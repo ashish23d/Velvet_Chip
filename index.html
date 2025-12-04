@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Awaany - Women's Fashion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+      :root {
+        --color-primary: #C22255;
+      }
+      /* Force light mode controls */
+      :root {
+        color-scheme: light;
+      }
+      
+      input, textarea, select {
+        /* Ensure inputs stay light */
+        color-scheme: light;
+      }
+
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      /* Make all buttons feel more interactive on click */
+      button,
+      a[class*=" py-"][class*=" px-"],
+      header nav a.relative { /* Targets main buttons, links styled as buttons, and header icons */
+        transition: transform 100ms ease-out;
+      }
+      button:active,
+      a[class*=" py-"][class*=" px-"]:active,
+      header nav a.relative:active {
+        transform: scale(0.95);
+      }
+      /* Payment success checkmark animation */
+      .checkmark-circle {
+        stroke-dasharray: 166;
+        stroke-dashoffset: 166;
+        animation: stroke-circle 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+      }
+      .checkmark-check {
+        transform-origin: 50% 50%;
+        stroke-dasharray: 48;
+        stroke-dashoffset: 48;
+        animation: stroke-check 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+      }
+      @keyframes stroke-circle {
+        100% {
+          stroke-dashoffset: 0;
+        }
+      }
+      @keyframes stroke-check {
+        100% {
+          stroke-dashoffset: 0;
+        }
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        darkMode: 'class', // Set to 'class' to disable system preference detection. Since we don't add the 'dark' class, it stays light.
+        theme: {
+          extend: {
+            colors: {
+              primary: 'var(--color-primary)',
+            },
+            fontFamily: {
+              'sans': ['Inter', 'sans-serif'],
+              'serif': ['Playfair Display', 'serif'],
+            },
+            animation: {
+              'point-right': 'point-right 1.5s ease-in-out infinite',
+              'jiggle': 'jiggle 0.6s ease-in-out',
+              'slide-in-down': 'slide-in-down 0.3s ease-out',
+              'fade-in': 'fade-in 0.3s ease-out',
+            },
+            keyframes: {
+              'point-right': {
+                '0%, 100%': { transform: 'translateX(0)' },
+                '50%': { transform: 'translateX(8px)' },
+              },
+              'jiggle': {
+                '0%': { transform: 'scale(1)' },
+                '25%': { transform: 'scale(1.2) rotate(-3deg)' },
+                '50%': { transform: 'scale(1.2) rotate(3deg)' },
+                '75%': { transform: 'scale(1.2) rotate(-3deg)' },
+                '100%': { transform: 'scale(1) rotate(0deg)' },
+              },
+              'slide-in-down': {
+                '0%': { transform: 'translateY(-20px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              'fade-in': {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.7.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.10.0",
+    "@heroicons/react/": "https://esm.sh/@heroicons/react@^2.2.0/",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react-router": "https://esm.sh/react-router@^7.7.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
+    "deno.ns": "https://aistudiocdn.com/deno.ns@^0.8.0",
+    "jspdf": "https://esm.sh/jspdf@2.5.1",
+    "jspdf-autotable": "https://esm.sh/jspdf-autotable@3.5.31",
+    "qrcode": "https://esm.sh/qrcode@1.5.3",
+    "jszip": "https://esm.sh/jszip@3.10.1",
+    "jsbarcode": "https://esm.sh/jsbarcode@3.11.6"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-white text-gray-900 transition-colors duration-200">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
