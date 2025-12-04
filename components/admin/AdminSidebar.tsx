@@ -63,9 +63,9 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, setOpen }) => {
             <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-transform duration-300 lg:relative lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="flex flex-col h-full">
                     <div className="flex items-center justify-between h-16 px-4 border-b">
-                        <ReactRouterDOM.Link to="/admin" className="flex-shrink-0">
+                        <div className="flex-shrink-0">
                             <Logo className="h-10 w-auto" />
-                        </ReactRouterDOM.Link>
+                        </div>
                         <button onClick={() => setOpen(false)} className="lg:hidden text-gray-500 hover:text-primary">
                             <ChevronDoubleRightIcon className="h-6 w-6 transform rotate-180" />
                         </button>

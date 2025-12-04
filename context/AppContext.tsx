@@ -862,7 +862,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const rejectChange = async (id: string) => { };
 
     const updateSiteContent = async (content: SiteContent) => {
-        const { error } = await supabase.from('site_content').update({ data: content.data }).eq('id', content.id);
+        const { error } = await supabase.from('site_content').upsert({ id: content.id, data: content.data });
         if (error) throw error;
         setSiteContent(prev => prev.map(c => c.id === content.id ? content : c));
         if (content.id === 'site_settings') setSiteSettings(content.data as any);
@@ -872,6 +872,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updateSiteSettings = async (settings: SiteSettings) => {
         await updateSiteContent({ id: 'site_settings', data: settings });
+        window.location.reload();
     };
     const updateContactDetails = async (details: ContactDetails) => {
         await updateSiteContent({ id: 'contact_details', data: details });
@@ -1080,10 +1081,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addProduct: async (p) => {
             const { data } = await supabase.from('products').insert(p).select().single();
             if (data) setProducts(prev => [...prev, data]);
+            window.location.reload();
         },
         updateProduct: async (p) => {
             await supabase.from('products').update(p).eq('id', p.id);
             setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, ...p } : prod));
+            window.location.reload();
         },
         deleteProduct: async (id) => {
             await supabase.from('products').delete().eq('id', id);
@@ -1094,6 +1097,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             await supabase.from('categories').update(cat).eq('id', cat.id);
             setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, ...cat } : c));
             // await loadAdminData(); // Removed to prevent full reload
+            window.location.reload();
         },
         deleteCategory,
         updateOrderStatus,
@@ -1113,13 +1117,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             await supabase.from('site_content').upsert(content);
             setSiteContent(prev => prev.map(c => c.id === content.id ? content : c));
             // await loadAdminData(); // Removed to prevent full reload
+            window.location.reload();
         },
         updateSiteSettings,
         updateContactDetails,
         updateSlides: async (newSlides) => {
-            await supabase.from('slides').upsert(newSlides);
+            const slidesForDb = newSlides.map(s => ({
+                id: s.id,
+                media: s.media,
+                text: s.text,
+                show_text: s.showText,
+                ordering: 0 // Default ordering if not present
+            }));
+            await supabase.from('slides').upsert(slidesForDb);
             setSlides(newSlides);
             // await loadAdminData(); // Removed to prevent full reload
+            window.location.reload();
         },
         adminDeleteSiteAsset,
         adminAddSeasonalCard,

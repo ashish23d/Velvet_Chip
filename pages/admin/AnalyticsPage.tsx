@@ -138,7 +138,7 @@ const AnalyticsPage: React.FC = () => {
                 {/* Sales Trend Chart */}
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                     <h3 className="text-lg font-semibold text-gray-800 mb-6">Monthly Sales Trend</h3>
-                    <div className="h-[300px]">
+                    <div className="h-[300px] min-h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={salesTrendData}>
                                 <defs>
@@ -163,7 +163,7 @@ const AnalyticsPage: React.FC = () => {
                 {/* Order Status Distribution */}
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                     <h3 className="text-lg font-semibold text-gray-800 mb-6">Order Status Distribution</h3>
-                    <div className="h-[300px]">
+                    <div className="h-[300px] min-h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie

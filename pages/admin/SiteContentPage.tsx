@@ -30,7 +30,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange }) => {
             onChange(editorRef.current.innerHTML);
         }
     };
-    
+
     const editorClasses = `mt-1 block w-full h-64 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary overflow-y-auto prose prose-sm max-w-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white`;
 
     return (
@@ -56,7 +56,7 @@ interface ContentBlockEditorProps {
     title: string;
     description: string;
     children: (
-        formData: Record<string, any>, 
+        formData: Record<string, any>,
         handleChange: (field: string, value: string) => void
     ) => React.ReactNode;
     contentId: string;
@@ -85,10 +85,10 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({ title, descript
         setIsSaving(true);
         setError('');
         setSuccess(false);
-        
+
         // Safety timeout to prevent infinite loading state
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Request timed out')), 10000)
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Request timed out')), 30000)
         );
 
         try {
@@ -111,7 +111,7 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({ title, descript
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-white">{title}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-4">{description}</p>
-            
+
             <div className="space-y-4">
                 {children(formData, handleChange)}
             </div>
@@ -132,9 +132,9 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({ title, descript
 };
 
 const SeasonalCardFormModal: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  cardToEdit: SeasonalEditCard | null;
+    isOpen: boolean;
+    onClose: () => void;
+    cardToEdit: SeasonalEditCard | null;
 }> = ({ isOpen, onClose, cardToEdit }) => {
     const { adminData, adminAddSeasonalCard, adminUpdateSeasonalCard } = useAppContext();
     const products = adminData?.products || [];
@@ -147,7 +147,7 @@ const SeasonalCardFormModal: React.FC<{
     });
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
-    
+
     useEffect(() => {
         if (cardToEdit) {
             setFormData({
@@ -170,8 +170,8 @@ const SeasonalCardFormModal: React.FC<{
     const handleSave = async () => {
         setIsSaving(true);
         setError('');
-        
-        const timeoutPromise = new Promise((_, reject) => 
+
+        const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Request timed out')), 10000)
         );
 
@@ -183,12 +183,12 @@ const SeasonalCardFormModal: React.FC<{
                 ]);
             } else {
                 await Promise.race([
-                    adminAddSeasonalCard(formData as Omit<SeasonalEditCard, 'id'|'created_at'>),
+                    adminAddSeasonalCard(formData as Omit<SeasonalEditCard, 'id' | 'created_at'>),
                     timeoutPromise
                 ]);
             }
             onClose();
-        } catch(err: any) {
+        } catch (err: any) {
             console.error("Save error:", err);
             setError(err.message || 'Failed to save card.');
             setIsSaving(false); // Only reset if error, otherwise onClose handles unmount
@@ -199,83 +199,83 @@ const SeasonalCardFormModal: React.FC<{
     const inputClass = "block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500";
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{cardToEdit ? 'Edit Card' : 'Add New Card'}</h3>
-                <button onClick={onClose}><XIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" /></button>
-            </div>
-            <div className="p-6 space-y-6 overflow-y-auto">
-                {/* General Settings */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center">
-                        <input id="is_active" type="checkbox" checked={formData.is_active} onChange={e => setFormData(p => ({...p, is_active: e.target.checked}))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
-                        <label htmlFor="is_active" className="ml-2 text-sm text-gray-700 dark:text-gray-300">Active (Visible on Homepage)</label>
-                    </div>
-                     <div className="flex items-center">
-                        <input id="reverse_layout" type="checkbox" checked={formData.reverse_layout} onChange={e => setFormData(p => ({...p, reverse_layout: e.target.checked}))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
-                        <label htmlFor="reverse_layout" className="ml-2 text-sm text-gray-700 dark:text-gray-300">Reverse Layout (Image on Right)</label>
-                    </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="p-4 border-b dark:border-gray-700 flex justify-between items-center">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{cardToEdit ? 'Edit Card' : 'Add New Card'}</h3>
+                    <button onClick={onClose}><XIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" /></button>
                 </div>
-                
-                {/* Card Type */}
-                <div>
-                    <label className={labelClass}>Card Type</label>
-                    <fieldset className="mt-2">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <label className={`relative flex cursor-pointer rounded-lg border bg-white dark:bg-gray-900 p-4 shadow-sm focus:outline-none ${formData.card_type === 'product' ? 'border-primary ring-2 ring-primary' : 'border-gray-300 dark:border-gray-600'}`}>
-                                <input type="radio" name="card_type" value="product" checked={formData.card_type === 'product'} onChange={() => setFormData(p => ({...p, card_type: 'product'}))} className="sr-only" aria-labelledby="card-type-product-label" />
-                                <span className="flex flex-1">
-                                    <span className="flex flex-col">
-                                        <span id="card-type-product-label" className="block text-sm font-medium text-gray-900 dark:text-white">Link to Product</span>
-                                        <span className="mt-1 flex items-center text-xs text-gray-500 dark:text-gray-400">Auto-fill with product details.</span>
-                                    </span>
-                                </span>
-                            </label>
-                            <label className={`relative flex cursor-pointer rounded-lg border bg-white dark:bg-gray-900 p-4 shadow-sm focus:outline-none ${formData.card_type === 'custom' ? 'border-primary ring-2 ring-primary' : 'border-gray-300 dark:border-gray-600'}`}>
-                                <input type="radio" name="card_type" value="custom" checked={formData.card_type === 'custom'} onChange={() => setFormData(p => ({...p, card_type: 'custom'}))} className="sr-only" aria-labelledby="card-type-custom-label" />
-                                <span className="flex flex-1">
-                                    <span className="flex flex-col">
-                                        <span id="card-type-custom-label" className="block text-sm font-medium text-gray-900 dark:text-white">Custom Content</span>
-                                        <span className="mt-1 flex items-center text-xs text-gray-500 dark:text-gray-400">Upload an image and add text.</span>
-                                    </span>
-                                </span>
-                            </label>
+                <div className="p-6 space-y-6 overflow-y-auto">
+                    {/* General Settings */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex items-center">
+                            <input id="is_active" type="checkbox" checked={formData.is_active} onChange={e => setFormData(p => ({ ...p, is_active: e.target.checked }))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
+                            <label htmlFor="is_active" className="ml-2 text-sm text-gray-700 dark:text-gray-300">Active (Visible on Homepage)</label>
                         </div>
-                    </fieldset>
-                </div>
+                        <div className="flex items-center">
+                            <input id="reverse_layout" type="checkbox" checked={formData.reverse_layout} onChange={e => setFormData(p => ({ ...p, reverse_layout: e.target.checked }))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
+                            <label htmlFor="reverse_layout" className="ml-2 text-sm text-gray-700 dark:text-gray-300">Reverse Layout (Image on Right)</label>
+                        </div>
+                    </div>
 
-                {/* Conditional Fields */}
-                <div className="animate-fade-in">
-                    {formData.card_type === 'product' ? (
-                         <div>
-                            <label htmlFor="product_id" className={labelClass}>Select Product</label>
-                            <select id="product_id" value={formData.product_id || ''} onChange={e => setFormData(p => ({...p, product_id: Number(e.target.value)}))} className={inputClass}>
-                                {products.map(prod => <option key={prod.id} value={prod.id}>{prod.name}</option>)}
-                            </select>
-                         </div>
-                    ) : (
-                        <div className="space-y-4 p-4 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50/50 dark:bg-gray-900/50">
-                            <div>
-                                <label className={labelClass}>Image</label>
-                                <ImageUploader bucket={BUCKETS.SITE_ASSETS} pathPrefix="seasonal_cards" images={formData.image_path ? [formData.image_path] : []} onImageUpload={(path) => setFormData(p => ({...p, image_path: path}))} onImageRemove={() => setFormData(p => ({...p, image_path: null}))} />
+                    {/* Card Type */}
+                    <div>
+                        <label className={labelClass}>Card Type</label>
+                        <fieldset className="mt-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <label className={`relative flex cursor-pointer rounded-lg border bg-white dark:bg-gray-900 p-4 shadow-sm focus:outline-none ${formData.card_type === 'product' ? 'border-primary ring-2 ring-primary' : 'border-gray-300 dark:border-gray-600'}`}>
+                                    <input type="radio" name="card_type" value="product" checked={formData.card_type === 'product'} onChange={() => setFormData(p => ({ ...p, card_type: 'product' }))} className="sr-only" aria-labelledby="card-type-product-label" />
+                                    <span className="flex flex-1">
+                                        <span className="flex flex-col">
+                                            <span id="card-type-product-label" className="block text-sm font-medium text-gray-900 dark:text-white">Link to Product</span>
+                                            <span className="mt-1 flex items-center text-xs text-gray-500 dark:text-gray-400">Auto-fill with product details.</span>
+                                        </span>
+                                    </span>
+                                </label>
+                                <label className={`relative flex cursor-pointer rounded-lg border bg-white dark:bg-gray-900 p-4 shadow-sm focus:outline-none ${formData.card_type === 'custom' ? 'border-primary ring-2 ring-primary' : 'border-gray-300 dark:border-gray-600'}`}>
+                                    <input type="radio" name="card_type" value="custom" checked={formData.card_type === 'custom'} onChange={() => setFormData(p => ({ ...p, card_type: 'custom' }))} className="sr-only" aria-labelledby="card-type-custom-label" />
+                                    <span className="flex flex-1">
+                                        <span className="flex flex-col">
+                                            <span id="card-type-custom-label" className="block text-sm font-medium text-gray-900 dark:text-white">Custom Content</span>
+                                            <span className="mt-1 flex items-center text-xs text-gray-500 dark:text-gray-400">Upload an image and add text.</span>
+                                        </span>
+                                    </span>
+                                </label>
                             </div>
-                            <div><label htmlFor="title" className={labelClass}>Title</label><input type="text" id="title" value={formData.title || ''} onChange={e => setFormData(p => ({...p, title: e.target.value}))} className={inputClass} /></div>
-                            <div><label htmlFor="description" className={labelClass}>Description</label><textarea id="description" rows={3} value={formData.description || ''} onChange={e => setFormData(p => ({...p, description: e.target.value}))} className={inputClass} /></div>
-                            <div><label htmlFor="button_link" className={labelClass}>Button Link</label><input type="text" id="button_link" placeholder="/category/sarees" value={formData.button_link || ''} onChange={e => setFormData(p => ({...p, button_link: e.target.value}))} className={inputClass} /></div>
-                        </div>
-                    )}
+                        </fieldset>
+                    </div>
+
+                    {/* Conditional Fields */}
+                    <div className="animate-fade-in">
+                        {formData.card_type === 'product' ? (
+                            <div>
+                                <label htmlFor="product_id" className={labelClass}>Select Product</label>
+                                <select id="product_id" value={formData.product_id || ''} onChange={e => setFormData(p => ({ ...p, product_id: Number(e.target.value) }))} className={inputClass}>
+                                    {products.map(prod => <option key={prod.id} value={prod.id}>{prod.name}</option>)}
+                                </select>
+                            </div>
+                        ) : (
+                            <div className="space-y-4 p-4 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50/50 dark:bg-gray-900/50">
+                                <div>
+                                    <label className={labelClass}>Image</label>
+                                    <ImageUploader bucket={BUCKETS.SITE_ASSETS} pathPrefix="seasonal_cards" images={formData.image_path ? [formData.image_path] : []} onImageUpload={(path) => setFormData(p => ({ ...p, image_path: path }))} onImageRemove={() => setFormData(p => ({ ...p, image_path: null }))} />
+                                </div>
+                                <div><label htmlFor="title" className={labelClass}>Title</label><input type="text" id="title" value={formData.title || ''} onChange={e => setFormData(p => ({ ...p, title: e.target.value }))} className={inputClass} /></div>
+                                <div><label htmlFor="description" className={labelClass}>Description</label><textarea id="description" rows={3} value={formData.description || ''} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))} className={inputClass} /></div>
+                                <div><label htmlFor="button_link" className={labelClass}>Button Link</label><input type="text" id="button_link" placeholder="/category/sarees" value={formData.button_link || ''} onChange={e => setFormData(p => ({ ...p, button_link: e.target.value }))} className={inputClass} /></div>
+                            </div>
+                        )}
+                    </div>
+                    <div><label htmlFor="button_text" className={labelClass}>Button Text</label><input type="text" id="button_text" value={formData.button_text || ''} onChange={e => setFormData(p => ({ ...p, button_text: e.target.value }))} className={inputClass} /></div>
+
+                    {error && <p className="text-sm text-red-500">{error}</p>}
                 </div>
-                 <div><label htmlFor="button_text" className={labelClass}>Button Text</label><input type="text" id="button_text" value={formData.button_text || ''} onChange={e => setFormData(p => ({...p, button_text: e.target.value}))} className={inputClass} /></div>
-                 
-                 {error && <p className="text-sm text-red-500">{error}</p>}
-            </div>
-            <div className="p-4 border-t dark:border-gray-700 flex justify-end gap-3 bg-gray-50 dark:bg-gray-900 rounded-b-lg">
-                <button type="button" onClick={onClose} className="bg-white dark:bg-gray-700 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">Cancel</button>
-                <button onClick={handleSave} disabled={isSaving} className="bg-primary text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-pink-700 disabled:bg-gray-400">{isSaving ? 'Saving...' : 'Save Card'}</button>
+                <div className="p-4 border-t dark:border-gray-700 flex justify-end gap-3 bg-gray-50 dark:bg-gray-900 rounded-b-lg">
+                    <button type="button" onClick={onClose} className="bg-white dark:bg-gray-700 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">Cancel</button>
+                    <button onClick={handleSave} disabled={isSaving} className="bg-primary text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-pink-700 disabled:bg-gray-400">{isSaving ? 'Saving...' : 'Save Card'}</button>
+                </div>
             </div>
         </div>
-      </div>
     );
 };
 
@@ -296,7 +296,7 @@ const SeasonalEditManager: React.FC = () => {
     };
 
     const handleDelete = (card: SeasonalEditCard) => {
-        const cardName = card.card_type === 'product' ? (products.find(p=>p.id === card.product_id)?.name || 'Product Card') : (card.title || 'Custom Card');
+        const cardName = card.card_type === 'product' ? (products.find(p => p.id === card.product_id)?.name || 'Product Card') : (card.title || 'Custom Card');
         showConfirmationModal({
             title: 'Delete Card',
             message: `Are you sure you want to delete the "${cardName}" card?`,
@@ -311,7 +311,7 @@ const SeasonalEditManager: React.FC = () => {
             <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold text-gray-800 dark:text-white">Section Cards</h3>
                 <button onClick={handleAdd} className="flex items-center gap-1 text-sm font-medium text-primary hover:text-pink-700">
-                    <PlusIcon className="w-4 h-4"/> Add Card
+                    <PlusIcon className="w-4 h-4" /> Add Card
                 </button>
             </div>
             <div className="space-y-2">
@@ -324,7 +324,7 @@ const SeasonalEditManager: React.FC = () => {
 
                         return (
                             <div key={card.id} className="flex items-center gap-4 p-2 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900">
-                                <SupabaseImage bucket={imageBucket} imagePath={imagePath} alt={title||''} className="w-16 h-16 object-cover rounded flex-shrink-0" />
+                                <SupabaseImage bucket={imageBucket} imagePath={imagePath} alt={title || ''} className="w-16 h-16 object-cover rounded flex-shrink-0" />
                                 <div className="flex-grow min-w-0">
                                     <p className="font-semibold truncate text-gray-900 dark:text-white">{title || 'Untitled Card'}</p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{card.card_type} Card</p>
@@ -333,8 +333,8 @@ const SeasonalEditManager: React.FC = () => {
                                     {card.is_active ? 'Active' : 'Inactive'}
                                 </span>
                                 <div className="flex items-center gap-2">
-                                    <button onClick={() => handleEdit(card)} className="p-1.5 text-gray-500 hover:text-primary"><PencilIcon className="w-5 h-5"/></button>
-                                    <button onClick={() => handleDelete(card)} className="p-1.5 text-gray-500 hover:text-red-500"><TrashIcon className="w-5 h-5"/></button>
+                                    <button onClick={() => handleEdit(card)} className="p-1.5 text-gray-500 hover:text-primary"><PencilIcon className="w-5 h-5" /></button>
+                                    <button onClick={() => handleDelete(card)} className="p-1.5 text-gray-500 hover:text-red-500"><TrashIcon className="w-5 h-5" /></button>
                                 </div>
                             </div>
                         )
@@ -464,7 +464,7 @@ const SiteContentPage: React.FC = () => {
                     />
                 )}
             </ContentBlockEditor>
-            
+
             <ContentBlockEditor
                 title="Privacy Policy"
                 description="Use the tools to format your content for the privacy policy page."
