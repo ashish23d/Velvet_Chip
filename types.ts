@@ -24,6 +24,12 @@ export interface SiteSettings {
   primaryColor: string;
   activeLogoPath: string | null;
   previousLogoPaths: string[];
+  // New Logo Settings
+  logoType?: 'image' | 'text';
+  textLogo?: string;
+  fontFamily?: string;
+  fontSize?: string; // e.g. "24px"
+  imageWidth?: string; // e.g. "150px"
 }
 
 export interface ContactDetails {
@@ -116,10 +122,10 @@ export interface Notification {
 export type OrderStatus = 'Processing' | 'Shipped' | 'Out for Delivery' | 'Delivered' | 'Cancelled' | 'Cancelled by User' | 'Return Requested' | 'Return Approved' | 'In Transit';
 
 export interface StatusUpdate {
-    status: OrderStatus;
-    timestamp: string;
-    description: string;
-    location?: string; // e.g., "Mumbai Hub"
+  status: OrderStatus;
+  timestamp: string;
+  description: string;
+  location?: string; // e.g., "Mumbai Hub"
 }
 
 export interface Order {
@@ -171,12 +177,12 @@ export interface Product {
   reviews: number;
   description: string;
   images: string[]; // Array of Supabase Storage paths
-  colors: { 
-      name: string; 
-      hex: string; 
-      uuid: string; 
-      images?: string[];
-      sizes?: { size: string; stock: number }[]; 
+  colors: {
+    name: string;
+    hex: string;
+    uuid: string;
+    images?: string[];
+    sizes?: { size: string; stock: number }[];
   }[];
   sizes: string[];
   specifications: { [key: string]: string };
@@ -247,32 +253,32 @@ export interface PendingChange {
 }
 
 export interface Promotion {
-    id: number;
-    code: string;
-    type: 'percentage' | 'flat';
-    value: number;
-    minPurchase: number;
-    usageLimit: number;
-    uses: number;
-    expiresAt: string;
-    isActive: boolean;
-    createdAt: string;
+  id: number;
+  code: string;
+  type: 'percentage' | 'flat';
+  value: number;
+  minPurchase: number;
+  usageLimit: number;
+  uses: number;
+  expiresAt: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 export interface Announcement {
-    text: string;
-    link: string;
-    isActive: boolean;
+  text: string;
+  link: string;
+  isActive: boolean;
 }
 
 export interface ContactSubmission {
-    id: number;
-    name: string;
-    email: string;
-    message: string;
-    status: 'new' | 'read' | 'resolved';
-    createdAt: string;
-    userId?: string | null;
+  id: number;
+  name: string;
+  email: string;
+  message: string;
+  status: 'new' | 'read' | 'resolved';
+  createdAt: string;
+  userId?: string | null;
 }
 
 export interface MailTemplate {
@@ -295,32 +301,32 @@ export type ReturnInspectionStatus = 'Pending' | 'Passed' | 'Failed';
 export type ReturnRefundStatus = 'Not Initiated' | 'Initiated' | 'Processed' | 'Rejected';
 
 export interface ReturnStatusUpdate {
-    status: ReturnRequestStatus;
-    timestamp: string;
-    description: string;
+  status: ReturnRequestStatus;
+  timestamp: string;
+  description: string;
 }
 
 export interface ReturnRequest {
-    id: string; // uuid
-    order_id: string;
-    item_id: string; // CartItem id
-    user_id: string;
-    reason: string;
-    comments: string | null;
-    type: 'refund' | 'replacement';
-    images: string[] | null; // array of storage paths
-    status: ReturnRequestStatus;
-    pickup_status: ReturnPickupStatus;
-    inspection_status: ReturnInspectionStatus;
-    refund_status: ReturnRefundStatus;
-    refund_amount: number | null;
-    return_requested_at: string; // timestamptz
-    updated_at: string; // timestamptz
-    status_history: ReturnStatusUpdate[];
-    // For convenience, joined data
-    item?: CartItem;
-    order?: Order;
-    user?: UserProfile;
+  id: string; // uuid
+  order_id: string;
+  item_id: string; // CartItem id
+  user_id: string;
+  reason: string;
+  comments: string | null;
+  type: 'refund' | 'replacement';
+  images: string[] | null; // array of storage paths
+  status: ReturnRequestStatus;
+  pickup_status: ReturnPickupStatus;
+  inspection_status: ReturnInspectionStatus;
+  refund_status: ReturnRefundStatus;
+  refund_amount: number | null;
+  return_requested_at: string; // timestamptz
+  updated_at: string; // timestamptz
+  status_history: ReturnStatusUpdate[];
+  // For convenience, joined data
+  item?: CartItem;
+  order?: Order;
+  user?: UserProfile;
 }
 
 export interface UserProfile {
@@ -343,25 +349,25 @@ export interface UserProfile {
 }
 
 export interface UserProfileWithOrders extends UserProfile {
-    orders?: Order[];
+  orders?: Order[];
 }
 
 export interface AdminData {
-    orders: Order[];
-    users: UserProfileWithOrders[];
-    products: Product[];
-    invoices: Invoice[];
-    promotions: Promotion[];
-    subscribers: any[];
-    mailTemplates: MailTemplate[];
-    contactSubmissions: ContactSubmission[];
-    returns: ReturnRequest[];
+  orders: Order[];
+  users: UserProfileWithOrders[];
+  products: Product[];
+  invoices: Invoice[];
+  promotions: Promotion[];
+  subscribers: any[];
+  mailTemplates: MailTemplate[];
+  contactSubmissions: ContactSubmission[];
+  returns: ReturnRequest[];
 }
 
 export interface SearchHistoryEntry {
-    id: string;
-    query: string;
-    created_at: string;
+  id: string;
+  query: string;
+  created_at: string;
 }
 
 export type Database = {

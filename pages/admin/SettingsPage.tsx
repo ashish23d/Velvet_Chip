@@ -10,12 +10,12 @@ import { CommandLineIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outl
 
 const ContactSettings: React.FC = () => {
     const { contactDetails, updateContactDetails } = useAppContext();
-    const [formState, setFormState] = useState<ContactDetails>({ email: '', phone: '', address: ''});
+    const [formState, setFormState] = useState<ContactDetails>({ email: '', phone: '', address: '' });
     const [isSaving, setIsSaving] = useState(false);
     const [success, setSuccess] = useState(false);
 
     useEffect(() => {
-        if(contactDetails) {
+        if (contactDetails) {
             setFormState(contactDetails);
         }
     }, [contactDetails]);
@@ -23,7 +23,7 @@ const ContactSettings: React.FC = () => {
     const isChanged = JSON.stringify(contactDetails) !== JSON.stringify(formState);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setFormState(prev => ({...prev, [e.target.name]: e.target.value }));
+        setFormState(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
     const handleSave = async () => {
@@ -55,16 +55,16 @@ const ContactSettings: React.FC = () => {
                     <textarea id="contact-address" name="address" rows={3} value={formState.address} onChange={handleChange} className={inputClass} />
                 </div>
             </div>
-             <div className="flex justify-end items-center gap-4 mt-4">
+            <div className="flex justify-end items-center gap-4 mt-4">
                 {success && <p className="text-xs text-green-600">Saved successfully!</p>}
                 <button
                     type="button"
                     onClick={handleSave}
                     disabled={isSaving || !isChanged}
                     className="bg-primary text-white py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium hover:bg-pink-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                 >
+                >
                     {isSaving ? 'Saving...' : 'Save Contact Info'}
-                 </button>
+                </button>
             </div>
         </div>
     );
@@ -149,7 +149,7 @@ const SettingsPage: React.FC = () => {
             setSettings(siteSettings);
         }
     }, [siteSettings]);
-    
+
     useEffect(() => {
         // Clear timeout on component unmount
         return () => {
@@ -168,7 +168,7 @@ const SettingsPage: React.FC = () => {
 
     const handleNewLogoUpload = (newPath: string) => {
         if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
-        
+
         const oldSettings = { ...settings };
         setPreviousSettingsForUndo(oldSettings);
         setUndoneLogoPath(newPath);
@@ -182,7 +182,7 @@ const SettingsPage: React.FC = () => {
                 ...(settings.previousLogoPaths || [])
             ].filter((p, i, a) => a.indexOf(p) === i).slice(0, 5)
         };
-        
+
         // Auto-save the new logo setting
         updateSiteSettings(updatedSettings).catch(err => {
             setError(err.message || "Failed to auto-save new logo.");
@@ -196,11 +196,11 @@ const SettingsPage: React.FC = () => {
             setUndoneLogoPath(null);
         }, 10000); // 10 seconds to undo
     };
-    
+
     const handleUndo = async () => {
         if (!previousSettingsForUndo || !undoneLogoPath) return;
         if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
-        
+
         try {
             // Auto-save the reverted state
             await updateSiteSettings(previousSettingsForUndo);
@@ -218,15 +218,15 @@ const SettingsPage: React.FC = () => {
     const handleSetActiveLogo = (path: string) => {
         setSettings(prev => {
             if (!prev.activeLogoPath || prev.activeLogoPath === path) return prev;
-            
+
             const newPrevious = (prev.previousLogoPaths || []).filter(p => p !== path);
             newPrevious.unshift(prev.activeLogoPath);
-            
+
             const uniquePrevious = [...new Set(newPrevious)].slice(0, 5);
             return { ...prev, activeLogoPath: path, previousLogoPaths: uniquePrevious };
         });
     };
-    
+
     const handleDeletePreviousLogo = (path: string) => {
         setSettings(prev => ({
             ...prev,
@@ -296,71 +296,187 @@ const SettingsPage: React.FC = () => {
             {/* Branding Settings */}
             <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow space-y-6">
                 <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">Branding</h3>
+
+                {/* Logo Type Selector */}
                 <div>
-                    <label className={labelClass}>Upload New Logo</label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">Upload an animated GIF, MP4/WebM video, or static image. Recommended size: 450x120 pixels.</p>
-                    <ImageUploader
-                        bucket={BUCKETS.SITE_ASSETS}
-                        pathPrefix="logo"
-                        images={[]} // Uploader is only for adding new images
-                        onImageUpload={handleNewLogoUpload}
-                        onImageRemove={() => {}} // Not used here, management is separate
-                        accept="image/png, image/jpeg, image/webp, image/gif, video/mp4, video/webm"
-                    />
-                     {showUndo && (
-                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between transition-opacity duration-300">
-                            <p className="text-sm text-blue-700">Logo updated.</p>
-                            <button onClick={handleUndo} className="text-sm font-semibold text-blue-800 hover:underline">
-                                Undo
-                            </button>
+                    <label className={labelClass}>Logo Type</label>
+                    <div className="mt-2 flex items-center gap-4">
+                        <label className="inline-flex items-center">
+                            <input
+                                type="radio"
+                                className="form-radio text-primary"
+                                name="logoType"
+                                value="image"
+                                checked={settings.logoType !== 'text'}
+                                onChange={() => setSettings(prev => ({ ...prev, logoType: 'image' }))}
+                            />
+                            <span className="ml-2 text-gray-700 dark:text-gray-300">Image Logo</span>
+                        </label>
+                        <label className="inline-flex items-center">
+                            <input
+                                type="radio"
+                                className="form-radio text-primary"
+                                name="logoType"
+                                value="text"
+                                checked={settings.logoType === 'text'}
+                                onChange={() => setSettings(prev => ({ ...prev, logoType: 'text' }))}
+                            />
+                            <span className="ml-2 text-gray-700 dark:text-gray-300">Text Logo</span>
+                        </label>
+                    </div>
+                </div>
+
+                {settings.logoType === 'text' ? (
+                    <div className="space-y-4 border-t dark:border-gray-700 pt-4">
+                        <div>
+                            <label htmlFor="textLogo" className={labelClass}>Logo Text</label>
+                            <input
+                                type="text"
+                                id="textLogo"
+                                value={settings.textLogo || 'Awaany'}
+                                onChange={(e) => setSettings(prev => ({ ...prev, textLogo: e.target.value }))}
+                                className={inputClass}
+                            />
                         </div>
-                    )}
-                </div>
-                
-                <div className="border-t dark:border-gray-700 pt-4">
-                     <label className={labelClass}>Manage Logos</label>
-                     {/* Current Logo */}
-                     <div className="mt-2">
-                         <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">Current Logo</h4>
-                         {settings.activeLogoPath ? (
-                              <div className="mt-2 inline-block p-2 border-2 border-primary rounded-lg bg-primary/10">
-                                 <SupabaseMedia bucket={BUCKETS.SITE_ASSETS} imagePath={settings.activeLogoPath} alt="Current Logo" className="h-14 bg-white rounded" />
-                              </div>
-                         ) : (
-                             <p className="text-sm text-gray-500 mt-2">No active logo set. The default will be used.</p>
-                         )}
-                     </div>
-                     {/* Previous Logos */}
-                     <div className="mt-4">
-                         <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">Previous Logos</h4>
-                         {(settings.previousLogoPaths || []).length > 0 ? (
-                            <div className="mt-2 flex flex-wrap gap-4">
-                                {(settings.previousLogoPaths || []).map((path, index) => (
-                                    <div key={index} className="relative group p-2 border border-gray-300 dark:border-gray-600 rounded-lg">
-                                        <SupabaseMedia bucket={BUCKETS.SITE_ASSETS} imagePath={path} alt={`Previous Logo ${index + 1}`} className="h-14 bg-white rounded" />
-                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity rounded-lg">
-                                            <button onClick={() => handleSetActiveLogo(path)} className="text-xs bg-white text-primary font-semibold py-1 px-2 rounded">Set Active</button>
-                                            <button onClick={() => handleDeletePreviousLogo(path)} className="p-1.5 bg-white text-red-500 rounded-full" aria-label="Delete logo from history">
-                                                <TrashIcon className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="fontFamily" className={labelClass}>Font Family</label>
+                                <select
+                                    id="fontFamily"
+                                    value={settings.fontFamily || 'sans-serif'}
+                                    onChange={(e) => setSettings(prev => ({ ...prev, fontFamily: e.target.value }))}
+                                    className={inputClass}
+                                >
+                                    <option value="sans-serif">Sans Serif</option>
+                                    <option value="serif">Serif</option>
+                                    <option value="monospace">Monospace</option>
+                                    <option value="'Inter', sans-serif">Inter</option>
+                                    <option value="'Roboto', sans-serif">Roboto</option>
+                                    <option value="'Playfair Display', serif">Playfair Display</option>
+                                    <option value="'Montserrat', sans-serif">Montserrat</option>
+                                </select>
                             </div>
-                         ) : (
-                              <p className="text-sm text-gray-500 mt-2">No previous logos saved.</p>
-                         )}
-                     </div>
-                </div>
+                            <div>
+                                <label htmlFor="fontSize" className={labelClass}>Font Size ({settings.fontSize || '24px'})</label>
+                                <input
+                                    type="range"
+                                    id="fontSize"
+                                    min="12"
+                                    max="72"
+                                    value={parseInt(settings.fontSize || '24')}
+                                    onChange={(e) => setSettings(prev => ({ ...prev, fontSize: `${e.target.value}px` }))}
+                                    className="w-full mt-2"
+                                />
+                            </div>
+                        </div>
+                        <div className="p-4 bg-gray-100 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 flex items-center justify-center h-32">
+                            <span style={{
+                                fontFamily: settings.fontFamily || 'sans-serif',
+                                fontSize: settings.fontSize || '24px',
+                                fontWeight: 'bold',
+                                color: settings.primaryColor
+                            }}>
+                                {settings.textLogo || 'Awaany'}
+                            </span>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-4 border-t dark:border-gray-700 pt-4">
+                        <div>
+                            <label className={labelClass}>Upload New Logo</label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">Upload an animated GIF, MP4/WebM video, or static image. Recommended size: 450x120 pixels.</p>
+                            <ImageUploader
+                                bucket={BUCKETS.SITE_ASSETS}
+                                pathPrefix="logo"
+                                images={[]} // Uploader is only for adding new images
+                                onImageUpload={handleNewLogoUpload}
+                                onImageRemove={() => { }} // Not used here, management is separate
+                                accept="image/png, image/jpeg, image/webp, image/gif, video/mp4, video/webm"
+                            />
+                            {showUndo && (
+                                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between transition-opacity duration-300">
+                                    <p className="text-sm text-blue-700">Logo updated.</p>
+                                    <button onClick={handleUndo} className="text-sm font-semibold text-blue-800 hover:underline">
+                                        Undo
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <label htmlFor="imageWidth" className={labelClass}>Logo Width ({settings.imageWidth === 'auto' || !settings.imageWidth ? 'Auto' : settings.imageWidth})</label>
+                            <div className="flex items-center gap-4">
+                                <input
+                                    type="range"
+                                    id="imageWidth"
+                                    min="50"
+                                    max="400"
+                                    value={settings.imageWidth && settings.imageWidth !== 'auto' ? parseInt(settings.imageWidth) : 150}
+                                    onChange={(e) => setSettings(prev => ({ ...prev, imageWidth: `${e.target.value}px` }))}
+                                    className="w-full mt-2"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setSettings(prev => ({ ...prev, imageWidth: 'auto' }))}
+                                    className="text-xs text-primary hover:underline whitespace-nowrap"
+                                >
+                                    Reset to Auto
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="border-t dark:border-gray-700 pt-4">
+                            <label className={labelClass}>Manage Logos</label>
+                            {/* Current Logo */}
+                            <div className="mt-2">
+                                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">Current Logo</h4>
+                                {settings.activeLogoPath ? (
+                                    <div className="mt-2 inline-block p-2 border-2 border-primary rounded-lg bg-primary/10">
+                                        <SupabaseMedia
+                                            bucket={BUCKETS.SITE_ASSETS}
+                                            imagePath={settings.activeLogoPath}
+                                            alt="Current Logo"
+                                            className="bg-white rounded"
+                                            style={{ width: settings.imageWidth === 'auto' ? undefined : settings.imageWidth, height: 'auto', maxHeight: '60px' }}
+                                        />
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-500 mt-2">No active logo set. The default will be used.</p>
+                                )}
+                            </div>
+                            {/* Previous Logos */}
+                            <div className="mt-4">
+                                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">Previous Logos</h4>
+                                {(settings.previousLogoPaths || []).length > 0 ? (
+                                    <div className="mt-2 flex flex-wrap gap-4">
+                                        {(settings.previousLogoPaths || []).map((path, index) => (
+                                            <div key={index} className="relative group p-2 border border-gray-300 dark:border-gray-600 rounded-lg">
+                                                <SupabaseMedia bucket={BUCKETS.SITE_ASSETS} imagePath={path} alt={`Previous Logo ${index + 1}`} className="h-14 bg-white rounded" />
+                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity rounded-lg">
+                                                    <button onClick={() => handleSetActiveLogo(path)} className="text-xs bg-white text-primary font-semibold py-1 px-2 rounded">Set Active</button>
+                                                    <button onClick={() => handleDeletePreviousLogo(path)} className="p-1.5 bg-white text-red-500 rounded-full" aria-label="Delete logo from history">
+                                                        <TrashIcon className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-500 mt-2">No previous logos saved.</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-            
+
             <ContactSettings />
-            
+
             <DeploymentHelper />
 
             {/* Save Button */}
             <div className="flex justify-end items-center gap-4 sticky bottom-8">
-                 {success && <p className="text-sm text-green-600">Settings saved successfully!</p>}
+                {success && <p className="text-sm text-green-600">Settings saved successfully!</p>}
                 <button
                     onClick={handleFinalSave}
                     disabled={!isChanged || isSaving}
