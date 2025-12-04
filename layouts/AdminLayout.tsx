@@ -34,7 +34,7 @@ const AdminLayout: React.FC = () => {
     // If global loading is still happening, or user isn't confirmed admin yet, show a generic loading
     // But if we have currentUser and they are admin, we render the layout immediately.
     if (isLoading) {
-         return (
+        return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-100">
                 <div className="text-center">
                     <svg className="animate-spin h-8 w-8 text-primary mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -50,7 +50,7 @@ const AdminLayout: React.FC = () => {
     if (!currentUser || currentUser.role !== 'admin') {
         return null; // Will redirect in useEffect
     }
-    
+
     return (
         <div className="flex h-screen bg-gray-100 font-sans">
             <AdminSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
@@ -58,9 +58,10 @@ const AdminLayout: React.FC = () => {
                 <AdminHeader setSidebarOpen={setSidebarOpen} />
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 sm:p-6 lg:p-8">
                     <AdminBreadcrumb />
-                    
+
                     {/* Content Loading State */}
-                    {isLoadingAdminData ? (
+                    {/* Content Loading State - Only show full spinner if we have NO data */}
+                    {isLoadingAdminData && !adminData ? (
                         <div className="flex h-full items-center justify-center">
                             <div className="text-center">
                                 <svg className="animate-spin h-10 w-10 text-primary mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -71,10 +72,10 @@ const AdminLayout: React.FC = () => {
                             </div>
                         </div>
                     ) : !adminData ? (
-                         <div className="flex h-full items-center justify-center">
+                        <div className="flex h-full items-center justify-center">
                             <div className="text-center">
                                 <p className="text-lg font-semibold text-red-600 mt-4">Failed to load admin data.</p>
-                                <button 
+                                <button
                                     onClick={() => loadAdminData()}
                                     className="mt-4 bg-primary text-white px-4 py-2 rounded-md hover:bg-pink-700"
                                 >

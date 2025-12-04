@@ -24,10 +24,10 @@ const AboutSectionEditor: React.FC = () => {
     if (!content) {
         return <div>Loading about section editor...</div>;
     }
-    
+
     const originalContent = siteContent.find(c => c.id === 'home_about_section');
     const isChanged = JSON.stringify(originalContent) !== JSON.stringify(content);
-    
+
     const handleChange = (field: 'title' | 'text', value: string) => {
         setContent(prev => prev ? ({ ...prev, data: { ...prev.data, [field]: value } }) : null);
     };
@@ -35,11 +35,11 @@ const AboutSectionEditor: React.FC = () => {
     const handleImageUpload = (publicId: string) => {
         setContent(prev => prev ? ({ ...prev, data: { ...prev.data, imagePath: publicId } }) : null);
     };
-    
+
     const handleImageRemove = () => {
         setContent(prev => prev ? ({ ...prev, data: { ...prev.data, imagePath: '' } }) : null);
     };
-    
+
     const handleSave = async () => {
         if (!content) return;
         setIsSaving(true);
@@ -50,12 +50,12 @@ const AboutSectionEditor: React.FC = () => {
             setSuccess(true);
             setTimeout(() => setSuccess(false), 2000);
         } catch (err: any) {
-             setError(err.message || 'An unexpected error occurred.');
+            setError(err.message || 'An unexpected error occurred.');
         } finally {
             setIsSaving(false);
         }
     };
-    
+
     const labelClass = "block text-sm font-medium text-gray-700";
     const inputClass = "block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm";
 
@@ -66,7 +66,7 @@ const AboutSectionEditor: React.FC = () => {
                 <div>
                     <label className={labelClass}>Section Image</label>
                     <div className="mt-2">
-                         <ImageUploader 
+                        <ImageUploader
                             bucket={BUCKETS.SITE_ASSETS}
                             pathPrefix={`site/about-section`}
                             images={content.data.imagePath ? [content.data.imagePath] : []}
@@ -76,7 +76,7 @@ const AboutSectionEditor: React.FC = () => {
                     </div>
                 </div>
                 <div className="space-y-4">
-                     <div>
+                    <div>
                         <label htmlFor="about-title" className={labelClass}>Title</label>
                         <input
                             id="about-title"
@@ -106,9 +106,9 @@ const AboutSectionEditor: React.FC = () => {
                     onClick={handleSave}
                     disabled={isSaving || !isChanged}
                     className="bg-primary text-white py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium hover:bg-pink-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                 >
+                >
                     {isSaving ? 'Saving...' : 'Save About Section'}
-                 </button>
+                </button>
             </div>
         </div>
     );
@@ -124,7 +124,7 @@ const CategoryHeroEditor: React.FC<{ category: Category }> = ({ category }) => {
     const handleTextChange = (newText: string) => {
         setFormState(prev => ({ ...prev, pageHeroText: newText }));
     };
-    
+
     const handleMediaUpload = (publicId: string) => {
         const type = /\.(mp4|webm)$/i.test(publicId) ? 'video' : 'image';
         setFormState(prev => ({ ...prev, pageHeroMedia: [...(prev.pageHeroMedia || []), { path: publicId, type }] }));
@@ -150,7 +150,7 @@ const CategoryHeroEditor: React.FC<{ category: Category }> = ({ category }) => {
             setIsSaving(false);
         }
     };
-    
+
     const isChanged = JSON.stringify(category) !== JSON.stringify(formState);
 
     const labelClass = "block text-sm font-medium text-gray-700";
@@ -159,12 +159,12 @@ const CategoryHeroEditor: React.FC<{ category: Category }> = ({ category }) => {
     return (
         <div className="p-4 border border-gray-200 rounded-lg bg-gray-50/50">
             <h4 className="font-semibold text-gray-800 mb-4">{category.name}</h4>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label className={labelClass}>Category Page Hero Media (Image/Video)</label>
                     <p className="text-xs text-gray-500 mt-1 mb-2">Upload one or more files. Videos under 5MB are recommended.</p>
                     <div className="mt-2">
-                        <ImageUploader 
+                        <ImageUploader
                             bucket={BUCKETS.CATEGORIES}
                             pathPrefix={`${category.id}/hero`}
                             images={(formState.pageHeroMedia || []).map(item => item.path)}
@@ -187,22 +187,22 @@ const CategoryHeroEditor: React.FC<{ category: Category }> = ({ category }) => {
                         />
                     </div>
                     <div className="flex items-center">
-                        <input id={`show-text-${category.id}`} type="checkbox" checked={formState.showPageHeroText} onChange={e => setFormState(p => ({...p, showPageHeroText: e.target.checked}))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
+                        <input id={`show-text-${category.id}`} type="checkbox" checked={formState.showPageHeroText} onChange={e => setFormState(p => ({ ...p, showPageHeroText: e.target.checked }))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
                         <label htmlFor={`show-text-${category.id}`} className="ml-2 text-sm text-gray-700">Show text on hero</label>
                     </div>
                 </div>
             </div>
             <div className="flex justify-end items-center gap-4 mt-4">
-                 {error && <p className="text-xs text-red-500">{error}</p>}
-                 {success && <p className="text-xs text-green-600">Saved successfully!</p>}
-                 <button
+                {error && <p className="text-xs text-red-500">{error}</p>}
+                {success && <p className="text-xs text-green-600">Saved successfully!</p>}
+                <button
                     type="button"
                     onClick={handleSave}
                     disabled={isSaving || !isChanged}
                     className="bg-primary text-white py-1.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium hover:bg-pink-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                 >
+                >
                     {isSaving ? 'Saving...' : 'Save'}
-                 </button>
+                </button>
             </div>
         </div>
     );
@@ -228,23 +228,34 @@ const AppearancePage: React.FC = () => {
     const handleShowTextToggle = (id: string, isChecked: boolean) => {
         setFormSlides(prev => prev.map(slide => slide.id === id ? { ...slide, showText: isChecked } : slide));
     };
-    
+
     const handleMediaUpload = (id: string, publicId: string) => {
         const type = /\.(mp4|webm)$/i.test(publicId) ? 'video' : 'image';
-        setFormSlides(prev => prev.map(slide => 
+        setFormSlides(prev => prev.map(slide =>
             slide.id === id ? { ...slide, media: [...slide.media, { path: publicId, type }] } : slide
         ));
     };
 
     const handleMediaRemove = (id: string, publicIdToRemove: string) => {
-        setFormSlides(prev => prev.map(slide => 
+        setFormSlides(prev => prev.map(slide =>
             slide.id === id ? { ...slide, media: slide.media.filter(item => item.path !== publicIdToRemove) } : slide
         ));
     };
 
+    // Simple UUID generator fallback
+    const generateUUID = () => {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    };
+
     const handleAddSlide = () => {
         const newSlide: Slide = {
-            id: crypto.randomUUID(),
+            id: generateUUID(),
             media: [],
             text: 'New Slide Caption',
             showText: true,
@@ -259,7 +270,7 @@ const AppearancePage: React.FC = () => {
         }
         setFormSlides(prev => prev.filter(slide => slide.id !== id));
     };
-    
+
     const handleSaveSlides = async () => {
         setIsSavingSlides(true);
         setError(null);
@@ -294,7 +305,7 @@ const AppearancePage: React.FC = () => {
                     <span className="block sm:inline">{error}</span>
                 </div>
             )}
-            
+
             <AboutSectionEditor />
 
             <div className="p-6 bg-white rounded-lg shadow">
@@ -319,7 +330,7 @@ const AppearancePage: React.FC = () => {
                                     disabled={formSlides.length <= 1}
                                     aria-label="Remove slide"
                                 >
-                                    <TrashIcon className="w-5 h-5"/>
+                                    <TrashIcon className="w-5 h-5" />
                                 </button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -327,7 +338,7 @@ const AppearancePage: React.FC = () => {
                                     <label className={labelClass}>Slide Media (Images & Videos)</label>
                                     <p className="text-xs text-gray-500 mt-1 mb-2">Max 5MB. Recommended: short, looping MP4/WebM files.</p>
                                     <div className="mt-2">
-                                        <ImageUploader 
+                                        <ImageUploader
                                             bucket={BUCKETS.SITE_ASSETS}
                                             pathPrefix={`hero-slider/${slide.id.substring(0, 8)}`}
                                             images={slide.media.map(item => item.path)}
@@ -364,13 +375,13 @@ const AppearancePage: React.FC = () => {
                     ))}
                 </div>
                 <div className="flex justify-end mt-6">
-                     <button type="button" onClick={handleSaveSlides} disabled={isSavingSlides} className="bg-primary text-white py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium hover:bg-pink-700 disabled:bg-gray-400">
+                    <button type="button" onClick={handleSaveSlides} disabled={isSavingSlides} className="bg-primary text-white py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium hover:bg-pink-700 disabled:bg-gray-400">
                         {isSavingSlides ? 'Saving Slides...' : 'Save Homepage Slides'}
                     </button>
                 </div>
             </div>
 
-             <div className="p-6 bg-white rounded-lg shadow">
+            <div className="p-6 bg-white rounded-lg shadow">
                 <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">Category Page Heroes</h3>
                 <div className="space-y-6">
                     {categories.map(category => (

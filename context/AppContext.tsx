@@ -10,7 +10,7 @@ import {
     Address, ReturnStatusUpdate, SearchHistoryEntry
 } from '../types.ts';
 import { generateProductDescription, getSearchSuggestions } from '../services/geminiService.ts';
-import { INITIAL_SLIDES, PRODUCTS as MOCK_PRODUCTS, REVIEWS as MOCK_REVIEWS } from '../constants.ts';
+import { INITIAL_SLIDES } from '../constants.ts';
 import { generateInvoicePDF } from '../utils/invoiceGenerator.ts';
 
 interface CheckoutState {
@@ -209,19 +209,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         onConfirm: () => { },
     });
 
-    // --- Helper: Derive Categories from Products (Fallback) ---
-    const deriveCategoriesFromProducts = (prods: Product[]): Category[] => {
-        const uniqueCats = new Set(prods.map(p => p.category));
-        return Array.from(uniqueCats).map(c => ({
-            id: c,
-            name: c.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-            heroImage: prods.find(p => p.category === c)?.images[0] || 'awaany_placeholders/categories/default',
-            pageHeroMedia: null,
-            pageHeroText: null,
-            showPageHeroText: true,
-            appImagePath: null
-        }));
-    };
+
 
     // --- Fetching Logic ---
 
@@ -307,7 +295,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const loadAdminData = async () => {
-        if (isLoadingAdminData) return;
+        // Allow re-fetching even if loading, to support "refresh" actions
+        // if (isLoadingAdminData) return; 
         setIsLoadingAdminData(true);
         try {
             const [
@@ -398,20 +387,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     loadedProducts = productsResult.value.data;
                     setProducts(loadedProducts);
                 } else {
-                    console.log("Using Mock Products as fallback");
-                    loadedProducts = MOCK_PRODUCTS;
-                    setProducts(MOCK_PRODUCTS);
+                    setProducts([]);
                 }
 
                 // Handle Categories & Fallback
                 if (categoriesResult.status === 'fulfilled' && categoriesResult.value) {
                     // State set in fetchCategories
-                } else {
-                    // If fetch failed or returned null/empty (and state is empty), derive from products
-                    setCategories(prev => {
-                        if (prev.length === 0) return deriveCategoriesFromProducts(loadedProducts);
-                        return prev;
-                    });
                 }
 
                 // Handle Reviews & Fallback
@@ -424,11 +405,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         productImages: r.product_images
                     }));
                     setReviews(mappedReviews);
-                } else {
-                    // Only fallback if products are also mocked (likely a fresh/demo env)
-                    if (loadedProducts === MOCK_PRODUCTS) {
-                        setReviews(MOCK_REVIEWS as any);
-                    }
                 }
 
                 if (siteContentResult.status === 'fulfilled' && siteContentResult.value.data) {
@@ -1114,7 +1090,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setProducts(prev => prev.filter(p => p.id !== id));
         },
         addCategory,
-        updateCategory,
+        updateCategory: async (cat) => {
+            await supabase.from('categories').update(cat).eq('id', cat.id);
+            setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, ...cat } : c));
+            // await loadAdminData(); // Removed to prevent full reload
+        },
         deleteCategory,
         updateOrderStatus,
         adminBulkUpdateOrderStatus,
@@ -1129,10 +1109,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         getPendingChanges,
         approveChange,
         rejectChange,
-        updateSiteContent,
+        updateSiteContent: async (content) => {
+            await supabase.from('site_content').upsert(content);
+            setSiteContent(prev => prev.map(c => c.id === content.id ? content : c));
+            // await loadAdminData(); // Removed to prevent full reload
+        },
         updateSiteSettings,
         updateContactDetails,
-        updateSlides,
+        updateSlides: async (newSlides) => {
+            await supabase.from('slides').upsert(newSlides);
+            setSlides(newSlides);
+            // await loadAdminData(); // Removed to prevent full reload
+        },
         adminDeleteSiteAsset,
         adminAddSeasonalCard,
         adminUpdateSeasonalCard,
