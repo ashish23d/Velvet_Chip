@@ -19,13 +19,13 @@ const ProductFormPage: React.FC = () => {
       const fetchProduct = async () => {
         setIsLoading(true);
         try {
-            const product = await getProductById(Number(id));
-            setProductToEdit(product);
+          const product = await getProductById(Number(id));
+          setProductToEdit(product);
         } catch (error) {
-            console.error("Failed to fetch product for editing:", error);
-            setError("Could not load product data.");
+          console.error("Failed to fetch product for editing:", error);
+          setError("Could not load product data.");
         } finally {
-            setIsLoading(false);
+          setIsLoading(false);
         }
       };
       fetchProduct();
@@ -36,6 +36,17 @@ const ProductFormPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Simple UUID generator fallback
+  const generateUUID = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
   const handleSave = async (productData: Product | Omit<Product, 'id' | 'rating' | 'reviews' | 'uuid'>) => {
     setIsSaving(true);
     setError(null);
@@ -43,7 +54,13 @@ const ProductFormPage: React.FC = () => {
       if (isEditing) {
         await updateProduct(productData as Product);
       } else {
-        await addProduct(productData as Omit<Product, 'id' | 'rating' | 'reviews' | 'uuid'>);
+        const newProduct = {
+          ...productData,
+          uuid: generateUUID(),
+          rating: 0,
+          reviews: 0
+        };
+        await addProduct(newProduct as any);
       }
       navigate('/admin/products');
     } catch (err: any) {
@@ -63,14 +80,14 @@ const ProductFormPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-       <div className="flex justify-between items-center">
-         <h1 className="text-2xl font-bold text-gray-800">
-           {isEditing ? `Edit Product: ${productToEdit?.name || ''}` : 'Create New Product'}
-         </h1>
-         <button onClick={handleCancel} className="text-sm font-medium text-primary hover:underline">
-           &larr; Back to Products
-         </button>
-       </div>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">
+          {isEditing ? `Edit Product: ${productToEdit?.name || ''}` : 'Create New Product'}
+        </h1>
+        <button onClick={handleCancel} className="text-sm font-medium text-primary hover:underline">
+          &larr; Back to Products
+        </button>
+      </div>
 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
@@ -78,7 +95,7 @@ const ProductFormPage: React.FC = () => {
           <span className="block sm:inline">{error}</span>
         </div>
       )}
-      
+
       {(isEditing && productToEdit) || !isEditing ? (
         <ProductForm
           productToEdit={productToEdit}

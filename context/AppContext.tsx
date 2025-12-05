@@ -1079,7 +1079,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isLoadingAdminData,
         loadAdminData,
         addProduct: async (p) => {
-            const { data } = await supabase.from('products').insert(p).select().single();
+            const { data, error } = await supabase.from('products').insert(p).select().single();
+            if (error) {
+                console.error("Error adding product:", error);
+                throw error;
+            }
             if (data) setProducts(prev => [...prev, data]);
             window.location.reload();
         },
