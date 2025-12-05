@@ -307,16 +307,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // if (isLoadingAdminData) return; 
         setIsLoadingAdminData(true);
         try {
-            const [
-                { data: products },
-                { data: orders },
-                { data: users },
-                { data: invoices },
-                { data: promotions },
-                { data: mailTemplates },
-                { data: contactSubmissions },
-                { data: returns }
-            ] = await Promise.all([
+            const results = await Promise.allSettled([
                 supabase.from('products').select('*'),
                 supabase.from('orders').select('*'),
                 supabase.from('profiles').select('*'),
@@ -326,6 +317,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 supabase.from('contacts').select('*'),
                 supabase.from('returns').select('*, item:orders(items), user:profiles(id,name,email)')
             ]);
+
+            const getData = (result: PromiseSettledResult<any>) =>
+                result.status === 'fulfilled' && !result.value.error ? result.value.data : [];
+
+            const products = getData(results[0]);
+            const orders = getData(results[1]);
+            const users = getData(results[2]);
+            const invoices = getData(results[3]);
+            const promotions = getData(results[4]);
+            const mailTemplates = getData(results[5]);
+            const contactSubmissions = getData(results[6]);
+            const returns = getData(results[7]);
+
+            // Log errors for debugging
+            results.forEach((result, index) => {
+                if (result.status === 'rejected') {
+                    console.error(`Error loading admin data index ${index}:`, result.reason);
+                } else if (result.value.error) {
+                    console.error(`Error loading admin data index ${index}:`, result.value.error);
+                }
+            });
 
             const usersWithOrders = users?.map((u: any) => {
                 const userOrders = orders?.filter((o: any) => o.user_id === u.id).map((o: any) => ({
@@ -590,8 +602,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const deleteCategory = async (id: string) => {
-        await supabase.from('categories').delete().eq('id', id);
-        fetchCategories();
+        const { error } = await supabase.from('categories').delete().eq('id', id);
+        if (error) throw error;
+        await Promise.all([fetchCategories(), loadAdminData()]);
     };
 
     const cartCount = (currentUser?.cart || []).reduce((acc, item) => acc + item.quantity, 0);
@@ -849,8 +862,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [currentUser, loadAdminData]);
 
-    const adminCreateUser = async (u: any) => { /* ... */ };
-    const adminUpdateUser = async (u: any) => { /* ... */ };
+    const adminCreateUser = async (u: any) => {
+        // Note: Creating a user usually requires Supabase Auth Admin API (service role).
+        // For now, we'll assume we are creating a profile entry or updating an existing one if the auth user exists.
+        // If you need to create an actual auth user, this needs a backend function.
+        // We will just insert into profiles for now as a placeholder for "creating a customer record" if that's the intent.
+        const { error } = await supabase.from('profiles').insert(u);
+        if (error) throw error;
+        await loadAdminData();
+    };
+
+    const adminUpdateUser = async (u: any) => {
+        const { error } = await supabase.from('profiles').update(u).eq('id', u.id);
+        if (error) throw error;
+        await loadAdminData();
+    };
 
     const updateUserStatus = async (id: string, status: string) => {
         if (adminData) {
@@ -861,14 +887,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         await supabase.from('profiles').update({ status }).eq('id', id);
     };
-    const adminChangeUserRole = async (id: string, role: string) => { /* ... */ };
+
+    const adminChangeUserRole = async (id: string, role: string) => {
+        const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
+        if (error) throw error;
+        await loadAdminData();
+    };
 
     const updateReviewStatus = async (id: number, status: string) => {
-        /* impl */
+        const { error } = await supabase.from('reviews').update({ status }).eq('id', id);
+        if (error) throw error;
+        await loadAdminData();
     };
-    const deleteReview = async (id: number) => { /* ... */ };
-    const adminUpdateReview = async (r: any) => { /* ... */ };
-    const adminDeleteReviewImage = async (rid: number, path: string) => { /* ... */ };
+
+    const deleteReview = async (id: number) => {
+        const { error } = await supabase.from('reviews').delete().eq('id', id);
+        if (error) throw error;
+        await loadAdminData();
+    };
+
+    const adminUpdateReview = async (r: any) => {
+        const { error } = await supabase.from('reviews').update(r).eq('id', r.id);
+        if (error) throw error;
+        await loadAdminData();
+    };
+
+    const adminDeleteReviewImage = async (rid: number, path: string) => {
+        // 1. Remove from storage
+        const { error: storageError } = await supabase.storage.from('reviews').remove([path]);
+        if (storageError) console.error("Error removing image from storage", storageError);
+
+        // 2. Update review record
+        const review = adminData?.reviews.find(r => r.id === rid);
+        if (review) {
+            const updatedImages = (review.productImages || []).filter(p => p !== path);
+            const { error: dbError } = await supabase.from('reviews').update({ product_images: updatedImages }).eq('id', rid);
+            if (dbError) throw dbError;
+            await loadAdminData();
+        }
+    };
 
     const getPendingChanges = () => [];
     const approveChange = async (id: string) => { };
@@ -1016,8 +1073,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await updateOrderStatus(orderId, 'Cancelled by User');
     }
 
+
+
+    const isProductInWishlist = (productId: number) => {
+        return (currentUser?.wishlist || []).some(p => p.id === productId);
+    };
+
     const placeOrder = async (method: 'COD' | 'Online') => {
-        return "order-id";
+        if (!currentUser) throw new Error("User not logged in");
+        if (cart.length === 0) throw new Error("Cart is empty");
+
+        const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+        const deliveryCharge = subtotal > 499 ? 0 : 50;
+        const totalAmount = (subtotal - checkoutState.discount) + deliveryCharge;
+
+        const orderPayload = {
+            user_id: currentUser.id,
+            customer_name: currentUser.name,
+            customer_email: currentUser.email,
+            items: cart.map(item => ({
+                productId: item.product.id,
+                name: item.product.name,
+                price: item.product.price,
+                quantity: item.quantity,
+                size: item.size,
+                color: item.color,
+                image: item.product.images[0]
+            })),
+            total_amount: totalAmount,
+            payment_method: method,
+            payment_status: method === 'Online' ? 'Paid' : 'Pending',
+            current_status: 'Processing',
+            shipping_address: currentUser.addresses?.find(a => a.id === checkoutState.selectedAddressId),
+            order_date: new Date().toISOString(),
+            status_history: [{ status: 'Processing', timestamp: new Date().toISOString(), description: 'Order placed successfully' }]
+        };
+
+        const { data, error } = await supabase.from('orders').insert(orderPayload).select().single();
+
+        if (error) {
+            console.error("Error placing order:", error);
+            throw error;
+        }
+
+        // Clear cart
+        const { error: clearCartError } = await supabase.from('profiles').update({ cart: [] }).eq('id', currentUser.id);
+        if (clearCartError) console.error("Error clearing cart:", clearCartError);
+
+        setCurrentUser({ ...currentUser, cart: [] });
+        setCart([]);
+
+        // Refresh admin data to show new order immediately in admin panel
+        loadAdminData();
+
+        return data.id;
     };
 
     const contextValue: AppContextType = {
@@ -1101,13 +1210,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             window.location.reload();
         },
         updateProduct: async (p) => {
-            await supabase.from('products').update(p).eq('id', p.id);
+            const { error } = await supabase.from('products').update(p).eq('id', p.id);
+            if (error) throw error;
             setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, ...p } : prod));
-            window.location.reload();
+            await loadAdminData();
         },
         deleteProduct: async (id) => {
-            await supabase.from('products').delete().eq('id', id);
+            const { error } = await supabase.from('products').delete().eq('id', id);
+            if (error) throw error;
             setProducts(prev => prev.filter(p => p.id !== id));
+            await loadAdminData();
         },
         addCategory,
         updateCategory: async (cat) => {

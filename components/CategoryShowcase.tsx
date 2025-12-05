@@ -49,11 +49,11 @@ const CategoryShowcase: React.FC = () => {
   };
 
   return (
-    <div className="relative group/container bg-white dark:bg-gray-900/50 rounded-3xl shadow-xl p-6 sm:p-8 border border-gray-100 dark:border-gray-800 mx-2 sm:mx-4">
+    <div className="relative group/container bg-white dark:bg-gray-900/50 rounded-3xl shadow-xl p-4 sm:p-8 border border-gray-100 dark:border-gray-800 w-full">
       {/* Navigation Arrows */}
       <button
         onClick={() => scroll('left')}
-        className={`absolute top-1/2 -left-3 sm:-left-5 z-10 -translate-y-1/2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg text-primary border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:scale-110 disabled:opacity-0 ${showLeftArrow ? 'opacity-0 group-hover/container:opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`absolute top-1/2 -left-2 sm:-left-5 z-10 -translate-y-1/2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg text-primary border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:scale-110 disabled:opacity-0 ${showLeftArrow ? 'opacity-0 group-hover/container:opacity-100' : 'opacity-0 pointer-events-none'}`}
         aria-label="Scroll left"
       >
         <ChevronLeftIcon className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -61,7 +61,7 @@ const CategoryShowcase: React.FC = () => {
 
       <button
         onClick={() => scroll('right')}
-        className={`absolute top-1/2 -right-3 sm:-right-5 z-10 -translate-y-1/2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg text-primary border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:scale-110 ${showRightArrow ? 'opacity-0 group-hover/container:opacity-100 animate-pulse' : 'opacity-0 pointer-events-none'}`}
+        className={`absolute top-1/2 -right-2 sm:-right-5 z-10 -translate-y-1/2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg text-primary border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:scale-110 ${showRightArrow ? 'opacity-0 group-hover/container:opacity-100 animate-pulse' : 'opacity-0 pointer-events-none'}`}
         aria-label="Scroll right"
       >
         <ChevronRightIcon className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -71,23 +71,23 @@ const CategoryShowcase: React.FC = () => {
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="overflow-x-auto pb-2 -mx-2 px-2 scroll-smooth no-scrollbar"
+        className="overflow-x-auto pb-4 -mx-2 px-2 scroll-smooth no-scrollbar snap-x snap-mandatory"
         style={{
           display: 'grid',
           gridTemplateRows: 'repeat(2, 1fr)',
           gridAutoFlow: 'column',
-          gridAutoColumns: 'minmax(120px, 1fr)', // Smaller default
-          gap: '1.5rem',
+          gridAutoColumns: 'minmax(140px, 1fr)', // Increased from 120px for better mobile view
+          gap: '1rem', // Reduced gap slightly for better density
         }}
       >
         {/* Responsive column sizing */}
         <style>{`
-            @media (min-width: 640px) { .category-grid { grid-auto-columns: minmax(150px, 1fr) !important; } }
+            @media (min-width: 640px) { .category-grid { grid-auto-columns: minmax(160px, 1fr) !important; } }
             @media (min-width: 1024px) { .category-grid { grid-auto-columns: calc((100% - 4rem) / 5) !important; } } 
         `}</style>
 
         {categories.map((category) => (
-          <div key={category.id} className="category-grid w-[120px] sm:w-[150px] lg:w-[calc((100vw-8rem)/5.5)] xl:w-[calc((1280px-8rem)/5.5)] flex-shrink-0">
+          <div key={category.id} className="category-grid flex-shrink-0 snap-start">
             <EditableWrapper editUrl={`/admin/categories/edit/${category.id}`}>
               <ReactRouterDOM.Link
                 to={`/category/${category.id}`}
@@ -107,7 +107,7 @@ const CategoryShowcase: React.FC = () => {
 
                 {/* Text */}
                 <div className="p-3 text-center">
-                  <h3 className="text-gray-800 dark:text-gray-200 text-xs sm:text-sm font-semibold tracking-wide truncate">
+                  <h3 className="text-gray-800 dark:text-gray-200 text-sm font-semibold tracking-wide truncate">
                     {category.name}
                   </h3>
                 </div>

@@ -38,9 +38,9 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, bucket }) => {
     if (allMedia.length === 0) return;
     setCurrentIndex((prevIndex) => (prevIndex - 1 + allMedia.length) % allMedia.length);
   };
-  
+
   const goToSlide = (slideIndex: number) => {
-      setCurrentIndex(slideIndex);
+    setCurrentIndex(slideIndex);
   }
 
   useEffect(() => {
@@ -56,13 +56,13 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, bucket }) => {
   return (
     <EditableWrapper editUrl="/admin/appearance">
       <div className="relative group">
-        <div 
+        <div
           className="absolute -inset-2 bg-primary/25 blur-2xl rounded-xl transition-opacity duration-500 ease-in-out group-hover:opacity-70"
           aria-hidden="true"
         ></div>
-        
-        <div className="relative w-full h-[60vh] overflow-hidden rounded-xl bg-gray-100">
-          
+
+        <div className="relative w-full h-[50vh] sm:h-[60vh] lg:h-[70vh] overflow-hidden rounded-xl bg-gray-100">
+
           <div
             className="flex h-full transition-transform duration-700 ease-in-out"
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
@@ -71,15 +71,15 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, bucket }) => {
               <div key={item.id} className="w-full h-full flex-shrink-0 relative">
                 <SupabaseMedia
                   bucket={bucket}
-                  imagePath={item.path} 
-                  alt="Hero image" 
-                  className="w-full h-full object-cover" 
+                  imagePath={item.path}
+                  alt="Hero image"
+                  className="w-full h-full object-cover"
                   width={1600}
                   height={900}
                 />
                 {item.showText && (
                   <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center p-4">
-                    <h2 className="text-white text-4xl md:text-6xl font-serif text-center max-w-4xl">
+                    <h2 className="text-white text-2xl sm:text-4xl md:text-6xl font-serif text-center max-w-4xl px-4">
                       {item.text}
                     </h2>
                   </div>
@@ -90,7 +90,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, bucket }) => {
 
           {allMedia.length > 1 && (
             <>
-              <button 
+              <button
                 onClick={prevSlide}
                 className="absolute top-1/2 left-4 transform -translate-y-1/2 bg-black bg-opacity-30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-opacity-50 focus:outline-none z-10"
                 aria-label="Previous slide"
@@ -100,7 +100,7 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, bucket }) => {
                 </svg>
               </button>
 
-              <button 
+              <button
                 onClick={nextSlide}
                 className="absolute top-1/2 right-4 transform -translate-y-1/2 bg-black bg-opacity-30 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-opacity-50 focus:outline-none z-10"
                 aria-label="Next slide"
@@ -112,12 +112,12 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, bucket }) => {
 
               <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex space-x-3 z-10">
                 {allMedia.map((_, slideIndex) => (
-                    <button
-                        key={slideIndex}
-                        onClick={() => goToSlide(slideIndex)}
-                        className={`w-3 h-3 rounded-full transition-colors duration-300 ${currentIndex === slideIndex ? 'bg-white' : 'bg-white/50 hover:bg-white'}`}
-                        aria-label={`Go to slide ${slideIndex + 1}`}
-                    />
+                  <button
+                    key={slideIndex}
+                    onClick={() => goToSlide(slideIndex)}
+                    className={`w-3 h-3 rounded-full transition-colors duration-300 ${currentIndex === slideIndex ? 'bg-white' : 'bg-white/50 hover:bg-white'}`}
+                    aria-label={`Go to slide ${slideIndex + 1}`}
+                  />
                 ))}
               </div>
             </>

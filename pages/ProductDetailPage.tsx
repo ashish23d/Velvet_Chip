@@ -16,30 +16,31 @@ import EditableWrapper from '../components/EditableWrapper.tsx';
 import SimilarProductsModal from '../components/SimilarProductsModal.tsx';
 import MapPinIcon from '../components/icons/MapPinIcon.tsx';
 import AddressSelectionModal from '../components/AddressSelectionModal.tsx';
+import CardRenderer from '../components/CardRenderer.tsx';
 
 const ProductDetailSkeleton = () => (
   <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="flex flex-col-reverse md:flex-row gap-4">
-              <div className="flex md:flex-col gap-2 md:w-24 flex-shrink-0">
-                  <div className="w-20 h-24 md:w-full bg-gray-200 rounded-md"></div>
-                  <div className="w-20 h-24 md:w-full bg-gray-200 rounded-md"></div>
-                  <div className="w-20 h-24 md:w-full bg-gray-200 rounded-md"></div>
-              </div>
-              <div className="flex-grow aspect-[3/4] bg-gray-200 rounded-lg"></div>
-          </div>
-          <div className="py-4 space-y-6">
-              <div className="h-10 bg-gray-300 rounded w-3/4"></div>
-              <div className="h-5 bg-gray-200 rounded w-1/4"></div>
-              <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-              </div>
-              <div className="h-8 bg-gray-300 rounded w-1/2"></div>
-              <div className="h-24 bg-gray-200 rounded"></div>
-              <div className="h-12 bg-gray-300 rounded"></div>
-          </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="flex flex-col-reverse md:flex-row gap-4">
+        <div className="flex md:flex-col gap-2 md:w-24 flex-shrink-0">
+          <div className="w-20 h-24 md:w-full bg-gray-200 rounded-md"></div>
+          <div className="w-20 h-24 md:w-full bg-gray-200 rounded-md"></div>
+          <div className="w-20 h-24 md:w-full bg-gray-200 rounded-md"></div>
+        </div>
+        <div className="flex-grow aspect-[3/4] bg-gray-200 rounded-lg"></div>
       </div>
+      <div className="py-4 space-y-6">
+        <div className="h-10 bg-gray-300 rounded w-3/4"></div>
+        <div className="h-5 bg-gray-200 rounded w-1/4"></div>
+        <div className="space-y-2">
+          <div className="h-4 bg-gray-200 rounded"></div>
+          <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+        </div>
+        <div className="h-8 bg-gray-300 rounded w-1/2"></div>
+        <div className="h-24 bg-gray-200 rounded"></div>
+        <div className="h-12 bg-gray-300 rounded"></div>
+      </div>
+    </div>
   </div>
 );
 
@@ -56,6 +57,7 @@ const ProductDetailPage: React.FC = () => {
     triggerFlyToCartAnimation,
     currentUser,
     fetchProducts,
+    cardAddons,
   } = useAppContext();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -84,17 +86,17 @@ const ProductDetailPage: React.FC = () => {
           setProduct(fetchedProduct);
           const initialColor = fetchedProduct.colors?.[0] || null;
           setSelectedColor(initialColor);
-          
+
           // Smart size selection: use color-specific size if available, else global
-          const availableSizes = (initialColor?.sizes && initialColor.sizes.length > 0) 
-            ? initialColor.sizes.map(s => s.size) 
+          const availableSizes = (initialColor?.sizes && initialColor.sizes.length > 0)
+            ? initialColor.sizes.map(s => s.size)
             : fetchedProduct.sizes;
-            
+
           setSelectedSize(availableSizes?.[0] || null);
-          
+
           setMainImage(initialColor?.images?.[0] || fetchedProduct.images?.[0] || '');
           setQuantity(1);
-          
+
           // Fetch similar products
           const { data: similarData } = await fetchProducts({ categoryId: fetchedProduct.category, limit: 5 });
           setSimilarProducts(similarData.filter(p => p.id !== fetchedProduct.id));
@@ -107,38 +109,38 @@ const ProductDetailPage: React.FC = () => {
     };
     loadProduct();
   }, [id, getProductById, fetchProducts]);
-  
+
   // Effect to set the initial delivery address for a logged-in user
   useEffect(() => {
     if (currentUser?.addresses && currentUser.addresses.length > 0) {
-        const defaultAddress = currentUser.addresses.find(a => a.isDefault);
-        const addressToSet = defaultAddress || currentUser.addresses[0];
-        setSelectedDeliveryAddress(addressToSet);
-        // Simulate checking delivery for this initial address
-        checkDelivery(addressToSet.pincode);
+      const defaultAddress = currentUser.addresses.find(a => a.isDefault);
+      const addressToSet = defaultAddress || currentUser.addresses[0];
+      setSelectedDeliveryAddress(addressToSet);
+      // Simulate checking delivery for this initial address
+      checkDelivery(addressToSet.pincode);
     } else {
-        setSelectedDeliveryAddress(null);
-        setDeliveryInfo(null);
+      setSelectedDeliveryAddress(null);
+      setDeliveryInfo(null);
     }
   }, [currentUser]);
 
   const productReviews = useMemo(() => reviews.filter(r => r.productId === product?.id && r.status === 'approved'), [reviews, product]);
-  
+
   const customerPhotos = useMemo(() => {
     return productReviews.flatMap(r => r.productImages || []);
   }, [productReviews]);
-  
+
   // Dummy delivery check function
   const checkDelivery = (pincode: string) => {
     if (pincode && pincode.length === 6) {
-        const deliveryDate = new Date();
-        deliveryDate.setDate(deliveryDate.getDate() + 5); // 5 days from now
-        setDeliveryInfo({
-            date: deliveryDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-            cod: !['4', '8'].includes(pincode.charAt(0)) // Some dummy logic for COD
-        });
+      const deliveryDate = new Date();
+      deliveryDate.setDate(deliveryDate.getDate() + 5); // 5 days from now
+      setDeliveryInfo({
+        date: deliveryDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+        cod: !['4', '8'].includes(pincode.charAt(0)) // Some dummy logic for COD
+      });
     } else {
-        setDeliveryInfo(null);
+      setDeliveryInfo(null);
     }
   };
 
@@ -146,12 +148,12 @@ const ProductDetailPage: React.FC = () => {
     e.preventDefault();
     checkDelivery(deliveryPincode);
   };
-  
+
   const handleAddressSelect = (addressId: string) => {
     const newAddress = currentUser?.addresses?.find(a => a.id === addressId);
     if (newAddress) {
-        setSelectedDeliveryAddress(newAddress);
-        checkDelivery(newAddress.pincode);
+      setSelectedDeliveryAddress(newAddress);
+      checkDelivery(newAddress.pincode);
     }
   };
 
@@ -167,18 +169,18 @@ const ProductDetailPage: React.FC = () => {
       </div>
     );
   }
-  
+
   const handleColorSelect = (color: Product['colors'][0]) => {
     setSelectedColor(color);
-    
+
     // Update available sizes when color changes
-    const newAvailableSizes = (color.sizes && color.sizes.length > 0) 
-        ? color.sizes.map(s => s.size) 
-        : product.sizes;
-    
+    const newAvailableSizes = (color.sizes && color.sizes.length > 0)
+      ? color.sizes.map(s => s.size)
+      : product.sizes;
+
     // Reset selection if current selection is not available in new color
     if (selectedSize && !newAvailableSizes.includes(selectedSize)) {
-        setSelectedSize(newAvailableSizes[0] || null);
+      setSelectedSize(newAvailableSizes[0] || null);
     }
 
     if (color.images && color.images.length > 0) {
@@ -200,7 +202,7 @@ const ProductDetailPage: React.FC = () => {
       alert("Please select a size and color.");
     }
   };
-  
+
   const handleToggleWishlist = () => {
     if (!currentUser) {
       navigate(`/login?redirect=${location.pathname}`);
@@ -211,7 +213,7 @@ const ProductDetailPage: React.FC = () => {
 
   const inWishlist = isProductInWishlist(product.id);
   const allImagesForProduct = [...new Set([...product.images, ...product.colors.flatMap(c => c.images || [])])];
-  
+
   // Determine available sizes for display
   const currentAvailableSizes = (selectedColor && selectedColor.sizes && selectedColor.sizes.length > 0)
     ? selectedColor.sizes.map(s => s.size)
@@ -256,7 +258,7 @@ const ProductDetailPage: React.FC = () => {
                 </p>
               </div>
             </EditableWrapper>
-            
+
             <div className="mt-6 space-y-6">
               {/* Color Selector */}
               <div>
@@ -288,7 +290,7 @@ const ProductDetailPage: React.FC = () => {
                       {size}
                     </button>
                   )) : (
-                      <p className="text-sm text-gray-500 italic">No sizes available for this color.</p>
+                    <p className="text-sm text-gray-500 italic">No sizes available for this color.</p>
                   )}
                 </div>
               </div>
@@ -325,79 +327,79 @@ const ProductDetailPage: React.FC = () => {
 
             {/* Delivery Options Section */}
             <div className="mt-8 border-t pt-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-                    <MapPinIcon className="w-6 h-6 text-primary" />
-                    Delivery Options
-                </h3>
-                {currentUser && selectedDeliveryAddress ? (
-                    // Logged-in user with addresses view
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                <MapPinIcon className="w-6 h-6 text-primary" />
+                Delivery Options
+              </h3>
+              {currentUser && selectedDeliveryAddress ? (
+                // Logged-in user with addresses view
+                <div>
+                  <div className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                        <div className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                     <p className="font-semibold text-gray-800">{selectedDeliveryAddress.pincode}</p>
-                                     <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Home</span>
-                                </div>
-                                <p className="text-sm text-gray-500 truncate max-w-xs">{selectedDeliveryAddress.address}, {selectedDeliveryAddress.city}</p>
-                            </div>
-                            <button onClick={() => setIsAddressModalOpen(true)} className="text-sm font-semibold text-primary hover:underline flex-shrink-0">Change</button>
-                        </div>
-                         {deliveryInfo && (
-                            <div className="mt-3 text-sm text-gray-700 space-y-1">
-                                <p>Delivery by <span className="font-bold">{deliveryInfo.date}</span></p>
-                                <p>{deliveryInfo.cod ? 'Cash on Delivery Available' : 'Cash on Delivery Not Available'}</p>
-                            </div>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-gray-800">{selectedDeliveryAddress.pincode}</p>
+                        <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Home</span>
+                      </div>
+                      <p className="text-sm text-gray-500 truncate max-w-xs">{selectedDeliveryAddress.address}, {selectedDeliveryAddress.city}</p>
                     </div>
-                ) : (
-                    // Guest or user with no addresses view
-                    <div>
-                        <form onSubmit={handlePincodeCheck} className="flex items-center gap-2">
-                            <input
-                                type="text"
-                                maxLength={6}
-                                value={deliveryPincode}
-                                onChange={(e) => setDeliveryPincode(e.target.value.replace(/\D/g, ''))}
-                                placeholder="Enter delivery pincode"
-                                className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                            />
-                            <button
-                                type="submit"
-                                className="px-4 py-2 text-sm font-semibold text-primary border border-primary/50 rounded-md hover:bg-primary/5"
-                            >
-                                Check
-                            </button>
-                        </form>
-                        {deliveryInfo ? (
-                            <div className="mt-3 text-sm text-gray-700 space-y-1">
-                                <p>Delivery by <span className="font-bold">{deliveryInfo.date}</span></p>
-                                <p>{deliveryInfo.cod ? 'Cash on Delivery Available' : 'Cash on Delivery Not Available'}</p>
-                            </div>
-                        ) : (
-                             <p className="text-xs text-gray-500 mt-2">Please enter pincode to check delivery availability.</p>
-                        )}
+                    <button onClick={() => setIsAddressModalOpen(true)} className="text-sm font-semibold text-primary hover:underline flex-shrink-0">Change</button>
+                  </div>
+                  {deliveryInfo && (
+                    <div className="mt-3 text-sm text-gray-700 space-y-1">
+                      <p>Delivery by <span className="font-bold">{deliveryInfo.date}</span></p>
+                      <p>{deliveryInfo.cod ? 'Cash on Delivery Available' : 'Cash on Delivery Not Available'}</p>
                     </div>
-                )}
+                  )}
+                </div>
+              ) : (
+                // Guest or user with no addresses view
+                <div>
+                  <form onSubmit={handlePincodeCheck} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={deliveryPincode}
+                      onChange={(e) => setDeliveryPincode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Enter delivery pincode"
+                      className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 text-sm font-semibold text-primary border border-primary/50 rounded-md hover:bg-primary/5"
+                    >
+                      Check
+                    </button>
+                  </form>
+                  {deliveryInfo ? (
+                    <div className="mt-3 text-sm text-gray-700 space-y-1">
+                      <p>Delivery by <span className="font-bold">{deliveryInfo.date}</span></p>
+                      <p>{deliveryInfo.cod ? 'Cash on Delivery Available' : 'Cash on Delivery Not Available'}</p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-2">Please enter pincode to check delivery availability.</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Specifications */}
             <div className="mt-10 border-t pt-6">
-                <details className="group">
-                    <summary className="flex justify-between items-center cursor-pointer list-none">
-                        <h3 className="text-lg font-medium text-gray-900">Specifications</h3>
-                        <span className="text-primary group-open:rotate-180 transition-transform">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                        </span>
-                    </summary>
-                    <div className="mt-4 text-sm text-gray-600 grid grid-cols-2 gap-x-4 gap-y-2">
-                        {Object.entries(product.specifications).map(([key, value]) => (
-                            <React.Fragment key={key}>
-                                <dt className="font-medium text-gray-500">{key}</dt>
-                                <dd className="text-gray-700">{value}</dd>
-                            </React.Fragment>
-                        ))}
-                    </div>
-                </details>
+              <details className="group">
+                <summary className="flex justify-between items-center cursor-pointer list-none">
+                  <h3 className="text-lg font-medium text-gray-900">Specifications</h3>
+                  <span className="text-primary group-open:rotate-180 transition-transform">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </span>
+                </summary>
+                <div className="mt-4 text-sm text-gray-600 grid grid-cols-2 gap-x-4 gap-y-2">
+                  {Object.entries(product.specifications).map(([key, value]) => (
+                    <React.Fragment key={key}>
+                      <dt className="font-medium text-gray-500">{key}</dt>
+                      <dd className="text-gray-700">{value}</dd>
+                    </React.Fragment>
+                  ))}
+                </div>
+              </details>
             </div>
             <div className="mt-4 border-t pt-4">
               <button
@@ -411,12 +413,12 @@ const ProductDetailPage: React.FC = () => {
         </div>
 
         <CustomerPhotos photoPaths={customerPhotos} />
-        
+
         <div className="my-16 border-t pt-12">
-            <h2 className="text-2xl lg:text-3xl font-serif text-center text-gray-800 mb-8">Ratings & Reviews</h2>
-            <ReviewsList reviews={productReviews} productRating={product.rating} totalReviews={product.reviews} />
+          <h2 className="text-2xl lg:text-3xl font-serif text-center text-gray-800 mb-8">Ratings & Reviews</h2>
+          <ReviewsList reviews={productReviews} productRating={product.rating} totalReviews={product.reviews} />
         </div>
-        
+
         {similarProducts.length > 0 && (
           <div className="my-16 border-t pt-12" id="similar-products-section">
             <h2 className="text-2xl lg:text-3xl font-serif text-center text-gray-800 mb-8">Similar Products</h2>
@@ -435,7 +437,19 @@ const ProductDetailPage: React.FC = () => {
         isOpen={isAddressModalOpen}
         onClose={() => setIsAddressModalOpen(false)}
         onSelect={handleAddressSelect}
-       />
+      />
+
+
+      {/* Card Addons */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        {cardAddons
+          .filter(addon => addon.placement === 'product_page' && addon.isActive)
+          .sort((a, b) => a.order - b.order)
+          .map(addon => (
+            <CardRenderer key={addon.id} addon={addon} />
+          ))
+        }
+      </div>
     </div>
   );
 };

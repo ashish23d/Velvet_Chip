@@ -219,6 +219,37 @@ const CardRenderer: React.FC<CardRendererProps> = ({ addon }) => {
                 );
             }
 
+            case 'info_card':
+                return (
+                    <div className="py-12">
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-12">
+                            {addon.image_path && (
+                                <div className="w-full md:w-1/3 flex-shrink-0">
+                                    <SupabaseImage
+                                        imagePath={addon.image_path}
+                                        bucket={BUCKETS.CARD_ADDONS}
+                                        alt={addon.title || 'Info'}
+                                        className="w-full h-auto rounded-xl shadow-md"
+                                    />
+                                </div>
+                            )}
+                            <div className="flex-1 text-center md:text-left">
+                                {addon.title && <h2 className="text-3xl font-bold mb-4">{addon.title}</h2>}
+                                {addon.subtitle && <h3 className="text-xl text-gray-500 dark:text-gray-400 mb-6">{addon.subtitle}</h3>}
+                                {addon.content && <div className="prose dark:prose-invert max-w-none mb-8">{addon.content}</div>}
+                                {addon.cta_text && addon.cta_link && (
+                                    <Link
+                                        to={addon.cta_link}
+                                        className="inline-block bg-primary text-white px-8 py-3 rounded-full font-semibold hover:bg-primary/90 transition-colors shadow-sm hover:shadow-md"
+                                    >
+                                        {addon.cta_text}
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+
             default:
                 return (
                     <div className="p-8 border-2 border-dashed border-gray-300 rounded-xl text-center">

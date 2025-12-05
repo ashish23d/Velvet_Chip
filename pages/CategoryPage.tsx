@@ -9,11 +9,12 @@ import ArrowsUpDownIcon from '../components/icons/ArrowsUpDownIcon.tsx';
 import { Product } from '../types.ts';
 import SupabaseMedia from '../components/SupabaseMedia.tsx';
 import { BUCKETS } from '../constants.ts';
+import CardRenderer from '../components/CardRenderer.tsx';
 
 const CategoryPage: React.FC = () => {
   const { id: categoryId } = useParams<{ id: string }>();
-  const { categories, fetchProducts, lastProductUpdate } = useAppContext();
-  
+  const { categories, fetchProducts, lastProductUpdate, cardAddons } = useAppContext();
+
   const category = useMemo(() => categories.find(c => c.id === categoryId), [categoryId, categories]);
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -47,24 +48,24 @@ const CategoryPage: React.FC = () => {
       }
     }
   };
-  
+
   // Initial load and reload on category change or product updates
   useEffect(() => {
     loadProducts(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId, fetchProducts, lastProductUpdate]);
-  
+
   const handleLoadMore = () => {
-      if (!isLoading && hasMore) {
-          setPage(prev => prev + 1);
-      }
+    if (!isLoading && hasMore) {
+      setPage(prev => prev + 1);
+    }
   };
 
   useEffect(() => {
     if (page > 1) {
-        loadProducts();
+      loadProducts();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
 
@@ -117,63 +118,63 @@ const CategoryPage: React.FC = () => {
 
     // Sort
     filtered.sort((a, b) => {
-        switch (sortBy) {
-            case 'price-asc': return a.price - b.price;
-            case 'price-desc': return b.price - a.price;
-            case 'rating': return b.rating - a.rating;
-            case 'latest': return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-            case 'popular':
-            default:
-                return b.reviews - a.reviews;
-        }
+      switch (sortBy) {
+        case 'price-asc': return a.price - b.price;
+        case 'price-desc': return b.price - a.price;
+        case 'rating': return b.rating - a.rating;
+        case 'latest': return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        case 'popular':
+        default:
+          return b.reviews - a.reviews;
+      }
     });
 
     return filtered;
   }, [products, selectedSizes, selectedColors, priceRange, sortBy]);
-  
+
   const onClearFilters = () => {
-      setSelectedSizes([]);
-      setSelectedColors([]);
-      setPriceRange({ min: minPrice, max: maxPrice });
+    setSelectedSizes([]);
+    setSelectedColors([]);
+    setPriceRange({ min: minPrice, max: maxPrice });
   };
-  
+
   const ProductGridSkeleton = () => (
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
-          {[...Array(8)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                  <div className="aspect-[3/4] bg-gray-200 rounded-lg"></div>
-                  <div className="h-4 bg-gray-200 rounded mt-2 w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded mt-1 w-1/2"></div>
-              </div>
-          ))}
-      </div>
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
+      {[...Array(8)].map((_, i) => (
+        <div key={i} className="animate-pulse">
+          <div className="aspect-[3/4] bg-gray-200 rounded-lg"></div>
+          <div className="h-4 bg-gray-200 rounded mt-2 w-3/4"></div>
+          <div className="h-4 bg-gray-200 rounded mt-1 w-1/2"></div>
+        </div>
+      ))}
+    </div>
   );
 
   if (!category && isLoading) {
     return <div className="text-center py-20">Loading category...</div>;
   }
-  
+
   if (!category) {
-      return <div className="text-center py-20">Category not found.</div>;
+    return <div className="text-center py-20">Category not found.</div>;
   }
 
   return (
     <div className="bg-white">
       {/* Category Hero */}
       {category.pageHeroMedia && category.pageHeroMedia.length > 0 && (
-         <div className="relative h-[40vh] bg-gray-200">
-            <SupabaseMedia
-              bucket={BUCKETS.CATEGORIES}
-              imagePath={category.pageHeroMedia[0].path}
-              alt={category.name}
-              className="w-full h-full object-cover"
-            />
-             {category.showPageHeroText && category.pageHeroText && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <h1 className="text-4xl md:text-5xl font-serif text-white text-center drop-shadow-lg">{category.pageHeroText}</h1>
-                </div>
-             )}
-         </div>
+        <div className="relative h-[40vh] bg-gray-200">
+          <SupabaseMedia
+            bucket={BUCKETS.CATEGORIES}
+            imagePath={category.pageHeroMedia[0].path}
+            alt={category.name}
+            className="w-full h-full object-cover"
+          />
+          {category.showPageHeroText && category.pageHeroText && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <h1 className="text-4xl md:text-5xl font-serif text-white text-center drop-shadow-lg">{category.pageHeroText}</h1>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -185,7 +186,7 @@ const CategoryPage: React.FC = () => {
         <div className="flex gap-8 items-start">
           {/* Filters (Desktop) */}
           <div className="hidden lg:block w-64 xl:w-72 flex-shrink-0">
-            <FilterSidebar 
+            <FilterSidebar
               availableSizes={availableSizes}
               availableColors={availableColors}
               priceRange={priceRange}
@@ -203,33 +204,44 @@ const CategoryPage: React.FC = () => {
           {/* Products Grid */}
           <main className="flex-1">
             {isLoading && products.length === 0 ? <ProductGridSkeleton /> : (
-                filteredAndSortedProducts.length > 0 ?
+              filteredAndSortedProducts.length > 0 ?
                 <>
-                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
-                        {filteredAndSortedProducts.map(product => (
-                        <ProductCard key={product.id} product={product} />
-                        ))}
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
+                    {filteredAndSortedProducts.map(product => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
+                  </div>
+                  {hasMore && (
+                    <div className="text-center mt-12">
+                      <button onClick={handleLoadMore} disabled={isLoading} className="bg-primary text-white py-2 px-8 rounded-full font-medium hover:bg-pink-700 transition-colors disabled:bg-gray-400">
+                        {isLoading ? 'Loading...' : 'Load More'}
+                      </button>
                     </div>
-                    {hasMore && (
-                        <div className="text-center mt-12">
-                            <button onClick={handleLoadMore} disabled={isLoading} className="bg-primary text-white py-2 px-8 rounded-full font-medium hover:bg-pink-700 transition-colors disabled:bg-gray-400">
-                                {isLoading ? 'Loading...' : 'Load More'}
-                            </button>
-                        </div>
-                    )}
+                  )}
                 </>
                 : (
-                    <div className="text-center py-20 bg-gray-50 rounded-lg">
-                        <h2 className="text-xl font-semibold text-gray-700">No Products Found</h2>
-                        <p className="mt-2 text-gray-500">Try adjusting your filters to find what you're looking for.</p>
-                    </div>
+                  <div className="text-center py-20 bg-gray-50 rounded-lg">
+                    <h2 className="text-xl font-semibold text-gray-700">No Products Found</h2>
+                    <p className="mt-2 text-gray-500">Try adjusting your filters to find what you're looking for.</p>
+                  </div>
                 )
             )}
           </main>
         </div>
       </div>
-      
-       {/* Mobile Filter/Sort Bar */}
+
+      {/* Card Addons */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        {cardAddons
+            .filter(addon => addon.placement === 'category_page' && addon.isActive)
+            .sort((a, b) => a.order - b.order)
+            .map(addon => (
+                <CardRenderer key={addon.id} addon={addon} />
+            ))
+        }
+      </div>
+
+      {/* Mobile Filter/Sort Bar */}
       <div className="lg:hidden sticky bottom-0 z-30 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
         <div className="grid grid-cols-2 h-14">
           <button

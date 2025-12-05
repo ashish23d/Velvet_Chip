@@ -20,24 +20,37 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ bucket, pathPrefix, image
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      // User cancelled the picker
+      return;
+    }
 
     setIsUploading(true);
     setError(null);
 
+    // Create a timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Upload timed out. Please try again.')), 30000); // 30s timeout
+    });
+
     try {
-      const path = await uploadImage({ file, bucket, pathPrefix });
+      // Race between upload and timeout
+      const path = await Promise.race([
+        uploadImage({ file, bucket, pathPrefix }),
+        timeoutPromise
+      ]) as string;
+
       onImageUpload(path);
     } catch (err: unknown) {
       console.error('Upload failed:', err);
       if (err instanceof Error) {
-          setError(err.message);
+        setError(err.message);
       } else {
-          setError('An unexpected error occurred. Please try again.');
+        setError('An unexpected error occurred. Please try again.');
       }
     } finally {
       setIsUploading(false);
-      if(fileInputRef.current) {
+      if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
@@ -54,8 +67,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ bucket, pathPrefix, image
           <div key={index} className="relative group aspect-square">
             <SupabaseImage
               bucket={bucket}
-              imagePath={path} 
-              alt={`Uploaded ${index + 1}`} 
+              imagePath={path}
+              alt={`Uploaded ${index + 1}`}
               className="w-full h-full object-cover rounded-md shadow-sm"
               width={200}
               height={200}

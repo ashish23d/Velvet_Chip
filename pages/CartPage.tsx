@@ -4,9 +4,10 @@ import { useAppContext } from '../context/AppContext.tsx';
 import CartItem from '../components/CartItem.tsx';
 import OrderSummary from '../components/OrderSummary.tsx';
 import ShoppingBagIcon from '../components/icons/ShoppingBagIcon.tsx';
+import CardRenderer from '../components/CardRenderer.tsx';
 
 const CartPage: React.FC = () => {
-  const { cart } = useAppContext();
+  const { cart, cardAddons } = useAppContext();
 
   if (cart.length === 0) {
     return (
@@ -14,8 +15,8 @@ const CartPage: React.FC = () => {
         <ShoppingBagIcon className="w-16 h-16 mx-auto text-gray-300" />
         <h1 className="mt-4 text-2xl font-semibold text-gray-800">Your Cart is Empty</h1>
         <p className="mt-2 text-gray-500">Looks like you haven't added anything to your cart yet.</p>
-        <ReactRouterDOM.Link 
-          to="/" 
+        <ReactRouterDOM.Link
+          to="/"
           className="mt-6 inline-block bg-primary text-white py-2 px-6 rounded-full font-medium hover:bg-pink-700 transition-colors"
         >
           Continue Shopping
@@ -32,16 +33,28 @@ const CartPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 xl:gap-12 items-start">
         {/* Cart Items */}
         <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200">
-            {cart.map(item => (
-                <CartItem key={item.id} item={item} />
-            ))}
+          {cart.map(item => (
+            <CartItem key={item.id} item={item} />
+          ))}
         </div>
         {/* Order Summary */}
         <div className="lg:col-span-1">
           <OrderSummary cart={cart} ctaText="Proceed to Address" ctaLink="/address" />
         </div>
       </div>
-    </div>
+
+
+      {/* Card Addons */}
+      <div className="mt-12">
+        {cardAddons
+          .filter(addon => addon.placement === 'cart_page' && addon.isActive)
+          .sort((a, b) => a.order - b.order)
+          .map(addon => (
+            <CardRenderer key={addon.id} addon={addon} />
+          ))
+        }
+      </div>
+    </div >
   );
 };
 
