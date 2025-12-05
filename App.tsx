@@ -66,6 +66,8 @@ import ReturnsListPage from './pages/admin/ReturnsListPage.tsx';
 import ConfirmationModal from './components/ConfirmationModal.tsx';
 import BulkInvoicePrintPage from './pages/admin/BulkInvoicePrintPage.tsx';
 import AnalyticsPage from './pages/admin/AnalyticsPage.tsx';
+import CardAddonsPage from './pages/admin/CardAddonsPage.tsx';
+import CardAddonFormPage from './pages/admin/CardAddonFormPage.tsx';
 
 
 const GlobalComponents = () => {
@@ -200,6 +202,9 @@ const AppRoutes: React.FC = () => (
       <ReactRouterDOM.Route path="marketing" element={<MarketingPage />} />
       <ReactRouterDOM.Route path="marketing/promotions/new" element={<PromotionFormPage />} />
       <ReactRouterDOM.Route path="marketing/promotions/edit/:id" element={<PromotionFormPage />} />
+      <ReactRouterDOM.Route path="card-addons" element={<CardAddonsPage />} />
+      <ReactRouterDOM.Route path="card-addons/new" element={<CardAddonFormPage />} />
+      <ReactRouterDOM.Route path="card-addons/edit/:id" element={<CardAddonFormPage />} />
       <ReactRouterDOM.Route path="settings" element={<SettingsPage />} />
       <ReactRouterDOM.Route path="analytics" element={<AnalyticsPage />} />
       <ReactRouterDOM.Route path="inbox" element={<InboxPage />} />

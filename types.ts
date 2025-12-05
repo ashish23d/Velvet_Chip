@@ -190,6 +190,45 @@ export interface Product {
   hsnCode?: string;
 }
 
+export type CardType =
+  | 'hero'
+  | 'banner'
+  | 'image'
+  | 'text'
+  | 'split'
+  | 'product_grid'
+  | 'product_carousel'
+  | 'category_highlight'
+  | 'info_card'
+  | 'video';
+
+export type CardPlacement = 'home' | 'category_page' | 'product_page' | 'cart_page';
+
+export interface CardAddon {
+  id: string;
+  type: CardType;
+  title?: string;
+  subtitle?: string;
+  content?: string;
+  image_path?: string;
+  cta_text?: string;
+  cta_link?: string;
+  target_type?: 'category' | 'product' | 'url' | 'none';
+  target_id?: string;
+  placement: CardPlacement;
+  order: number;
+  is_active: boolean;
+  config?: {
+    backgroundColor?: string;
+    textColor?: string;
+    textAlignment?: 'left' | 'center' | 'right';
+    fullWidth?: boolean;
+    height?: string; // e.g., '400px'
+    [key: string]: any;
+  };
+  created_at?: string;
+}
+
 export interface Category {
   id: string;
   name: string;

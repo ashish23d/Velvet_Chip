@@ -2,7 +2,7 @@ import React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import Logo from '../icons/Logo.tsx';
 import Squares2X2Icon from '../icons/Squares2X2Icon.tsx';
-import { CubeIcon, DocumentDuplicateIcon, ChartBarIcon } from '@heroicons/react/24/outline';
+import { CubeIcon, DocumentDuplicateIcon, ChartBarIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline';
 import FolderIcon from '../icons/FolderIcon.tsx';
 import ArchiveBoxIcon from '../icons/ArchiveBoxIcon.tsx';
 import UserGroupIcon from '../icons/UserGroupIcon.tsx';
@@ -39,6 +39,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, setOpen }) => {
         { to: '/admin/approvals', icon: CheckBadgeIcon, label: 'Approvals' },
         { to: '/admin/appearance', icon: PhotoIcon, label: 'Appearance' },
         { to: '/admin/content', icon: DocumentTextIcon, label: 'Site Content' },
+        { to: '/admin/card-addons', icon: Square3Stack3DIcon, label: 'Card Addons' },
         { to: '/admin/mails', icon: EnvelopeOpenIcon, label: 'Mails' },
         { to: '/admin/subscribers', icon: EnvelopeIcon, label: 'Subscribers' },
         { to: '/admin/marketing', icon: MegaphoneIcon, label: 'Marketing' },

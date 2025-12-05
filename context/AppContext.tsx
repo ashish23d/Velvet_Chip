@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabaseClient.ts';
 import {
@@ -7,7 +6,8 @@ import {
     Slide, SeasonalEditCard, Promotion, Announcement,
     UserProfile, AdminData, MailTemplate, ContactSubmission,
     ReturnRequest, ReturnRequestStatus, PendingChange,
-    Address, ReturnStatusUpdate, SearchHistoryEntry
+    Address, ReturnStatusUpdate, SearchHistoryEntry,
+    CardAddon
 } from '../types.ts';
 import { generateProductDescription, getSearchSuggestions } from '../services/geminiService.ts';
 import { INITIAL_SLIDES } from '../constants.ts';
@@ -118,6 +118,13 @@ interface AppContextType {
     adminUpdateSeasonalCard: (card: any) => Promise<void>;
     adminDeleteSeasonalCard: (id: string) => Promise<void>;
     getAllSubscribers: () => any[];
+
+    // Card Addons
+    cardAddons: CardAddon[];
+    fetchCardAddons: () => Promise<void>;
+    addCardAddon: (addon: Partial<CardAddon>) => Promise<CardAddon>;
+    updateCardAddon: (id: string, updates: Partial<CardAddon>) => Promise<CardAddon>;
+    deleteCardAddon: (id: string) => Promise<void>;
     addSubscriber: (email: string) => Promise<void>;
     deleteSubscriber: (id: number) => Promise<void>;
     getAllPromotions: () => Promotion[];
@@ -150,7 +157,7 @@ interface AppContextType {
     closeOfferModal: () => void;
     isCartShaking: boolean;
     setIsCartShaking: (shaking: boolean) => void;
-    animationItem: { product: Product; startRect: DOMRect } | null;
+    flyToCartItem: { product: Product; startRect: DOMRect } | null;
     setAnimationItem: (item: any) => void;
     triggerFlyToCartAnimation: (product: Product, startElement: HTMLElement) => void;
     confirmationState: {
@@ -187,6 +194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [siteContent, setSiteContent] = useState<SiteContent[]>([]);
     const [slides, setSlides] = useState<Slide[]>(INITIAL_SLIDES);
     const [seasonalEditCards, setSeasonalEditCards] = useState<SeasonalEditCard[]>([]);
+    const [cardAddons, setCardAddons] = useState<CardAddon[]>([]);
     const [announcement, setAnnouncement] = useState<Announcement | null>(null);
 
     const [isLoading, setIsLoading] = useState(true);
@@ -372,13 +380,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 const { data: { session } } = await supabase.auth.getSession();
                 setSession(session);
 
-                const [categoriesResult, productsResult, reviewsResult, siteContentResult, slidesResult, seasonalResult] = await Promise.allSettled([
+                const [categoriesResult, productsResult, reviewsResult, siteContentResult, slidesResult, seasonalResult, cardAddonsResult] = await Promise.allSettled([
                     fetchCategories(),
                     supabase.from('products').select('*'),
                     supabase.from('reviews').select('*').eq('status', 'approved'),
                     supabase.from('site_content').select('*'),
                     supabase.from('slides').select('*').order('ordering'),
-                    supabase.from('seasonal_edit_cards').select('*').order('ordering')
+                    supabase.from('seasonal_edit_cards').select('*').order('ordering'),
+                    supabase.from('card_addons').select('*').order('order', { ascending: true })
                 ]);
 
                 // Handle Products & Fallback
@@ -424,6 +433,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
                 if (seasonalResult.status === 'fulfilled' && seasonalResult.value.data) {
                     setSeasonalEditCards(seasonalResult.value.data);
+                }
+
+                if (cardAddonsResult.status === 'fulfilled' && cardAddonsResult.value.data) {
+                    setCardAddons(cardAddonsResult.value.data);
                 }
 
                 if (session?.user) {
@@ -584,7 +597,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cartCount = (currentUser?.cart || []).reduce((acc, item) => acc + item.quantity, 0);
     const addToCart = async (product: Product, size: string, color: { name: string; hex: string }, quantity = 1) => {
         if (!currentUser) return;
-        const newCartItem: CartItem = { id: `${product.id}-${size}-${color.name}`, product, quantity, selectedSize: size, selectedColor: color };
+        const newCartItem: CartItem = { id: `${product.id} -${size} -${color.name} `, product, quantity, selectedSize: size, selectedColor: color };
         const updatedCart = [...(currentUser.cart || [])];
         const existingIndex = updatedCart.findIndex(i => i.id === newCartItem.id);
         if (existingIndex > -1) {
@@ -674,11 +687,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const { pdfBlob, qrBlob, invoiceData } = await generateInvoicePDF(order, siteSettings, contactDetails);
 
-        const pdfPath = `invoices/pdf/${invoiceData.invoice_number}.pdf`;
+        const pdfPath = `invoices / pdf / ${invoiceData.invoice_number}.pdf`;
         const { error: pdfError } = await supabase.storage.from('site-assets').upload(pdfPath, pdfBlob, { upsert: true, contentType: 'application/pdf' });
         if (pdfError) throw new Error("Failed to upload invoice PDF.");
 
-        const qrPath = `invoices/qr/${invoiceData.invoice_number}.png`;
+        const qrPath = `invoices / qr / ${invoiceData.invoice_number}.png`;
         await supabase.storage.from('site-assets').upload(qrPath, qrBlob, { upsert: true, contentType: 'image/png' });
 
         const { data: existingInvoice } = await supabase.from('invoices').select('id').eq('order_id', orderId).single();
@@ -708,7 +721,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updateOrderStatus = async (id: string, status: string) => {
         const timestamp = new Date().toISOString();
-        const description = `Order status updated to ${status}`;
+        const description = `Order status updated to ${status} `;
 
         if (adminData) {
             setAdminData({
@@ -794,7 +807,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     id: crypto.randomUUID(),
                     type: 'return',
                     title: `Return Update`,
-                    message: `Your return request status has been updated to: ${data.status}`,
+                    message: `Your return request status has been updated to: ${data.status} `,
                     timestamp: new Date().toISOString(),
                     read: false,
                     link: '/profile'
@@ -1183,6 +1196,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         closeConfirmationModal: () => setConfirmationState(p => ({ ...p, isOpen: false })),
         logout: async () => { await supabase.auth.signOut(); setSession(null); setCurrentUser(null); },
         userCancelOrder,
+
+        // Card Addons
+        cardAddons,
+        fetchCardAddons: useCallback(async () => {
+            const { data, error } = await supabase.from('card_addons').select('*').order('order', { ascending: true });
+            if (error) {
+                console.error('Error fetching card addons:', error);
+                return;
+            }
+            setCardAddons(data || []);
+        }, []),
+        addCardAddon: async (addon) => {
+            const { data, error } = await supabase.from('card_addons').insert(addon).select().single();
+            if (error) throw error;
+            setCardAddons(prev => [...prev, data]);
+            return data;
+        },
+        updateCardAddon: async (id, updates) => {
+            const { data, error } = await supabase.from('card_addons').update(updates).eq('id', id).select().single();
+            if (error) throw error;
+            setCardAddons(prev => prev.map(a => a.id === id ? data : a));
+            return data;
+        },
+        deleteCardAddon: async (id) => {
+            const { error } = await supabase.from('card_addons').delete().eq('id', id);
+            if (error) throw error;
+            setCardAddons(prev => prev.filter(a => a.id !== id));
+        },
     };
 
     return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

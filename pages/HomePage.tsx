@@ -10,9 +10,10 @@ import { BUCKETS } from '../constants.ts';
 import { Product } from '../types.ts';
 import ChevronLeftIcon from '../components/icons/ChevronLeftIcon.tsx';
 import ChevronRightIcon from '../components/icons/ChevronRightIcon.tsx';
+import CardRenderer from '../components/CardRenderer.tsx';
 
 const HomePage: React.FC = () => {
-    const { slides, seasonalEditCards, fetchProducts, lastProductUpdate, siteContent } = useAppContext();
+    const { slides, seasonalEditCards, fetchProducts, lastProductUpdate, siteContent, products, categories, isLoading, cardAddons } = useAppContext();
 
     // Helper to get content with fallback
     const getContent = (id: string, defaultTitle: string, defaultDesc: string) => {
@@ -135,6 +136,17 @@ const HomePage: React.FC = () => {
                     <div className="animate-pulse relative w-full h-[60vh] overflow-hidden rounded-xl bg-gray-200 dark:bg-gray-800"></div>
                 )}
             </section>
+
+            {/* Dynamic Card Addons */}
+            <div className="flex flex-col gap-8 mb-12">
+                {cardAddons
+                    .filter(addon => addon.placement === 'home' && addon.is_active)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .map(addon => (
+                        <CardRenderer key={addon.id} addon={addon} />
+                    ))
+                }
+            </div>
 
             {/* Category Showcase Section */}
             <section className="container mx-auto px-4 sm:px-6 lg:px-8">
