@@ -55,15 +55,15 @@ const CategoryListPage: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{category.id}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end items-center gap-4">
-                     <ReactRouterDOM.Link to={`/admin/categories/edit/${category.id}`} className="text-indigo-600 hover:text-indigo-900">
-                        <PencilIcon className="h-5 w-5"/>
-                     </ReactRouterDOM.Link>
+                    <ReactRouterDOM.Link to={`/admin/categories/edit/${category.id}`} className="text-indigo-600 hover:text-indigo-900">
+                      <PencilIcon className="h-5 w-5" />
+                    </ReactRouterDOM.Link>
                     <button
-                      onClick={() => deleteCategory(category.id)}
+                      onClick={() => { if (window.confirm('Are you sure you want to delete this category?')) deleteCategory(category.id); }}
                       className="text-red-600 hover:text-red-900"
                       aria-label={`Delete ${category.name}`}
                     >
-                      <TrashIcon className="h-5 w-5"/>
+                      <TrashIcon className="h-5 w-5" />
                     </button>
                   </div>
                 </td>

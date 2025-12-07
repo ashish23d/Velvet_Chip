@@ -22,6 +22,20 @@ const CardRenderer: React.FC<CardRendererProps> = ({ addon }) => {
     };
 
     const wrapperClass = config.fullWidth ? 'w-full' : 'container mx-auto px-4';
+    const sectionClass = config.fullWidth ? '' : 'py-8';
+    const roundedClass = config.fullWidth ? '' : 'rounded-xl';
+
+    // Helper function to get YouTube video ID
+    const getYouTubeId = (url: string) => {
+        const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+        return match ? match[1] : null;
+    };
+
+    // Helper function to get Vimeo video ID
+    const getVimeoId = (url: string) => {
+        const match = url.match(/vimeo\.com\/(\d+)/);
+        return match ? match[1] : null;
+    };
 
     const renderContent = () => {
         switch (addon.type) {
@@ -154,17 +168,15 @@ const CardRenderer: React.FC<CardRendererProps> = ({ addon }) => {
                 if (addon.target_type === 'category' && addon.target_id) {
                     displayProducts = products.filter(p => p.category === addon.target_id);
                 } else if (addon.target_type === 'product' && addon.target_id) {
-                    // If a specific product is selected, maybe show it and related items?
-                    // For now, let's just show the selected product + others in same category
                     const selectedProduct = products.find(p => p.id === Number(addon.target_id));
                     if (selectedProduct) {
                         displayProducts = products.filter(p => p.category === selectedProduct.category);
                     }
+                } else if (addon.target_type === 'manual' && addon.config?.productIds) {
+                    displayProducts = products.filter(p => addon.config?.productIds?.includes(p.id));
                 }
 
-                // Limit to 8 products for grid
                 displayProducts = displayProducts.slice(0, 8);
-
                 if (displayProducts.length === 0) return null;
 
                 return (
@@ -196,9 +208,13 @@ const CardRenderer: React.FC<CardRendererProps> = ({ addon }) => {
                 let displayProducts = products;
                 if (addon.target_type === 'category' && addon.target_id) {
                     displayProducts = products.filter(p => p.category === addon.target_id);
+                } else if (addon.target_type === 'manual' && addon.config?.productIds) {
+                    displayProducts = products.filter(p => addon.config?.productIds?.includes(p.id));
                 }
-                // Limit to 10 products for carousel
-                displayProducts = displayProducts.slice(0, 10);
+
+                if (addon.target_type !== 'manual') {
+                    displayProducts = displayProducts.slice(0, 10);
+                }
 
                 if (displayProducts.length === 0) return null;
 
@@ -250,6 +266,94 @@ const CardRenderer: React.FC<CardRendererProps> = ({ addon }) => {
                     </div>
                 );
 
+            case 'video': {
+                const videoUrl = addon.video_url;
+                const uploadedVideo = addon.image_path
+                    ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${BUCKETS.CARD_ADDONS}/${addon.image_path}`
+                    : null;
+
+                const youtubeId = videoUrl ? getYouTubeId(videoUrl) : null;
+                const vimeoId = videoUrl ? getVimeoId(videoUrl) : null;
+                const isDirectVideo = videoUrl && !youtubeId && !vimeoId;
+
+                // Only show overlay if there's text content
+                const hasTextContent = addon.title || addon.subtitle || addon.cta_text;
+
+                return (
+                    <div className={`relative w-full overflow-hidden ${roundedClass}`} style={{ height: addon.config?.height || '500px' }}>
+                        {youtubeId && (
+                            <iframe
+                                src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&rel=0&modestbranding=1`}
+                                className="absolute inset-0 w-full h-full"
+                                frameBorder="0"
+                                allow="autoplay; encrypted-media"
+                                allowFullScreen
+                            />
+                        )}
+
+                        {vimeoId && (
+                            <iframe
+                                src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=1&loop=1&background=1&controls=0`}
+                                className="absolute inset-0 w-full h-full"
+                                frameBorder="0"
+                                allow="autoplay; fullscreen"
+                                allowFullScreen
+                            />
+                        )}
+
+                        {isDirectVideo && (
+                            <video
+                                src={videoUrl}
+                                className="absolute inset-0 w-full h-full object-cover"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                            />
+                        )}
+
+                        {!videoUrl && uploadedVideo && (
+                            <video
+                                src={uploadedVideo}
+                                className="absolute inset-0 w-full h-full object-cover"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                            />
+                        )}
+
+                        {!videoUrl && !uploadedVideo && (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                <div className="text-center">
+                                    <span className="text-gray-400 block mb-2">No video provided</span>
+                                    <span className="text-xs text-gray-500">Paste a URL or upload a file in admin panel</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Conditional Overlay - only show if there's text content */}
+                        {hasTextContent && (
+                            <>
+                                <div className="absolute inset-0 bg-black/30 z-10" />
+                                <div className="absolute inset-0 z-20 flex flex-col justify-center items-center text-center p-8">
+                                    {addon.title && <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white drop-shadow-lg">{addon.title}</h2>}
+                                    {addon.subtitle && <p className="text-xl md:text-2xl mb-8 text-white/90 drop-shadow-lg">{addon.subtitle}</p>}
+                                    {addon.cta_text && addon.cta_link && (
+                                        <Link
+                                            to={addon.cta_link}
+                                            className="bg-white text-gray-900 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors shadow-lg"
+                                        >
+                                            {addon.cta_text}
+                                        </Link>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                );
+            }
+
             default:
                 return (
                     <div className="p-8 border-2 border-dashed border-gray-300 rounded-xl text-center">
@@ -260,7 +364,7 @@ const CardRenderer: React.FC<CardRendererProps> = ({ addon }) => {
     };
 
     return (
-        <section style={containerStyle} className="py-8">
+        <section style={containerStyle} className={sectionClass}>
             <div className={wrapperClass}>
                 {renderContent()}
             </div>

@@ -12,17 +12,17 @@ const CategoryFormPage: React.FC = () => {
     const { getCategoryById, addCategory, updateCategory } = useAppContext();
 
     const isEditing = Boolean(id);
-    
+
     const [name, setName] = useState('');
     const [heroImage, setHeroImage] = useState<string>('');
     const [appImagePath, setAppImagePath] = useState<string>('');
     const [pageHeroMedia, setPageHeroMedia] = useState<MediaItem[]>([]);
     const [pageHeroText, setPageHeroText] = useState('');
     const [showPageHeroText, setShowPageHeroText] = useState(true);
-    
+
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    
+
     useEffect(() => {
         if (isEditing && id) {
             const categoryToEdit = getCategoryById(id);
@@ -65,11 +65,11 @@ const CategoryFormPage: React.FC = () => {
             setIsSaving(false);
         }
     };
-    
+
     const handleCancel = () => {
         navigate('/admin/categories');
     };
-    
+
     const handleMediaUpload = (publicId: string) => {
         const type = /\.(mp4|webm)$/i.test(publicId) ? 'video' : 'image';
         setPageHeroMedia(prev => [...prev, { path: publicId, type }]);
@@ -83,7 +83,7 @@ const CategoryFormPage: React.FC = () => {
     const inputClass = "block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500";
 
     return (
-        <form onSubmit={handleSave} className="space-y-8">
+        <div className="space-y-8">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
                 {isEditing ? 'Edit Category' : 'Create New Category'}
             </h1>
@@ -94,19 +94,19 @@ const CategoryFormPage: React.FC = () => {
                     <span className="block sm:inline">{error}</span>
                 </div>
             )}
-            
+
             <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
-                 <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">Category Details</h3>
-                 <div className="space-y-6">
+                <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">Category Details</h3>
+                <div className="space-y-6">
                     <div>
                         <label htmlFor="name" className={labelClass}>Category Name</label>
-                        <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} className={inputClass} required/>
+                        <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} className={inputClass} required />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className={labelClass}>Web Showcase Card Image</label>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">This image appears on the website homepage.</p>
-                            <ImageUploader 
+                            <ImageUploader
                                 bucket={BUCKETS.CATEGORIES}
                                 pathPrefix={name || 'new-category'}
                                 images={heroImage ? [heroImage] : []}
@@ -115,10 +115,10 @@ const CategoryFormPage: React.FC = () => {
                                 accept="image/*"
                             />
                         </div>
-                         <div>
+                        <div>
                             <label className={labelClass}>Category img for mobile</label>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">Image displayed for this category in the mobile app (saved to <code>app_image_path</code>).</p>
-                            <ImageUploader 
+                            <ImageUploader
                                 bucket={BUCKETS.APP_ASSETS}
                                 pathPrefix={name ? `${name}/app-icon` : 'new-category/app-icon'}
                                 images={appImagePath ? [appImagePath] : []}
@@ -128,7 +128,7 @@ const CategoryFormPage: React.FC = () => {
                             />
                         </div>
                     </div>
-                 </div>
+                </div>
             </div>
 
             <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -137,7 +137,7 @@ const CategoryFormPage: React.FC = () => {
                     <div>
                         <label className={labelClass}>Hero Media (Image/Video)</label>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">Media for the banner at the top of the category page. Videos under 5MB are recommended.</p>
-                        <ImageUploader 
+                        <ImageUploader
                             bucket={BUCKETS.CATEGORIES}
                             pathPrefix={`${name || 'new-category'}/page-hero`}
                             images={pageHeroMedia.map(item => item.path)}
@@ -160,11 +160,11 @@ const CategoryFormPage: React.FC = () => {
             {/* Actions */}
             <div className="flex justify-end gap-4">
                 <button type="button" onClick={handleCancel} className="bg-white dark:bg-gray-700 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">Cancel</button>
-                <button type="submit" disabled={isSaving} className="bg-primary text-white py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium hover:bg-pink-700 disabled:bg-gray-400">
+                <button type="button" onClick={handleSave} disabled={isSaving} className="bg-primary text-white py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium hover:bg-pink-700 disabled:bg-gray-400">
                     {isSaving ? 'Saving...' : 'Save Category'}
                 </button>
             </div>
-        </form>
+        </div>
     );
 };
 

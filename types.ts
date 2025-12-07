@@ -211,9 +211,10 @@ export interface CardAddon {
   subtitle?: string;
   content?: string;
   image_path?: string;
+  video_url?: string;
   cta_text?: string;
   cta_link?: string;
-  target_type?: 'category' | 'product' | 'url' | 'none';
+  target_type?: 'category' | 'product' | 'url' | 'manual' | 'none';
   target_id?: string;
   placement: CardPlacement;
   order: number;

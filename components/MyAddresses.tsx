@@ -35,7 +35,7 @@ const MyAddresses: React.FC = () => {
     setShowForm(false);
     setAddressToEdit(null);
   };
-  
+
   const addresses = (currentUser?.addresses || []).sort((a, b) => {
     if (a.isDefault && !b.isDefault) return -1;
     if (!a.isDefault && b.isDefault) return 1;
@@ -52,7 +52,7 @@ const MyAddresses: React.FC = () => {
             onClick={handleAddNew}
             className="flex items-center gap-2 bg-primary text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-pink-700 transition-colors"
           >
-            <PlusIcon className="w-5 h-5"/>
+            <PlusIcon className="w-5 h-5" />
             Add New Address
           </button>
         )}
@@ -60,33 +60,33 @@ const MyAddresses: React.FC = () => {
 
       <div className="p-6">
         {showForm ? (
-            <AddressForm 
-                addressToEdit={addressToEdit}
-                onSave={handleSave}
-                onCancel={handleCancel}
-            />
+          <AddressForm
+            addressToEdit={addressToEdit}
+            onSave={handleSave}
+            onCancel={handleCancel}
+          />
         ) : (
-            addresses.length === 0 ? (
-                 <div className="text-center py-10">
-                    <p className="text-gray-500">You have no saved addresses.</p>
-                 </div>
-            ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {addresses.map(addr => (
-                        <AddressCard 
-                            key={addr.id} 
-                            address={addr} 
-                            onEdit={handleEdit}
-                            onDelete={deleteAddress}
-                            onSetDefault={setDefaultAddress}
-                        />
-                    ))}
-                </div>
-            )
+          addresses.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-gray-500">You have no saved addresses.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {addresses.map(addr => (
+                <AddressCard
+                  key={addr.id}
+                  address={addr}
+                  onEdit={handleEdit}
+                  onDelete={(id) => { if (window.confirm('Are you sure you want to delete this address?')) deleteAddress(id); }}
+                  onSetDefault={setDefaultAddress}
+                />
+              ))}
+            </div>
+          )
         )}
-        
+
         {!canAddMore && !showForm && (
-            <p className="text-center text-sm text-gray-500 mt-6">You have reached the maximum of 5 saved addresses.</p>
+          <p className="text-center text-sm text-gray-500 mt-6">You have reached the maximum of 5 saved addresses.</p>
         )}
       </div>
     </div>

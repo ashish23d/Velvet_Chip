@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext.tsx';
 import { CardAddon, CardType, CardPlacement } from '../../types.ts';
 import ImageUploader from './ImageUploader.tsx';
+import VideoUploader from './VideoUploader.tsx';
 import { BUCKETS } from '../../constants.ts';
 
 interface CardAddonFormProps {
@@ -187,54 +188,216 @@ const CardAddonForm: React.FC<CardAddonFormProps> = ({ initialData, isEditing })
                     </div>
                 )}
 
-                {/* Product/Category Selection for Grids/Carousels */}
-                {(formData.type === 'product_grid' || formData.type === 'product_carousel' || formData.type === 'category_highlight') && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Type</label>
-                            <select
-                                name="target_type"
-                                value={formData.target_type}
-                                onChange={handleChange}
-                                className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                {/* Video Section - URL or Upload */}
+                {formData.type === 'video' && (
+                    <div className="space-y-4">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Video Source</label>
+
+                        {/* Toggle between URL and Upload */}
+                        <div className="flex gap-4 mb-4">
+                            <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, video_url: '', image_path: '' }))}
+                                className={`px-4 py-2 rounded-md font-medium transition-colors ${!formData.video_url && !formData.image_path
+                                        ? 'bg-primary text-white'
+                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    }`}
                             >
-                                <option value="none">None</option>
-                                <option value="category">Specific Category</option>
-                                <option value="product">Specific Product</option>
-                            </select>
+                                Choose Mode
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, image_path: '' }))}
+                                className={`px-4 py-2 rounded-md font-medium transition-colors ${formData.video_url
+                                        ? 'bg-primary text-white'
+                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    }`}
+                            >
+                                📎 Paste URL
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setFormData(prev => ({ ...prev, video_url: '' }))}
+                                className={`px-4 py-2 rounded-md font-medium transition-colors ${formData.image_path
+                                        ? 'bg-primary text-white'
+                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    }`}
+                            >
+                                📤 Upload File
+                            </button>
                         </div>
 
-                        {formData.target_type === 'category' && (
+                        {/* Video URL Input */}
+                        {(formData.video_url !== undefined && !formData.image_path) && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Category</label>
-                                <select
-                                    name="target_id"
-                                    value={formData.target_id || ''}
-                                    onChange={handleChange}
-                                    className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                >
-                                    <option value="">Select a category...</option>
-                                    {categories.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Video URL
+                                    <span className="text-xs text-gray-500 ml-2">(YouTube, Vimeo, or direct MP4/WebM link)</span>
+                                </label>
+                                <input
+                                    type="url"
+                                    value={formData.video_url || ''}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, video_url: e.target.value }))}
+                                    placeholder="https://www.youtube.com/watch?v=... or https://example.com/video.mp4"
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white"
+                                />
+                                {formData.video_url && (
+                                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                        Preview: {formData.video_url.includes('youtube.com') ? '🎥 YouTube' :
+                                            formData.video_url.includes('vimeo.com') ? '🎥 Vimeo' :
+                                                '📹 Direct Video'}
+                                    </div>
+                                )}
                             </div>
                         )}
 
-                        {formData.target_type === 'product' && (
+                        {/* Video File Upload */}
+                        {(!formData.video_url && formData.image_path !== undefined) && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Product</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Video File</label>
+                                <VideoUploader
+                                    bucket={BUCKETS.CARD_ADDONS}
+                                    pathPrefix="addons-video"
+                                    videoPath={formData.image_path || ''}
+                                    onVideoUpload={(path) => setFormData(prev => ({ ...prev, image_path: path }))}
+                                    onVideoRemove={() => setFormData(prev => ({ ...prev, image_path: '' }))}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Product/Category Selection for Grids/Carousels */}
+                {(formData.type === 'product_grid' || formData.type === 'product_carousel' || formData.type === 'category_highlight') && (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Type</label>
                                 <select
-                                    name="target_id"
-                                    value={formData.target_id || ''}
+                                    name="target_type"
+                                    value={formData.target_type}
                                     onChange={handleChange}
                                     className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                 >
-                                    <option value="">Select a product...</option>
-                                    {products.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
-                                    ))}
+                                    <option value="none">None</option>
+                                    <option value="category">Specific Category</option>
+                                    <option value="product">Specific Product (Single)</option>
+                                    <option value="manual">Manual Selection (Multiple)</option>
                                 </select>
+                            </div>
+
+                            {formData.target_type === 'category' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Category</label>
+                                    <select
+                                        name="target_id"
+                                        value={formData.target_id || ''}
+                                        onChange={handleChange}
+                                        className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        <option value="">Select a category...</option>
+                                        {categories.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {formData.target_type === 'product' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Product</label>
+                                    <select
+                                        name="target_id"
+                                        value={formData.target_id || ''}
+                                        onChange={handleChange}
+                                        className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        <option value="">Select a product...</option>
+                                        {products.map(p => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
+                        {formData.target_type === 'manual' && (
+                            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Select Products</label>
+
+                                {/* Selected Products List */}
+                                <div className="mb-4">
+                                    <p className="text-xs text-gray-500 mb-2">Selected Products ({formData.config?.productIds?.length || 0})</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {formData.config?.productIds?.map((id: number) => {
+                                            const product = products.find(p => p.id === id);
+                                            return (
+                                                <div key={id} className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
+                                                    <span>{product?.name || `Product #${id}`}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const currentIds = formData.config?.productIds || [];
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                config: {
+                                                                    ...prev.config,
+                                                                    productIds: currentIds.filter((pid: number) => pid !== id)
+                                                                }
+                                                            }));
+                                                        }}
+                                                        className="hover:text-red-500"
+                                                    >
+                                                        &times;
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                        {(!formData.config?.productIds || formData.config.productIds.length === 0) && (
+                                            <span className="text-sm text-gray-400 italic">No products selected</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Product Selector */}
+                                <div>
+                                    <input
+                                        type="text"
+                                        placeholder="Search products to add..."
+                                        className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white mb-2"
+                                        onChange={(e) => {
+                                            // Simple local search could be implemented here if list is long
+                                            // For now, we rely on the select dropdown below
+                                        }}
+                                    />
+                                    <select
+                                        className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                        onChange={(e) => {
+                                            const id = Number(e.target.value);
+                                            if (id) {
+                                                const currentIds = formData.config?.productIds || [];
+                                                if (!currentIds.includes(id)) {
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        config: {
+                                                            ...prev.config,
+                                                            productIds: [...currentIds, id]
+                                                        }
+                                                    }));
+                                                }
+                                                e.target.value = ""; // Reset select
+                                            }
+                                        }}
+                                    >
+                                        <option value="">Select product to add...</option>
+                                        {products
+                                            .filter(p => !formData.config?.productIds?.includes(p.id))
+                                            .map(p => (
+                                                <option key={p.id} value={p.id}>{p.name} ({p.category})</option>
+                                            ))
+                                        }
+                                    </select>
+                                </div>
                             </div>
                         )}
                     </div>

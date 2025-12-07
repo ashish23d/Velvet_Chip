@@ -315,7 +315,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 supabase.from('promotions').select('*'),
                 supabase.from('mail_templates').select('*'),
                 supabase.from('contacts').select('*'),
-                supabase.from('returns').select('*, item:orders(items), user:profiles(id,name,email)')
+                supabase.from('returns').select('*, item:orders(items), user:profiles(id,name,email)'),
+                supabase.from('subscribers').select('*').order('subscribed_at', { ascending: false })
             ]);
 
             const getData = (result: PromiseSettledResult<any>) =>
@@ -329,6 +330,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const mailTemplates = getData(results[5]);
             const contactSubmissions = getData(results[6]);
             const returns = getData(results[7]);
+            const subscribers = getData(results[8]);
 
             // Log errors for debugging
             results.forEach((result, index) => {
@@ -367,7 +369,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 mailTemplates: mailTemplates?.map(m => ({ ...m, htmlContent: m.html_content, templateType: m.template_type, isActive: m.is_active, createdAt: m.created_at, updatedAt: m.updated_at })) as MailTemplate[] || [],
                 contactSubmissions: contactSubmissions?.map(c => ({ ...c, createdAt: c.created_at })) as ContactSubmission[] || [],
                 returns: processedReturns as ReturnRequest[] || [],
-                subscribers: [],
+                subscribers: subscribers || [],
             });
         } catch (e) {
             console.error("Error loading admin data", e);
@@ -586,6 +588,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const updateCategory = async (c: any) => {
+        console.log("Updating category:", c);
         const dbPayload = {
             name: c.name,
             hero_image: c.heroImage,
@@ -594,10 +597,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             show_page_hero_text: c.showPageHeroText,
             app_image_path: c.appImagePath || null
         };
+        console.log("DB Payload:", dbPayload);
 
-        const { error } = await supabase.from('categories').update(dbPayload).eq('id', c.id);
-        if (error) throw error;
+        const { data, error } = await supabase.from('categories').update(dbPayload).eq('id', c.id).select();
 
+        if (error) {
+            console.error("Error updating category in DB:", error);
+            throw error;
+        }
+
+        if (!data || data.length === 0) {
+            console.error("Update failed: No category found with ID", c.id);
+            throw new Error(`Category update failed. ID '${c.id}' not found or permission denied.`);
+        }
+
+        console.log("Category updated successfully:", data);
         await Promise.all([fetchCategories(), loadAdminData()]);
     };
 
@@ -993,7 +1007,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data) return;
         await supabase.from('subscribers').insert({ email });
     };
-    const deleteSubscriber = async (id: number) => { /* ... */ };
+    const deleteSubscriber = async (id: number) => {
+        await supabase.from('subscribers').delete().eq('id', id);
+        loadAdminData();
+    };
 
     const getAllPromotions = () => adminData?.promotions || [];
     const getPromotionById = (id: number) => adminData?.promotions.find(p => p.id === id);
