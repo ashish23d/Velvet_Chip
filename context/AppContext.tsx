@@ -7,7 +7,7 @@ import {
     UserProfile, AdminData, MailTemplate, ContactSubmission,
     ReturnRequest, ReturnRequestStatus, PendingChange,
     Address, ReturnStatusUpdate, SearchHistoryEntry,
-    CardAddon
+    CardAddon, PaymentSettings
 } from '../types.ts';
 import { generateProductDescription, getSearchSuggestions } from '../services/geminiService.ts';
 import { INITIAL_SLIDES } from '../constants.ts';
@@ -32,6 +32,7 @@ interface AppContextType {
 
     // Site Data
     siteSettings: SiteSettings | null;
+    paymentSettings: PaymentSettings | null;
     contactDetails: ContactDetails;
     siteContent: SiteContent[];
     slides: Slide[];
@@ -127,6 +128,8 @@ interface AppContextType {
     deleteCardAddon: (id: string) => Promise<void>;
     addSubscriber: (email: string) => Promise<void>;
     deleteSubscriber: (id: number) => Promise<void>;
+    activePromotions: Promotion[];
+    getAvailablePromotions: () => Promotion[];
     getAllPromotions: () => Promotion[];
     getPromotionById: (id: number) => Promotion | undefined;
     addPromotion: (promo: any) => Promise<void>;
@@ -186,10 +189,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [wishlist, setWishlist] = useState<Product[]>([]);
     const [savedItems, setSavedItems] = useState<Product[]>([]);
     const [reviews, setReviews] = useState<Review[]>([]);
+    const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
     const [adminData, setAdminData] = useState<AdminData | null>(null);
     const [searchHistory, setSearchHistory] = useState<SearchHistoryEntry[]>([]);
 
     const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
+    const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
     const [contactDetails, setContactDetailsState] = useState<ContactDetails>({ email: '', phone: '', address: '' });
     const [siteContent, setSiteContent] = useState<SiteContent[]>([]);
     const [slides, setSlides] = useState<Slide[]>(INITIAL_SLIDES);
@@ -315,7 +320,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 supabase.from('promotions').select('*'),
                 supabase.from('mail_templates').select('*'),
                 supabase.from('contacts').select('*'),
-                supabase.from('returns').select('*, item:orders(items), user:profiles(id,name,email)'),
+                supabase.from('returns').select('*'),
                 supabase.from('subscribers').select('*').order('subscribed_at', { ascending: false })
             ]);
 
@@ -355,9 +360,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }) as UserProfile[] || [];
 
             const processedReturns = returns?.map((r: any) => {
-                const orderItems: any[] = r.item?.items || [];
-                const item = orderItems.find(i => i.id === r.item_id);
-                return { ...r, item, user: r.user };
+                const relatedOrder = orders?.find((o: any) => o.id === r.order_id);
+                // We can find the item details from the order's items JSON
+                const orderItems: any[] = relatedOrder?.items || [];
+                // item_id in returns table corresponds to the CartItem.id in the order's items array
+                const item = orderItems.find((i: any) => i.id === r.item_id);
+
+                // Find user details from users array
+                const relatedUser = users?.find((u: any) => u.id === r.user_id);
+
+                return {
+                    ...r,
+                    item,
+                    user: relatedUser ? { id: relatedUser.id, name: relatedUser.name, email: relatedUser.email } : null,
+                    order: relatedOrder
+                };
             }) || [];
 
             setAdminData({
@@ -394,14 +411,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 const { data: { session } } = await supabase.auth.getSession();
                 setSession(session);
 
-                const [categoriesResult, productsResult, reviewsResult, siteContentResult, slidesResult, seasonalResult, cardAddonsResult] = await Promise.allSettled([
+                const [categoriesResult, productsResult, reviewsResult, siteContentResult, slidesResult, seasonalResult, cardAddonsResult, promotionsResult] = await Promise.allSettled([
                     fetchCategories(),
                     supabase.from('products').select('*'),
                     supabase.from('reviews').select('*').eq('status', 'approved'),
                     supabase.from('site_content').select('*'),
                     supabase.from('slides').select('*').order('ordering'),
                     supabase.from('seasonal_edit_cards').select('*').order('ordering'),
-                    supabase.from('card_addons').select('*').order('order', { ascending: true })
+                    supabase.from('card_addons').select('*').order('order', { ascending: true }),
+                    supabase.from('promotions').select('*').eq('is_active', true)
                 ]);
 
                 // Handle Products & Fallback
@@ -435,10 +453,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     setSiteContent(siteData);
                     const settings = siteData.find(d => d.id === 'site_settings')?.data;
                     if (settings) setSiteSettings(settings);
-                    const contact = siteData.find(d => d.id === 'contact_details')?.data;
-                    if (contact) setContactDetailsState(contact);
-                    const announce = siteData.find(d => d.id === 'announcement')?.data;
-                    if (announce) setAnnouncement(announce);
+                    const contactData = siteData.find(d => d.id === 'contact_details')?.data;
+                    if (contactData) setContactDetailsState(contactData);
+                    const paymentData = siteData.find(d => d.id === 'payment_settings')?.data;
+                    if (paymentData) setPaymentSettings(paymentData);
+                    const announcementData = siteData.find(d => d.id === 'announcement')?.data;
+                    if (announcementData) setAnnouncement(announcementData);
                 }
 
                 if (slidesResult.status === 'fulfilled' && slidesResult.value.data && slidesResult.value.data.length > 0) {
@@ -451,6 +471,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
                 if (cardAddonsResult.status === 'fulfilled' && cardAddonsResult.value.data) {
                     setCardAddons(cardAddonsResult.value.data);
+                }
+
+                if (promotionsResult.status === 'fulfilled' && promotionsResult.value.data) {
+                    setActivePromotions(promotionsResult.value.data);
                 }
 
                 if (session?.user) {
@@ -588,7 +612,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const updateCategory = async (c: any) => {
-        console.log("Updating category:", c);
+        console.log("🔄 Updating category:", c);
         const dbPayload = {
             name: c.name,
             hero_image: c.heroImage,
@@ -597,21 +621,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             show_page_hero_text: c.showPageHeroText,
             app_image_path: c.appImagePath || null
         };
-        console.log("DB Payload:", dbPayload);
+        console.log("📤 DB Payload:", dbPayload);
+        console.log("🆔 Updating category ID:", c.id);
 
         const { data, error } = await supabase.from('categories').update(dbPayload).eq('id', c.id).select();
 
         if (error) {
-            console.error("Error updating category in DB:", error);
-            throw error;
+            console.error("❌ Error updating category in DB:", error);
+            console.error("❌ Error code:", error.code);
+            console.error("❌ Error message:", error.message);
+            console.error("❌ Error details:", error.details);
+            console.error("❌ Error hint:", error.hint);
+            throw new Error(`Failed to update category: ${error.message}${error.hint ? ' - ' + error.hint : ''}`);
         }
 
         if (!data || data.length === 0) {
-            console.error("Update failed: No category found with ID", c.id);
+            console.error("❌ Update failed: No category found with ID", c.id);
             throw new Error(`Category update failed. ID '${c.id}' not found or permission denied.`);
         }
 
-        console.log("Category updated successfully:", data);
+        console.log("✅ Category updated successfully:", data);
         await Promise.all([fetchCategories(), loadAdminData()]);
     };
 
@@ -1096,32 +1125,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return (currentUser?.wishlist || []).some(p => p.id === productId);
     };
 
-    const placeOrder = async (method: 'COD' | 'Online') => {
-        if (!currentUser) throw new Error("User not logged in");
-        if (cart.length === 0) throw new Error("Cart is empty");
+    const placeOrder = async (method: 'COD' | 'Online', cartItems?: CartItem[]) => {
+        // Use provided cart items or fall back to current cart
+        const itemsToOrder = cartItems || cart;
 
-        const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+        console.log('🛒 placeOrder called with method:', method);
+        console.log('📦 Cart items to order:', itemsToOrder);
+        console.log('🔢 Cart length:', itemsToOrder.length);
+        console.log('👤 Current user:', currentUser);
+
+        if (!currentUser) throw new Error("User not logged in");
+        if (itemsToOrder.length === 0) {
+            console.error('❌ Cart is empty when trying to place order!');
+            throw new Error("Cart is empty");
+        }
+
+        const subtotal = itemsToOrder.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
         const deliveryCharge = subtotal > 499 ? 0 : 50;
         const totalAmount = (subtotal - checkoutState.discount) + deliveryCharge;
 
         const orderPayload = {
+            // Database auto-generates: id, created_at
             user_id: currentUser.id,
-            customer_name: currentUser.name,
-            customer_email: currentUser.email,
-            items: cart.map(item => ({
+            items: itemsToOrder.map(item => ({
+                id: item.id,
                 productId: item.product.id,
                 name: item.product.name,
                 price: item.product.price,
                 quantity: item.quantity,
-                size: item.size,
-                color: item.color,
+                size: item.selectedSize,
+                color: item.selectedColor,
                 image: item.product.images[0]
             })),
-            total_amount: totalAmount,
-            payment_method: method,
-            payment_status: method === 'Online' ? 'Paid' : 'Pending',
+            total_amount: totalAmount, // For new schema
+            total: totalAmount,        // For old schema (just in case)
+            payment: {
+                method: method,
+                status: method === 'Online' ? 'Paid' : 'Pending',
+                transactionId: ''
+            },
             current_status: 'Processing',
-            shipping_address: currentUser.addresses?.find(a => a.id === checkoutState.selectedAddressId),
+            shipping_address: currentUser.addresses?.find(a => a.id === checkoutState.selectedAddressId) || null,
             order_date: new Date().toISOString(),
             status_history: [{ status: 'Processing', timestamp: new Date().toISOString(), description: 'Order placed successfully' }]
         };
@@ -1129,9 +1173,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const { data, error } = await supabase.from('orders').insert(orderPayload).select().single();
 
         if (error) {
-            console.error("Error placing order:", error);
+            console.error("❌ Error placing order:", error);
             throw error;
         }
+
+        console.log("✅ Order created successfully:", data);
 
         // Clear cart
         const { error: clearCartError } = await supabase.from('profiles').update({ cart: [] }).eq('id', currentUser.id);
@@ -1139,6 +1185,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         setCurrentUser({ ...currentUser, cart: [] });
         setCart([]);
+
+        // Fetch updated orders to show new order immediately in user's orders section
+        await fetchUserOrders();
 
         // Refresh admin data to show new order immediately in admin panel
         loadAdminData();
@@ -1156,6 +1205,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         session,
         isLoading,
         siteSettings,
+        paymentSettings,
         contactDetails,
         siteContent,
         slides,
@@ -1167,8 +1217,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateCartItemQuantity,
         checkoutState,
         setSelectedAddressForCheckout: (id) => setCheckoutState(p => ({ ...p, selectedAddressId: id })),
-        applyPromotion: async (code) => { /* impl */ },
+        applyPromotion: async (code) => {
+            const promotion = activePromotions.find(p => p.code === code);
+            if (!promotion) {
+                throw new Error("Invalid promotion code");
+            }
+
+            // Check expiry
+            if (promotion.expires_at && new Date(promotion.expires_at) < new Date()) {
+                throw new Error("Promotion code has expired");
+            }
+
+            // Calculate cart total for min purchase check
+            const cartTotal = (currentUser?.cart || []).reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+            if (promotion.min_purchase && cartTotal < promotion.min_purchase) {
+                throw new Error(`Minimum purchase of ₹${promotion.min_purchase} required`);
+            }
+
+            // Apply discount
+            let discountAmount = 0;
+            if (promotion.type === 'percentage') {
+                discountAmount = (cartTotal * promotion.value) / 100;
+            } else {
+                discountAmount = promotion.value;
+            }
+
+            // Ensure discount doesn't exceed total
+            discountAmount = Math.min(discountAmount, cartTotal);
+
+            setCheckoutState(p => ({
+                ...p,
+                appliedPromotion: promotion,
+                discount: discountAmount
+            }));
+        },
         removePromotion: () => setCheckoutState(p => ({ ...p, appliedPromotion: null, discount: 0 })),
+        activePromotions,
+        getAvailablePromotions: () => {
+            const cartTotal = (currentUser?.cart || []).reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+            return activePromotions.filter(p => {
+                const isExpired = p.expires_at && new Date(p.expires_at) < new Date();
+                const isMinPurchaseMet = !p.min_purchase || cartTotal >= p.min_purchase;
+                return !isExpired && isMinPurchaseMet;
+            });
+        },
         placeOrder,
         toggleWishlist,
         isProductInWishlist: (id) => currentUser?.wishlist?.some(p => p.id === id) || false,

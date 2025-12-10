@@ -29,6 +29,7 @@ const CategoryPage: React.FC = () => {
   // Filters State
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState({ min: 0, max: 10000 });
   const [sortBy, setSortBy] = useState('popular');
 
@@ -74,6 +75,7 @@ const CategoryPage: React.FC = () => {
     // For a full implementation, this might need a separate API call.
     const sizes = new Set<string>();
     const colors = new Map<string, { name: string; hex: string }>();
+    const tags = new Set<string>();
     let min = Infinity;
     let max = 0;
 
@@ -84,6 +86,7 @@ const CategoryPage: React.FC = () => {
           colors.set(color.name, color);
         }
       });
+      if (product.tags) product.tags.forEach(tag => tags.add(tag));
       if (product.price < min) min = product.price;
       if (product.price > max) max = product.price;
     });
@@ -91,6 +94,7 @@ const CategoryPage: React.FC = () => {
     return {
       availableSizes: Array.from(sizes),
       availableColors: Array.from(colors.values()),
+      availableTags: Array.from(tags),
       minPrice: min === Infinity ? 0 : min,
       maxPrice: max === 0 ? 10000 : max,
     };
@@ -113,6 +117,10 @@ const CategoryPage: React.FC = () => {
     if (selectedColors.length > 0) {
       filtered = filtered.filter(p => p.colors.some(c => selectedColors.includes(c.name)));
     }
+    // Filter by tags
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(p => p.tags && p.tags.some(t => selectedTags.includes(t)));
+    }
     // Filter by price
     filtered = filtered.filter(p => p.price >= priceRange.min && p.price <= priceRange.max);
 
@@ -130,11 +138,12 @@ const CategoryPage: React.FC = () => {
     });
 
     return filtered;
-  }, [products, selectedSizes, selectedColors, priceRange, sortBy]);
+  }, [products, selectedSizes, selectedColors, selectedTags, priceRange, sortBy]);
 
   const onClearFilters = () => {
     setSelectedSizes([]);
     setSelectedColors([]);
+    setSelectedTags([]);
     setPriceRange({ min: minPrice, max: maxPrice });
   };
 
@@ -192,12 +201,15 @@ const CategoryPage: React.FC = () => {
               priceRange={priceRange}
               selectedSizes={selectedSizes}
               selectedColors={selectedColors}
+              selectedTags={selectedTags}
               onPriceChange={setPriceRange}
               onSizeToggle={(size) => setSelectedSizes(p => p.includes(size) ? p.filter(s => s !== size) : [...p, size])}
               onColorToggle={(color) => setSelectedColors(p => p.includes(color) ? p.filter(c => c !== color) : [...p, color])}
+              onTagToggle={(tag) => setSelectedTags(t => t.includes(tag) ? t.filter(x => x !== tag) : [...t, tag])}
               onClearFilters={onClearFilters}
               minPrice={minPrice}
               maxPrice={maxPrice}
+              availableTags={availableTags}
             />
           </div>
 
@@ -233,11 +245,11 @@ const CategoryPage: React.FC = () => {
       {/* Card Addons */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         {cardAddons
-            .filter(addon => addon.placement === 'category_page' && addon.isActive)
-            .sort((a, b) => a.order - b.order)
-            .map(addon => (
-                <CardRenderer key={addon.id} addon={addon} />
-            ))
+          .filter(addon => addon.placement === 'category_page' && addon.isActive)
+          .sort((a, b) => a.order - b.order)
+          .map(addon => (
+            <CardRenderer key={addon.id} addon={addon} />
+          ))
         }
       </div>
 
@@ -273,12 +285,15 @@ const CategoryPage: React.FC = () => {
         priceRange={priceRange}
         selectedSizes={selectedSizes}
         selectedColors={selectedColors}
+        selectedTags={selectedTags}
         onPriceChange={setPriceRange}
         onSizeToggle={(size) => setSelectedSizes(p => p.includes(size) ? p.filter(s => s !== size) : [...p, size])}
         onColorToggle={(color) => setSelectedColors(p => p.includes(color) ? p.filter(c => c !== color) : [...p, color])}
+        onTagToggle={(tag) => setSelectedTags(t => t.includes(tag) ? t.filter(x => x !== tag) : [...t, tag])}
         onClearFilters={onClearFilters}
         minPrice={minPrice}
         maxPrice={maxPrice}
+        availableTags={availableTags}
       />
     </div>
   );

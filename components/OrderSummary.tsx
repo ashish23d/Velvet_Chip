@@ -82,27 +82,53 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ cart, ctaText, ctaLink, onC
         </div>
       </div>
       
-      {!isPaymentPage && (
-        <div className="border-t mt-4 pt-4">
-            <label htmlFor="promotion" className="text-sm font-medium text-gray-700">Have a promotion code?</label>
-            <div className="mt-1 flex gap-2">
-                <input
-                    type="text"
-                    id="promotion"
-                    value={promotionCode}
-                    onChange={(e) => setPromotionCode(e.target.value)}
-                    placeholder="Enter Code"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
-                <button
-                    onClick={handleApplyPromotion}
-                    disabled={!promotionCode}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-semibold rounded-md hover:bg-gray-200 disabled:opacity-50"
-                >
-                    Apply
-                </button>
+      <div className="border-t mt-4 pt-4">
+          <label htmlFor="promotion" className="text-sm font-medium text-gray-700">Have a promotion code?</label>
+          <div className="mt-1 flex gap-2">
+              <input
+                  type="text"
+                  id="promotion"
+                  value={promotionCode}
+                  onChange={(e) => setPromotionCode(e.target.value)}
+                  placeholder="Enter Code"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              />
+              <button
+                  onClick={handleApplyPromotion}
+                  disabled={!promotionCode}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-semibold rounded-md hover:bg-gray-200 disabled:opacity-50"
+              >
+                  Apply
+              </button>
+          </div>
+          {promotionError && <p className="text-red-500 text-xs mt-1">{promotionError}</p>}
+      </div>
+      
+      {/* Available Coupons Section */}
+      {useAppContext().getAvailablePromotions().length > 0 && !appliedPromotion && (
+        <div className="mt-4 border-t pt-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Available Coupons</h3>
+            <div className="space-y-2">
+                {useAppContext().getAvailablePromotions().map(promo => (
+                    <div key={promo.id} className="border border-green-200 bg-green-50 rounded-md p-3">
+                        <div className="flex justify-between items-start">
+                             <div>
+                                <p className="font-semibold text-green-700">{promo.code}</p>
+                                <p className="text-xs text-green-600">
+                                    {promo.type === 'percentage' ? `${promo.value}% Off` : `₹${promo.value} Off`}
+                                    {promo.min_purchase ? ` on orders above ₹${promo.min_purchase}` : ''}
+                                </p>
+                             </div>
+                             <button
+                                onClick={() => applyPromotion(promo.code)}
+                                className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                            >
+                                Apply
+                             </button>
+                        </div>
+                    </div>
+                ))}
             </div>
-            {promotionError && <p className="text-red-500 text-xs mt-1">{promotionError}</p>}
         </div>
       )}
 

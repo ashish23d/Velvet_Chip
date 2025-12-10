@@ -15,7 +15,7 @@ const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
+
     let interval = seconds / 31536000;
     if (interval > 1) return `${Math.floor(interval)}y ago`;
     interval = seconds / 2592000;
@@ -38,11 +38,11 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ item }) => {
         return (
             <div className="flex items-start space-x-4">
                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <SupabaseImage 
-                      bucket={BUCKETS.PRODUCTS}
-                      imagePath={item.items[0].product.images[0]} 
-                      alt={item.items[0].product.name} 
-                      className="w-full h-full object-cover rounded-full"
+                    <SupabaseImage
+                        bucket={BUCKETS.PRODUCTS}
+                        imagePath={item.items[0]?.product?.images?.[0] || item.items[0]?.image}
+                        alt={item.items[0]?.product?.name || item.items[0]?.name || 'Order'}
+                        className="w-full h-full object-cover rounded-full"
                     />
                 </div>
                 <div className="flex-1">
@@ -56,16 +56,16 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ item }) => {
         )
     }
     if (item.type === 'user') {
-         return (
+        return (
             <div className="flex items-center space-x-4">
                 <div className="flex-shrink-0">
                     <Avatar user={item} className="w-10 h-10 rounded-full object-cover" />
                 </div>
                 <div className="flex-1">
                     <p className="text-sm text-gray-800">
-                       New user <span className="font-semibold text-primary">{item.name}</span> registered.
+                        New user <span className="font-semibold text-primary">{item.name}</span> registered.
                     </p>
-                     <p className="text-xs text-gray-500">{formatTimeAgo(item.timestamp)}</p>
+                    <p className="text-xs text-gray-500">{formatTimeAgo(item.timestamp)}</p>
                 </div>
             </div>
         )

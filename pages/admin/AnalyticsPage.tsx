@@ -38,10 +38,13 @@ const AnalyticsPage: React.FC = () => {
 
     // --- Calculations ---
 
-    const totalSales = orders.reduce((sum, order) => sum + order.totalAmount, 0);
-    const totalOrders = orders.length;
+    const safeOrders = orders || [];
+    const safeReturns = returns || [];
+
+    const totalSales = safeOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const totalOrders = safeOrders.length;
     const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
-    const totalReturns = returns.filter(r => r.status === 'Approved').reduce((sum, r) => sum + (r.refund_amount || 0), 0);
+    const totalReturns = safeReturns.filter(r => r.status === 'Approved').reduce((sum, r) => sum + (r.refund_amount || 0), 0);
     const returnRate = totalSales > 0 ? (totalReturns / totalSales) * 100 : 0;
 
     // Sales Trend Data (Monthly)
@@ -52,47 +55,57 @@ const AnalyticsPage: React.FC = () => {
         // Initialize with 0
         months.forEach(m => data[m] = 0);
 
-        orders.forEach(order => {
+        safeOrders.forEach(order => {
+            if (!order.orderDate) return;
             const date = new Date(order.orderDate);
+            if (isNaN(date.getTime())) return;
             const month = months[date.getMonth()];
-            data[month] += order.totalAmount;
+            if (month) data[month] += (order.totalAmount || 0);
         });
 
         return months.map(month => ({ name: month, sales: data[month] }));
-    }, [orders]);
+    }, [safeOrders]);
 
     // Top Selling Products
     const topProducts = useMemo(() => {
         const productSales: { [key: string]: { name: string, sales: number, quantity: number } } = {};
 
-        orders.forEach(order => {
+        safeOrders.forEach(order => {
+            if (!order.items) return;
             order.items.forEach((item: any) => {
-                if (!productSales[item.product.id]) {
-                    productSales[item.product.id] = {
-                        name: item.product.name,
+                if (!item?.product?.id) return;
+
+                const productId = item.product.id;
+                const productName = item.product.name || 'Unknown Product';
+                const productPrice = Number(item.product.price) || 0;
+                const quantity = Number(item.quantity) || 0;
+
+                if (!productSales[productId]) {
+                    productSales[productId] = {
+                        name: productName,
                         sales: 0,
                         quantity: 0
                     };
                 }
-                productSales[item.product.id].sales += item.product.price * item.quantity;
-                productSales[item.product.id].quantity += item.quantity;
+                productSales[productId].sales += productPrice * quantity;
+                productSales[productId].quantity += quantity;
             });
         });
 
         return Object.values(productSales)
             .sort((a, b) => b.sales - a.sales)
             .slice(0, 5);
-    }, [orders]);
+    }, [safeOrders]);
 
     // Order Status Distribution
     const orderStatusData = useMemo(() => {
         const statusCounts: { [key: string]: number } = {};
-        orders.forEach(order => {
+        safeOrders.forEach(order => {
             const status = order.currentStatus || 'Processing';
             statusCounts[status] = (statusCounts[status] || 0) + 1;
         });
         return Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
-    }, [orders]);
+    }, [safeOrders]);
 
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 

@@ -32,6 +32,14 @@ export interface SiteSettings {
   imageWidth?: string; // e.g. "150px"
 }
 
+export interface PaymentSettings {
+  razorpay_enabled: boolean;
+  razorpay_key_id: string; // Public key - safe for frontend
+  cod_enabled: boolean;
+  upi_enabled?: boolean;
+  test_mode: boolean;
+}
+
 export interface ContactDetails {
   email: string;
   phone: string;
@@ -129,7 +137,8 @@ export interface StatusUpdate {
 }
 
 export interface Order {
-  id: string;
+  id: string; // UUID
+  readable_id?: string; // Friendly ID like ORD-2412-1001
   userId: string;
   orderDate: string;
   currentStatus: OrderStatus;
@@ -186,6 +195,7 @@ export interface Product {
   }[];
   sizes: string[];
   specifications: { [key: string]: string };
+  tags?: string[];
   createdAt?: string;
   hsnCode?: string;
 }

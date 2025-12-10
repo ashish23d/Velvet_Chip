@@ -29,6 +29,9 @@ interface MobileFilterSortSheetProps {
   onApplyFilters: () => void;
   minPrice: number;
   maxPrice: number;
+  availableTags?: string[];
+  selectedTags?: string[];
+  onTagToggle?: (tag: string) => void;
 }
 
 const SortOption: React.FC<{
@@ -42,9 +45,8 @@ const SortOption: React.FC<{
   return (
     <button
       onClick={() => onSortChange(sortKey)}
-      className={`flex items-center w-full text-left p-4 text-gray-700 transition-colors duration-200 ${
-        isSelected ? 'bg-pink-50 text-primary font-semibold' : 'hover:bg-gray-50'
-      }`}
+      className={`flex items-center w-full text-left p-4 text-gray-700 transition-colors duration-200 ${isSelected ? 'bg-pink-50 text-primary font-semibold' : 'hover:bg-gray-50'
+        }`}
       role="menuitemradio"
       aria-checked={isSelected}
     >
@@ -76,18 +78,16 @@ const MobileFilterSortSheet: React.FC<MobileFilterSortSheetProps> = ({
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/60 z-40 transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 bg-black/60 z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Sheet Panel */}
       <div
-        className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-y-0' : 'translate-y-full'
-        }`}
+        className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-y-0' : 'translate-y-full'
+          }`}
         style={{ maxHeight: '90vh' }}
         role="dialog"
         aria-modal="true"

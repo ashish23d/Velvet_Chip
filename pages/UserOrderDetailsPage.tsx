@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import OrderTracker from '../components/OrderTracker.tsx';
@@ -12,19 +12,46 @@ import { CartItem } from '../types.ts';
 const UserOrderDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { currentUser, getAllPromotions, openReviewModal, products, userCancelOrder, showConfirmationModal } = useAppContext();
-    
-    const order = useMemo(() => currentUser?.orders?.find(o => o.id === id), [currentUser, id]);
-    const promotions = getAllPromotions();
-    
-    const [isDownloading, setIsDownloading] = useState(false);
+    const { currentUser, getAllPromotions, openReviewModal, products, userCancelOrder, showConfirmationModal, getOrderById } = useAppContext();
+
+    const order = getOrderById(id);
+    const [liveOrder, setLiveOrder] = useState(order);
+
+    useEffect(() => {
+        setLiveOrder(order);
+    }, [order]);
+
+    useEffect(() => {
+        if (!id) return;
+
+        const channel = supabase
+            .channel(`order-${id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'orders',
+                    filter: `id=eq.${id}`,
+                },
+                (payload) => {
+                    console.log('Order update received:', payload);
+                    setLiveOrder(prev => ({ ...prev, ...payload.new } as any));
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [id]);
 
     const suggestedProducts = useMemo(() => {
-        if (!order) return [];
-        const orderProductIds = new Set(order.items.map(item => item.product.id));
+        if (!liveOrder) return [];
+        const orderProductIds = new Set(liveOrder.items.map((item: any) => item.product?.id || item.productId));
         return products.filter(p => !orderProductIds.has(p.id)).slice(0, 4);
-    }, [products, order]);
-    
+    }, [products, liveOrder]);
+
     const handleCancel = async () => {
         if (!order) return;
         showConfirmationModal({
@@ -43,7 +70,7 @@ const UserOrderDetailsPage: React.FC = () => {
             isDestructive: true,
         });
     };
-    
+
     const handleDownloadInvoice = async (e: React.MouseEvent) => {
         e.preventDefault();
         if (!order || !order.downloadable_invoice_url) return;
@@ -53,7 +80,7 @@ const UserOrderDetailsPage: React.FC = () => {
             const { data, error } = await supabase.storage
                 .from(BUCKETS.SITE_ASSETS)
                 .download(order.downloadable_invoice_url);
-            
+
             if (error || !data) {
                 throw new Error('Could not download invoice file.');
             }
@@ -67,7 +94,7 @@ const UserOrderDetailsPage: React.FC = () => {
             link.setAttribute('download', `Invoice-${invoiceNum}.pdf`); // Force download attribute
             document.body.appendChild(link);
             link.click();
-            
+
             // Cleanup with delay to ensure download starts
             setTimeout(() => {
                 document.body.removeChild(link);
@@ -82,18 +109,18 @@ const UserOrderDetailsPage: React.FC = () => {
     };
 
     const isReturnable = (item: CartItem): boolean => {
-      if (!order || order.currentStatus !== 'Delivered') return false;
-      const deliveredStatus = order.statusHistory.find(s => s.status === 'Delivered');
-      if (!deliveredStatus) return false;
-      
-      const deliveryDate = new Date(deliveredStatus.timestamp);
-      const sevenDaysAfterDelivery = new Date(deliveryDate);
-      sevenDaysAfterDelivery.setDate(deliveryDate.getDate() + 7);
-      
-      // Check if item is already returned
-      const hasReturnRequest = currentUser?.returns?.some(r => r.order_id === order.id && r.item_id === item.id);
+        if (!order || order.currentStatus !== 'Delivered') return false;
+        const deliveredStatus = order.statusHistory.find(s => s.status === 'Delivered');
+        if (!deliveredStatus) return false;
 
-      return new Date() < sevenDaysAfterDelivery && !hasReturnRequest;
+        const deliveryDate = new Date(deliveredStatus.timestamp);
+        const sevenDaysAfterDelivery = new Date(deliveryDate);
+        sevenDaysAfterDelivery.setDate(deliveryDate.getDate() + 7);
+
+        // Check if item is already returned
+        const hasReturnRequest = currentUser?.returns?.some(r => r.order_id === order.id && r.item_id === item.id);
+
+        return new Date() < sevenDaysAfterDelivery && !hasReturnRequest;
     };
 
     if (!order) {
@@ -106,9 +133,12 @@ const UserOrderDetailsPage: React.FC = () => {
         );
     }
 
-    const appliedPromotion = promotions.find(p => p.code === order.promotionCode);
-    
-    const subtotal = order.items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+    const appliedPromotion = getAllPromotions().find(p => p.code === order.promotionCode);
+
+    const subtotal = order.items.reduce((acc, item) => {
+        const price = item.product?.price || (item as any).price || 0;
+        return acc + price * item.quantity;
+    }, 0);
     const shipping = subtotal > 499 ? 0 : 50;
     const promoDiscount = useMemo(() => {
         if (!appliedPromotion) return 0;
@@ -117,7 +147,7 @@ const UserOrderDetailsPage: React.FC = () => {
         }
         return appliedPromotion.value;
     }, [appliedPromotion, subtotal]);
-    
+
 
     const showInvoiceButton = order.currentStatus !== 'Processing' && order.currentStatus !== 'Cancelled' && order.currentStatus !== 'Cancelled by User';
 
@@ -132,7 +162,7 @@ const UserOrderDetailsPage: React.FC = () => {
                 </div>
                 <Link to="/profile" className="text-sm font-medium text-primary hover:underline">&larr; Back to My Orders</Link>
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 xl:gap-12 items-start">
                 {/* Main tracking info */}
                 <div className="lg:col-span-2 space-y-6">
@@ -141,64 +171,84 @@ const UserOrderDetailsPage: React.FC = () => {
                     <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
                         <h3 className="text-lg font-semibold text-gray-800 mb-2">Items</h3>
                         <div className="divide-y divide-gray-200">
-                            {order.items.map(item => (
-                                <div key={item.id} className="py-4">
-                                    <div className="flex items-start gap-4">
-                                        <SupabaseImage bucket={BUCKETS.PRODUCTS} imagePath={item.product.images[0]} alt={item.product.name} className="w-20 h-28 object-cover rounded-md flex-shrink-0" />
-                                        <div className="flex-grow">
-                                            <p className="font-semibold text-gray-800">{item.product.name}</p>
-                                            <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                            {order.items.map(item => {
+                                // Handle both nested 'product' (CartItem) and flat structure (Saved Order Item)
+                                const productId = item.product?.id || (item as any).productId;
+                                const productName = item.product?.name || (item as any).name;
+                                const productImage = item.product?.images?.[0] || (item as any).image;
+                                const productPrice = item.product?.price || (item as any).price;
+
+                                return (
+                                    <div key={item.id} className="py-4">
+                                        <div className="flex items-start gap-4">
+                                            <SupabaseImage bucket={BUCKETS.PRODUCTS} imagePath={productImage} alt={productName} className="w-20 h-28 object-cover rounded-md flex-shrink-0" />
+                                            <div className="flex-grow">
+                                                <p className="font-semibold text-gray-800">{productName}</p>
+                                                <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                                            </div>
+                                            <p className="text-sm font-semibold text-gray-800">₹{productPrice * item.quantity}</p>
                                         </div>
-                                        <p className="text-sm font-semibold text-gray-800">₹{item.product.price * item.quantity}</p>
+                                        <div className="mt-4 pl-24 flex gap-4">
+                                            {/* Only show review button if product object is reconstructable or present */}
+                                            {order.currentStatus === 'Delivered' && (
+                                                <button
+                                                    onClick={() => {
+                                                        const productForReview = item.product || {
+                                                            id: productId,
+                                                            name: productName,
+                                                            images: [productImage],
+                                                            price: productPrice
+                                                        } as any;
+                                                        openReviewModal(productForReview);
+                                                    }}
+                                                    className="text-sm font-semibold text-primary border border-primary/50 rounded-full px-4 py-1.5 hover:bg-primary/5 transition-colors"
+                                                >
+                                                    Write a Review
+                                                </button>
+                                            )}
+                                            {isReturnable(item) && (
+                                                <Link to={`/help-and-returns/${order.id}/${item.id}`} className="text-sm font-semibold text-blue-600 border border-blue-200 rounded-full px-4 py-1.5 hover:bg-blue-50 transition-colors">
+                                                    Request Return
+                                                </Link>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="mt-4 pl-24 flex gap-4">
-                                        {order.currentStatus === 'Delivered' && (
-                                            <button onClick={() => openReviewModal(item.product)} className="text-sm font-semibold text-primary border border-primary/50 rounded-full px-4 py-1.5 hover:bg-primary/5 transition-colors">
-                                                Write a Review
-                                            </button>
-                                        )}
-                                        {isReturnable(item) && (
-                                            <Link to={`/help-and-returns/${order.id}/${item.id}`} className="text-sm font-semibold text-blue-600 border border-blue-200 rounded-full px-4 py-1.5 hover:bg-blue-50 transition-colors">
-                                                Request Return
-                                            </Link>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
 
                 {/* Sidebar */}
                 <div className="lg:col-span-1 space-y-6">
-                     <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4">
                         {showInvoiceButton && (
-                             <button 
+                            <button
                                 onClick={handleDownloadInvoice}
                                 disabled={isDownloading || !order.downloadable_invoice_url}
                                 className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 py-2.5 px-4 rounded-lg font-semibold hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                 title={!order.downloadable_invoice_url ? "Invoice not generated yet" : "Download Invoice"}
                             >
-                                <ArrowDownTrayIcon className="w-5 h-5"/>
+                                <ArrowDownTrayIcon className="w-5 h-5" />
                                 {isDownloading ? 'Downloading...' : 'Invoice'}
                             </button>
                         )}
-                        
-                         <Link to={`/help-and-returns/${order.id}`} className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 py-2.5 px-4 rounded-lg font-semibold hover:bg-gray-50">
-                            <QuestionMarkCircleIcon className="w-5 h-5"/>
+
+                        <Link to={`/help-and-returns/${order.id}`} className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 py-2.5 px-4 rounded-lg font-semibold hover:bg-gray-50">
+                            <QuestionMarkCircleIcon className="w-5 h-5" />
                             Need Help?
                         </Link>
                     </div>
 
                     {order.currentStatus === 'Processing' && (
-                         <button onClick={handleCancel} className="w-full bg-red-50 text-red-700 border border-red-200 py-2.5 px-4 rounded-lg font-semibold hover:bg-red-100">
+                        <button onClick={handleCancel} className="w-full bg-red-50 text-red-700 border border-red-200 py-2.5 px-4 rounded-lg font-semibold hover:bg-red-100">
                             Cancel Order
                         </button>
                     )}
-                    
+
                     <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
                         <h3 className="text-lg font-semibold text-gray-800 border-b pb-3 mb-4">
-                           Delivery Details
+                            Delivery Details
                         </h3>
                         <div className="text-sm text-gray-600">
                             <p className="font-semibold text-gray-800">{order.shippingAddress.name}</p>
@@ -210,7 +260,7 @@ const UserOrderDetailsPage: React.FC = () => {
 
                     <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
                         <h3 className="text-lg font-semibold text-gray-800 border-b pb-3 mb-4">
-                           Price Details
+                            Price Details
                         </h3>
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span>₹{subtotal.toLocaleString()}</span></div>
@@ -224,27 +274,45 @@ const UserOrderDetailsPage: React.FC = () => {
                                 <span>₹{order.totalAmount.toLocaleString()}</span>
                             </div>
                         </div>
-                         <div className="mt-4 pt-4 border-t border-dashed">
-                             <Link to="/coupons" className="text-sm font-semibold text-primary hover:underline">See other available coupons &rarr;</Link>
-                         </div>
+                        <div className="mt-4 pt-4 border-t border-dashed">
+                            <Link to="/coupons" className="text-sm font-semibold text-primary hover:underline">See other available coupons &rarr;</Link>
+                        </div>
                     </div>
-                    
-                     {suggestedProducts.length > 0 && (
-                        <div className="bg-pink-50 rounded-lg p-6">
-                            <h3 className="text-lg font-serif text-center text-primary mb-4">You Might Also Like</h3>
+
+                    {suggestedProducts.length > 0 && (
+                        <div className="mt-8">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-gray-900">You Might Also Like</h3>
+                                <Link to="/products" className="text-sm font-medium text-primary hover:text-pink-700 transition-colors">
+                                    View All
+                                </Link>
+                            </div>
                             <div className="grid grid-cols-2 gap-4">
                                 {suggestedProducts.map(product => (
-                                    <div key={product.id} className="bg-white rounded-lg overflow-hidden shadow-sm">
-                                        <Link to={`/product/${product.id}`} className="group">
-                                            <div className="aspect-square overflow-hidden">
-                                                <SupabaseImage bucket={BUCKETS.PRODUCTS} imagePath={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
+                                    <Link key={product.id} to={`/product/${product.id}`} className="group block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-300">
+                                        <div className="aspect-[4/5] overflow-hidden relative bg-gray-50">
+                                            <SupabaseImage
+                                                bucket={BUCKETS.PRODUCTS}
+                                                imagePath={product.images[0]}
+                                                alt={product.name}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            />
+                                            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                <p className="text-white text-xs font-medium text-center">View Details</p>
                                             </div>
-                                            <div className="p-2 text-center">
-                                                <p className="text-xs font-semibold text-gray-800 truncate group-hover:text-primary">{product.name}</p>
-                                                <p className="text-xs text-gray-600">₹{product.price}</p>
+                                        </div>
+                                        <div className="p-3">
+                                            <h4 className="text-sm font-medium text-gray-900 line-clamp-1 group-hover:text-primary transition-colors">
+                                                {product.name}
+                                            </h4>
+                                            <div className="flex items-baseline gap-2 mt-1">
+                                                <p className="text-sm font-bold text-gray-900">₹{product.price}</p>
+                                                {product.compareAtPrice && (
+                                                    <p className="text-xs text-gray-400 line-through">₹{product.compareAtPrice}</p>
+                                                )}
                                             </div>
-                                        </Link>
-                                    </div>
+                                        </div>
+                                    </Link>
                                 ))}
                             </div>
                         </div>

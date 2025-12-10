@@ -7,77 +7,84 @@ import SupabaseImage from '../components/SupabaseImage.tsx';
 import { BUCKETS } from '../constants.ts';
 
 const OrderConfirmationPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const { getOrderById, currentUser } = useAppContext();
+    const { id } = useParams<{ id: string }>();
+    const { getOrderById, currentUser } = useAppContext();
 
-  const order = getOrderById(id);
+    const order = getOrderById(id);
 
-  if (!order) {
+    if (!order) {
+        return (
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+                <h1 className="text-2xl font-bold text-red-600">Order Not Found</h1>
+                <p className="text-gray-600 mt-2">We couldn't find the order you're looking for.</p>
+                <Link to="/" className="mt-6 inline-block bg-primary text-white py-2 px-6 rounded-full font-medium hover:bg-pink-700">Go to Homepage</Link>
+            </div>
+        );
+    }
+
     return (
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <h1 className="text-2xl font-bold text-red-600">Order Not Found</h1>
-        <p className="text-gray-600 mt-2">We couldn't find the order you're looking for.</p>
-        <Link to="/" className="mt-6 inline-block bg-primary text-white py-2 px-6 rounded-full font-medium hover:bg-pink-700">Go to Homepage</Link>
-      </div>
-    );
-  }
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-2xl mx-auto">
+                <div className="bg-white p-6 sm:p-10 rounded-lg shadow-lg text-center border-t-4 border-primary">
+                    <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto" />
+                    <h1 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900 mt-4">Thank you for your order!</h1>
+                    <p className="text-gray-600 mt-2">
+                        Your order <span className="font-semibold text-primary">#{order.id}</span> has been placed successfully.
+                    </p>
+                    <p className="text-gray-500 text-sm mt-1">
+                        An email confirmation has been sent to {currentUser?.email}.
+                    </p>
 
-  return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
-            <div className="bg-white p-6 sm:p-10 rounded-lg shadow-lg text-center border-t-4 border-primary">
-                <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto" />
-                <h1 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900 mt-4">Thank you for your order!</h1>
-                <p className="text-gray-600 mt-2">
-                    Your order <span className="font-semibold text-primary">#{order.id}</span> has been placed successfully.
-                </p>
-                <p className="text-gray-500 text-sm mt-1">
-                    An email confirmation has been sent to {currentUser?.email}.
-                </p>
+                    <div className="text-left mt-8 border-t pt-6">
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4">Order Summary</h2>
+                        <div className="space-y-4">
+                            {order.items.map(item => {
+                                // Handle both nested 'product' (CartItem) and flat structure (Saved Order Item)
+                                const productName = item.product?.name || (item as any).name;
+                                const productImage = item.product?.images?.[0] || (item as any).image;
+                                const productPrice = item.product?.price || (item as any).price;
 
-                <div className="text-left mt-8 border-t pt-6">
-                    <h2 className="text-lg font-semibold text-gray-800 mb-4">Order Summary</h2>
-                    <div className="space-y-4">
-                        {order.items.map(item => (
-                            <div key={item.id} className="flex items-center gap-4">
-                                <SupabaseImage
-                                    bucket={BUCKETS.PRODUCTS}
-                                    imagePath={item.product.images[0]} 
-                                    alt={item.product.name} 
-                                    className="w-16 h-20 object-cover rounded-md flex-shrink-0"
-                                />
-                                <div className="flex-grow">
-                                    <p className="font-semibold text-sm text-gray-800">{item.product.name}</p>
-                                    <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                                </div>
-                                <p className="text-sm font-semibold text-gray-800">₹{item.product.price * item.quantity}</p>
+                                return (
+                                    <div key={item.id} className="flex items-center gap-4">
+                                        <SupabaseImage
+                                            bucket={BUCKETS.PRODUCTS}
+                                            imagePath={productImage}
+                                            alt={productName}
+                                            className="w-16 h-20 object-cover rounded-md flex-shrink-0"
+                                        />
+                                        <div className="flex-grow">
+                                            <p className="font-semibold text-sm text-gray-800">{productName}</p>
+                                            <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                                        </div>
+                                        <p className="text-sm font-semibold text-gray-800">₹{productPrice * item.quantity}</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="mt-6 border-t pt-4 space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span>Subtotal</span>
+                                <span>₹{order.totalAmount}</span>
                             </div>
-                        ))}
-                    </div>
-                    <div className="mt-6 border-t pt-4 space-y-2 text-sm">
-                        <div className="flex justify-between">
-                            <span>Subtotal</span>
-                            <span>₹{order.totalAmount}</span>
-                        </div>
-                         <div className="flex justify-between font-bold text-base text-gray-900">
-                            <span>Total</span>
-                            <span>₹{order.totalAmount}</span>
+                            <div className="flex justify-between font-bold text-base text-gray-900">
+                                <span>Total</span>
+                                <span>₹{order.totalAmount}</span>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
-                    <Link to="/profile" className="bg-gray-100 text-gray-800 py-3 px-6 rounded-full font-medium hover:bg-gray-200 transition-colors">
-                        View My Orders
-                    </Link>
-                    <Link to="/" className="bg-primary text-white py-3 px-6 rounded-full font-medium hover:bg-pink-700 transition-colors">
-                        Continue Shopping
-                    </Link>
+                    <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+                        <Link to="/profile" className="bg-gray-100 text-gray-800 py-3 px-6 rounded-full font-medium hover:bg-gray-200 transition-colors">
+                            View My Orders
+                        </Link>
+                        <Link to="/" className="bg-primary text-white py-3 px-6 rounded-full font-medium hover:bg-pink-700 transition-colors">
+                            Continue Shopping
+                        </Link>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-  );
+    );
 };
 
 export default OrderConfirmationPage;

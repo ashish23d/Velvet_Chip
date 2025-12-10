@@ -37,6 +37,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
 
   // State for color variants, which will hold images and sizes
   const [colorVariants, setColorVariants] = useState<ColorVariant[]>([]);
+  // State for tags
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
 
   // Simple UUID generator fallback
   const generateUUID = () => {
@@ -55,7 +58,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
       setDescription(productToEdit.description);
       setCategory(productToEdit.category);
       setMrp(productToEdit.mrp);
+      setMrp(productToEdit.mrp);
       setPrice(productToEdit.price);
+      setTags(productToEdit.tags || []);
 
       const initialVariants: ColorVariant[] = productToEdit.colors.map((color, index) => ({
         id: `color-${productToEdit.id}-${index}`,
@@ -153,6 +158,21 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
     ));
   };
 
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const newTag = tagInput.trim();
+      if (newTag && !tags.includes(newTag)) {
+        setTags([...tags, newTag]);
+      }
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const allSizes = new Set<string>();
@@ -184,7 +204,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
       })),
       sizes: Array.from(allSizes),
       images: mainImages,
+      images: mainImages,
       specifications: productToEdit?.specifications || {},
+      tags: tags,
     };
 
     if (productToEdit) {
@@ -217,6 +239,33 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
               <option value="">Select a category</option>
               {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
             </select>
+          </div>
+          <div className="sm:col-span-6">
+            <label htmlFor="tags" className={labelClass}>Tags</label>
+            <div className="mt-1 flex flex-wrap gap-2 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 min-h-[42px] focus-within:ring-1 focus-within:ring-primary focus-within:border-primary">
+              {tags.map(tag => (
+                <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                  {tag}
+                  <button type="button" onClick={() => removeTag(tag)} className="ml-1.5 inline-flex text-primary hover:text-pink-700 focus:outline-none">
+                    <span className="sr-only">Remove key</span>
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                      <title>Remove</title>
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </span>
+              ))}
+              <input
+                type="text"
+                id="tags"
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={handleTagInputKeyDown}
+                placeholder="Type tag and press Enter"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-sm p-0 text-gray-900 dark:text-white placeholder-gray-400"
+              />
+            </div>
+            <p className="mt-1 text-sm text-gray-500">Separate tags with comma or enter.</p>
           </div>
         </div>
       </div>

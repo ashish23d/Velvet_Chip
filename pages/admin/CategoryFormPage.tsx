@@ -57,8 +57,12 @@ const CategoryFormPage: React.FC = () => {
                 await updateCategory({ id, ...categoryData });
             } else {
                 await addCategory(categoryData);
+                // Only navigate after creating new category
+                navigate('/admin/categories');
+                return;
             }
-            navigate('/admin/categories');
+            // Don't navigate after update - just show success
+            alert('Category updated successfully!');
         } catch (err: any) {
             setError(err.message || 'An unexpected error occurred.');
         } finally {

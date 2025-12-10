@@ -12,7 +12,11 @@ interface OrderProductCardProps {
 }
 
 const OrderProductCard: React.FC<OrderProductCardProps> = ({ item, order }) => {
-    const { product } = item;
+    // Handle both nested 'product' (CartItem) and flat structure (Saved Order Item)
+    const productId = item.product?.id || (item as any).productId;
+    const productName = item.product?.name || (item as any).name;
+    const productImage = item.product?.images?.[0] || (item as any).image;
+
     const { openReviewModal } = useAppContext();
     const [rating, setRating] = React.useState(0);
 
@@ -34,8 +38,14 @@ const OrderProductCard: React.FC<OrderProductCardProps> = ({ item, order }) => {
     };
 
     const statusStyle = getStatusStyles();
-    const latestStatusUpdate = order.statusHistory[order.statusHistory.length - 1];
+    // Default to a safe date if statusHistory is empty or undefined
+    const latestStatusUpdate = order.statusHistory?.length > 0
+        ? order.statusHistory[order.statusHistory.length - 1]
+        : { timestamp: new Date().toISOString() };
+
     const displayDate = new Date(latestStatusUpdate.timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    if (!productId) return null; // Safety check
 
     return (
         <div className="bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
@@ -43,8 +53,8 @@ const OrderProductCard: React.FC<OrderProductCardProps> = ({ item, order }) => {
                 <Link to={`/order/${order.id}`} className="sm:w-28 flex-shrink-0">
                     <SupabaseImage
                         bucket={BUCKETS.PRODUCTS}
-                        imagePath={product.images[0]}
-                        alt={product.name}
+                        imagePath={productImage}
+                        alt={productName}
                         className="w-full h-40 sm:h-36 object-cover rounded-md"
                     />
                 </Link>
@@ -53,14 +63,14 @@ const OrderProductCard: React.FC<OrderProductCardProps> = ({ item, order }) => {
                         <p className={`text-sm font-bold ${statusStyle.color}`}>
                             {statusStyle.text} {displayDate}
                         </p>
-                        <h3 className="font-semibold text-gray-800 mt-1 hover:text-primary transition-colors">{product.name}</h3>
+                        <h3 className="font-semibold text-gray-800 mt-1 hover:text-primary transition-colors">{productName}</h3>
                         <p className="text-xs text-gray-500 mt-1">
                             Qty: {item.quantity} | Size: {item.selectedSize}
                         </p>
                     </Link>
                 </div>
                 <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0">
-                     <Link to={`/order/${order.id}`} className="text-sm font-semibold text-primary border border-primary/50 rounded-full px-4 py-1.5 hover:bg-primary/5 transition-colors">
+                    <Link to={`/order/${order.id}`} className="text-sm font-semibold text-primary border border-primary/50 rounded-full px-4 py-1.5 hover:bg-primary/5 transition-colors">
                         View Order
                     </Link>
                 </div>
@@ -71,7 +81,16 @@ const OrderProductCard: React.FC<OrderProductCardProps> = ({ item, order }) => {
                     <div className="flex flex-col sm:flex-row items-center gap-4">
                         <StarRatingInput rating={rating} setRating={setRating} />
                         <button
-                            onClick={() => openReviewModal(product)}
+                            onClick={() => {
+                                // Reconstruct a partial product object if needed for the review modal
+                                const productForReview = item.product || {
+                                    id: (item as any).productId,
+                                    name: (item as any).name,
+                                    images: [(item as any).image],
+                                    price: (item as any).price
+                                } as any;
+                                openReviewModal(productForReview);
+                            }}
                             className="w-full sm:w-auto text-sm font-semibold text-primary hover:underline"
                         >
                             Write a Review
