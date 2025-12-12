@@ -19,22 +19,22 @@ interface SearchBarProps {
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobileOverlay, autofocusOnOpen }) => {
-    const { searchProducts, getSearchSuggestions, categories, searchHistory, clearSearchHistory } = useAppContext();
+    const { searchProducts, getSearchSuggestions, categories, searchHistory, clearSearchHistory, deleteSearchHistoryItem } = useAppContext();
     const navigate = ReactRouterDOM.useNavigate();
-    
+
     // Global query state for sync
     const [query, setQuery] = useState('');
-    
+
     // Logic state
     const [productResults, setProductResults] = useState<Product[]>([]);
     const [suggestedQueries, setSuggestedQueries] = useState<string[]>([]);
     const [suggestedCategories, setSuggestedCategories] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    
+
     // UI State for Desktop Modal
     const [isExpanded, setIsExpanded] = useState(false); // Logical open/close
     const [isVisible, setIsVisible] = useState(false); // Visual transition state
-    
+
     const modalInputRef = useRef<HTMLInputElement>(null);
     const headerInputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -57,7 +57,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
                     searchProducts(query),
                     getSearchSuggestions(query)
                 ]);
-                
+
                 setProductResults(products.slice(0, 4));
                 setSuggestedQueries(suggestions.suggestedQueries || []);
                 setSuggestedCategories(suggestions.suggestedCategories || []);
@@ -66,7 +66,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
             } finally {
                 setIsLoading(false);
             }
-        }, 350); 
+        }, 350);
 
         return () => clearTimeout(debounceTimer);
     }, [query, searchProducts, getSearchSuggestions, categories]);
@@ -127,7 +127,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
         if (trimmed) {
             navigate(`/search?q=${encodeURIComponent(trimmed)}`);
             closeExpanded();
-            if(isMobileOverlay && onResultClick) onResultClick();
+            if (isMobileOverlay && onResultClick) onResultClick();
         }
     };
 
@@ -146,7 +146,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
         if (category) {
             navigate(`/category/${category.id}`);
             closeExpanded();
-            if(isMobileOverlay && onResultClick) onResultClick();
+            if (isMobileOverlay && onResultClick) onResultClick();
         }
     };
 
@@ -174,14 +174,22 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
                             </div>
                             <div className="space-y-1">
                                 {searchHistory.map((entry) => (
-                                    <button
-                                        key={entry.id}
-                                        onClick={() => handleHistoryClick(entry.query)}
-                                        className="flex items-center gap-3 w-full text-left text-sm text-gray-700 hover:bg-gray-50 p-2 rounded-md transition-colors group"
-                                    >
-                                        <ClockIcon className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors" />
-                                        <span>{entry.query}</span>
-                                    </button>
+                                    <div key={entry.id} className="flex items-center gap-2 w-full hover:bg-gray-50 p-2 rounded-md transition-colors group">
+                                        <button
+                                            onClick={() => handleHistoryClick(entry.query)}
+                                            className="flex items-center gap-3 flex-grow text-left text-sm text-gray-700"
+                                        >
+                                            <ClockIcon className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors" />
+                                            <span>{entry.query}</span>
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); deleteSearchHistoryItem(entry.id); }}
+                                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                            title="Remove from history"
+                                        >
+                                            <XIcon className="w-3 h-3" />
+                                        </button>
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -190,8 +198,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
                         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">Trending Categories</h3>
                         <div className="flex flex-wrap gap-2 px-2">
                             {categories.slice(0, 5).map(cat => (
-                                <button 
-                                    key={cat.id} 
+                                <button
+                                    key={cat.id}
                                     onClick={() => handleCategoryClick(cat.name)}
                                     className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-full transition-colors"
                                 >
@@ -219,10 +227,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
                         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">Products</h3>
                         <div className="space-y-2">
                             {productResults.map(product => (
-                                <ReactRouterDOM.Link 
+                                <ReactRouterDOM.Link
                                     key={product.id}
                                     to={`/product/${product.id}`}
-                                    onClick={() => { closeExpanded(); if(isMobileOverlay && onResultClick) onResultClick(); }}
+                                    onClick={() => { closeExpanded(); if (isMobileOverlay && onResultClick) onResultClick(); }}
                                     className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-lg transition-colors group"
                                 >
                                     <SupabaseImage bucket={BUCKETS.PRODUCTS} imagePath={product.images[0]} alt={product.name} className="w-10 h-14 object-cover rounded bg-gray-100" />
@@ -241,7 +249,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
                         {hasQueries && (
                             <div>
                                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                    <LightBulbIcon className="w-4 h-4"/> Suggestions
+                                    <LightBulbIcon className="w-4 h-4" /> Suggestions
                                 </h3>
                                 {suggestedQueries.map(sq => (
                                     <button key={sq} onClick={() => handleHistoryClick(sq)} className="flex items-center gap-3 w-full text-left text-sm text-gray-700 hover:bg-gray-50 p-2 rounded-md">
@@ -254,7 +262,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
                         {hasCategories && (
                             <div>
                                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                    <FolderIcon className="w-4 h-4"/> Collections
+                                    <FolderIcon className="w-4 h-4" /> Collections
                                 </h3>
                                 {suggestedCategories.map(sc => (
                                     <button key={sc} onClick={() => handleCategoryClick(sc)} className="flex items-center gap-3 w-full text-left text-sm text-gray-700 hover:bg-gray-50 p-2 rounded-md">
@@ -325,14 +333,14 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
             {isExpanded && (
                 <>
                     {/* Backdrop */}
-                    <div 
-                        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`} 
+                    <div
+                        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
                         aria-hidden="true"
                         onClick={closeExpanded}
                     />
 
                     {/* Modal Container */}
-                    <div 
+                    <div
                         ref={containerRef}
                         className={`fixed top-24 left-1/2 -translate-x-1/2 w-[90vw] max-w-3xl z-50 transition-all duration-300 ease-out transform ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-4'}`}
                     >
@@ -351,9 +359,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-primary">
                                         <SearchIcon className="h-6 w-6" />
                                     </div>
-                                    <button 
-                                        type="button" 
-                                        onClick={closeExpanded} 
+                                    <button
+                                        type="button"
+                                        onClick={closeExpanded}
                                         className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
                                         aria-label="Close search"
                                     >

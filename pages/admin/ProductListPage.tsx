@@ -117,7 +117,7 @@ const ProductListPage: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">₹{product.price}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {/* Simplified stock display */}
-                  {product.sizes.length} sizes
+                  {product.sizes.length} variants
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end items-center gap-4">

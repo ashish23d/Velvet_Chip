@@ -62,14 +62,16 @@ interface AppContextType {
     updateUser: (data: Partial<User>) => Promise<void>;
     fetchUserOrders: () => Promise<void>;
 
-    // Products & Search
-    fetchProducts: (params?: any) => Promise<{ data: Product[], count: number }>;
+    categories: Category[];
+    products: Product[];
+    fetchProducts: (params?: { categoryId?: string; limit?: number; page?: number; perPage?: number }) => Promise<{ data: Product[]; count: number }>;
     getProductById: (id: number | string | undefined) => Promise<Product | undefined>;
     searchProducts: (query: string) => Promise<Product[]>;
     getSearchSuggestions: (query: string) => Promise<{ suggestedQueries: string[], suggestedCategories: string[] }>;
     lastProductUpdate: number;
     searchHistory: SearchHistoryEntry[];
     addToSearchHistory: (query: string) => Promise<void>;
+    deleteSearchHistoryItem: (id: string) => Promise<void>;
     clearSearchHistory: () => Promise<void>;
 
     // Categories
@@ -286,14 +288,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
 
         try {
-            // Insert into DB (RLS handles security)
+            // Insert new entry
             await supabase.from('search_history').insert({
                 user_id: currentUser.id,
                 query: trimmedQuery
             });
-            // No need to re-fetch immediately, optimistic update covers UI
+
+            // Cleanup: Keep only the latest 10 entries for this user
+            // We fetch the latest 11 items (just ID and CreatedAt) to check if we need to delete
+            const { data: recentHistory } = await supabase
+                .from('search_history')
+                .select('id')
+                .eq('user_id', currentUser.id)
+                .order('created_at', { ascending: false });
+
+            if (recentHistory && recentHistory.length > 10) {
+                const idsToDelete = recentHistory.slice(10).map(r => r.id);
+                if (idsToDelete.length > 0) {
+                    await supabase.from('search_history').delete().in('id', idsToDelete);
+                }
+            }
+
         } catch (error) {
-            console.error("Error adding search history:", error);
+            console.error("Error managing search history:", error);
+        }
+    };
+
+
+
+    const deleteSearchHistoryItem = async (id: string) => {
+        if (!currentUser) return;
+        setSearchHistory(prev => prev.filter(item => item.id !== id)); // Optimistic update
+        try {
+            await supabase.from('search_history').delete().eq('id', id);
+        } catch (error) {
+            console.error("Error deleting search history item:", error);
         }
     };
 
@@ -411,18 +440,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 const { data: { session } } = await supabase.auth.getSession();
                 setSession(session);
 
-                const [categoriesResult, productsResult, reviewsResult, siteContentResult, slidesResult, seasonalResult, cardAddonsResult, promotionsResult] = await Promise.allSettled([
+                // --- CRITICAL DATA FETCH ---
+                // These are required for the initial paint of the app
+                const [categoriesResult, productsResult, siteContentResult, promotionsResult] = await Promise.allSettled([
                     fetchCategories(),
                     supabase.from('products').select('*'),
-                    supabase.from('reviews').select('*').eq('status', 'approved'),
                     supabase.from('site_content').select('*'),
-                    supabase.from('slides').select('*').order('ordering'),
-                    supabase.from('seasonal_edit_cards').select('*').order('ordering'),
-                    supabase.from('card_addons').select('*').order('order', { ascending: true }),
                     supabase.from('promotions').select('*').eq('is_active', true)
                 ]);
 
-                // Handle Products & Fallback
+                // 1. Products
                 let loadedProducts: Product[] = [];
                 if (productsResult.status === 'fulfilled' && productsResult.value.data && productsResult.value.data.length > 0) {
                     loadedProducts = productsResult.value.data;
@@ -431,23 +458,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     setProducts([]);
                 }
 
-                // Handle Categories & Fallback
-                if (categoriesResult.status === 'fulfilled' && categoriesResult.value) {
-                    // State set in fetchCategories
-                }
+                // 2. Categories - State handled inside fetchCategories if fulfilled
 
-                // Handle Reviews & Fallback
-                if (reviewsResult.status === 'fulfilled' && reviewsResult.value.data && reviewsResult.value.data.length > 0) {
-                    const mappedReviews = reviewsResult.value.data.map((r: any) => ({
-                        ...r,
-                        productId: r.product_id,
-                        userId: r.user_id,
-                        userImage: r.user_image,
-                        productImages: r.product_images
-                    }));
-                    setReviews(mappedReviews);
-                }
-
+                // 3. Site Content (Settings)
                 if (siteContentResult.status === 'fulfilled' && siteContentResult.value.data) {
                     const siteData = siteContentResult.value.data;
                     setSiteContent(siteData);
@@ -459,6 +472,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     if (paymentData) setPaymentSettings(paymentData);
                     const announcementData = siteData.find(d => d.id === 'announcement')?.data;
                     if (announcementData) setAnnouncement(announcementData);
+                }
+
+                // 4. Promotions (Critical for price calculations)
+                if (promotionsResult.status === 'fulfilled' && promotionsResult.value.data) {
+                    setActivePromotions(promotionsResult.value.data);
+                }
+
+                // --- IMMEDIATE UI RELEASE ---
+                setIsLoading(false);
+
+                // --- BACKGROUND DATA FETCH ---
+                // Less critical data that can pop in 
+                const [reviewsResult, slidesResult, seasonalResult, cardAddonsResult] = await Promise.allSettled([
+                    supabase.from('reviews').select('*').eq('status', 'approved'),
+                    supabase.from('slides').select('*').order('ordering'),
+                    supabase.from('seasonal_edit_cards').select('*').order('ordering'),
+                    supabase.from('card_addons').select('*').order('order', { ascending: true }),
+                ]);
+
+                if (reviewsResult.status === 'fulfilled' && reviewsResult.value.data && reviewsResult.value.data.length > 0) {
+                    const mappedReviews = reviewsResult.value.data.map((r: any) => ({
+                        ...r,
+                        productId: r.product_id,
+                        userId: r.user_id,
+                        userImage: r.user_image,
+                        productImages: r.product_images
+                    }));
+                    setReviews(mappedReviews);
                 }
 
                 if (slidesResult.status === 'fulfilled' && slidesResult.value.data && slidesResult.value.data.length > 0) {
@@ -473,18 +514,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     setCardAddons(cardAddonsResult.value.data);
                 }
 
-                if (promotionsResult.status === 'fulfilled' && promotionsResult.value.data) {
-                    setActivePromotions(promotionsResult.value.data);
-                }
-
                 if (session?.user) {
-                    await fetchUserProfile(session.user.id);
+                    // User profile check is background
+                    fetchUserProfile(session.user.id);
                 }
 
             } catch (e) {
                 console.error("Init error", e);
-            } finally {
-                setTimeout(() => setIsLoading(false), 100);
+                setIsLoading(false); // Ensure loading stops on error
             }
         };
 
@@ -1280,12 +1317,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
         getProductById: async (id) => products.find(p => p.id === Number(id)),
         searchProducts: async (q) => {
-            return products.filter(p => p.name.toLowerCase().includes(q.toLowerCase()));
+            const lowerQ = q.toLowerCase();
+            return products.filter(p =>
+                p.name.toLowerCase().includes(lowerQ) ||
+                p.tags?.some(tag => tag.toLowerCase().includes(lowerQ))
+            );
         },
         getSearchSuggestions: async (q) => ({ suggestedQueries: [], suggestedCategories: [] }),
         lastProductUpdate,
         searchHistory,
         addToSearchHistory,
+        deleteSearchHistoryItem,
         clearSearchHistory,
         getCategoryById: (id) => categories.find(c => c.id === id),
         reviews,
@@ -1316,19 +1358,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 throw error;
             }
             if (data) setProducts(prev => [...prev, data]);
-            window.location.reload();
         },
         updateProduct: async (p) => {
             const { error } = await supabase.from('products').update(p).eq('id', p.id);
             if (error) throw error;
             setProducts(prev => prev.map(prod => prod.id === p.id ? { ...prod, ...p } : prod));
-            await loadAdminData();
         },
         deleteProduct: async (id) => {
             const { error } = await supabase.from('products').delete().eq('id', id);
             if (error) throw error;
             setProducts(prev => prev.filter(p => p.id !== id));
-            await loadAdminData();
         },
         addCategory,
         updateCategory: async (cat) => {

@@ -191,13 +191,20 @@ export interface Product {
     hex: string;
     uuid: string;
     images?: string[];
-    sizes?: { size: string; stock: number }[];
+    size: string;
+    stock: number;
+    price?: number;
+    mrp?: number;
+    sku?: string;
   }[];
-  sizes: string[];
-  specifications: { [key: string]: string };
-  tags?: string[];
-  createdAt?: string;
-  hsnCode?: string;
+}[];
+sizes: string[];
+specifications: { [key: string]: string };
+tags ?: string[];
+createdAt ?: string;
+hsnCode ?: string;
+show_colors ?: boolean;
+sku ?: string;
 }
 
 export type CardType =
@@ -853,205 +860,209 @@ export type Database = {
           type?: string
         }
       }
-      products: {
-        Row: {
-          category: string
-          colors: Json
-          created_at: string
-          description: string
-          hsn_code: string | null
-          id: number
-          images: string[]
-          mrp: number
-          name: string
-          price: number
-          rating: number
-          reviews: number
-          sizes: string[]
-          specifications: Json
-          uuid: string
-        }
-        Insert: {
-          category: string
-          colors: Json
-          created_at?: string
-          description: string
-          hsn_code?: string | null
-          id?: number
-          images: string[]
-          mrp: number
-          name: string
-          price: number
-          rating: number
-          reviews: number
-          sizes: string[]
-          specifications: Json
-          uuid: string
-        }
-        Update: {
-          category?: string
-          colors?: Json
-          created_at?: string
-          description?: string
-          hsn_code?: string | null
-          id?: number
-          images?: string[]
-          mrp?: number
-          name?: string
-          price?: number
-          rating?: number
-          reviews?: number
-          sizes?: string[]
-          specifications?: Json
-          uuid?: string
-        }
+    }
+    products: {
+      Row: {
+        category: string
+        colors: Json
+        created_at: string
+        description: string
+        hsn_code: string | null
+        id: number
+        images: string[]
+        mrp: number
+        name: string
+        price: number
+        rating: number
+        reviews: number
+        sizes: string[]
+        specifications: Json
+        tags: string[] | null
+        uuid: string
       }
-      profiles: {
-        Row: {
-          avatar: string | null
-          cart: Json | null
-          dob: string | null
-          email: string | null
-          gender: string | null
-          id: string
-          mobile: string | null
-          name: string
-          notifications: Json | null
-          created_at: string | null
-          role: string | null
-          status: string | null
-          wishlist: Json | null
-          saved_items: Json | null
-        }
-        Insert: {
-          avatar?: string | null
-          cart?: Json | null
-          dob?: string | null
-          email?: string | null
-          gender?: string | null
-          id: string
-          mobile?: string | null
-          name: string
-          notifications?: Json | null
-          created_at?: string | null
-          role?: string | null
-          status?: string | null
-          wishlist?: Json | null
-          saved_items?: Json | null
-        }
-        Update: {
-          avatar?: string | null
-          cart?: Json | null
-          dob?: string | null
-          email?: string | null
-          gender?: string | null
-          id?: string
-          mobile?: string | null
-          name?: string
-          notifications?: Json | null
-          created_at?: string | null
-          role?: string | null
-          status?: string | null
-          wishlist?: Json | null
-          saved_items?: Json | null
-        }
+      Insert: {
+        category: string
+        colors: Json
+        created_at?: string
+        description: string
+        hsn_code?: string | null
+        id?: number
+        images: string[]
+        mrp: number
+        name: string
+        price: number
+        rating: number
+        reviews: number
+        sizes: string[]
+        specifications: Json
+        tags?: string[] | null
+        uuid: string
       }
-      reviews: {
-        Row: {
-          author: string
-          comment: string
-          date: string
-          id: number
-          product_id: number
-          product_images: string[]
-          rating: number
-          status: string
-          user_id: string | null
-          user_image: string
-        }
-        Insert: {
-          author: string
-          comment: string
-          date: string
-          id?: number
-          product_id: number
-          product_images: string[]
-          rating: number
-          status: string
-          user_id?: string | null
-          user_image: string
-        }
-        Update: {
-          author?: string
-          comment?: string
-          date?: string
-          id?: number
-          product_id?: number
-          product_images?: string[]
-          rating?: number
-          status?: string
-          user_id?: string | null
-          user_image?: string
-        }
-      }
-      slides: {
-        Row: {
-          id: string
-          media: Json | null
-          ordering: number | null
-          text: string
-          show_text: boolean
-        }
-        Insert: {
-          id: string
-          media?: Json | null
-          ordering?: number | null
-          text: string
-          show_text?: boolean
-        }
-        Update: {
-          id?: string
-          media?: Json | null
-          ordering?: number | null
-          text?: string
-          show_text?: boolean
-        }
-      }
-      subscribers: {
-        Row: {
-          id: number
-          email: string
-          subscribed_at: string
-        }
-        Insert: {
-          id?: number
-          email: string
-          subscribed_at?: string
-        }
-        Update: {
-          id?: number
-          email?: string
-          subscribed_at?: string
-        }
-      }
-      site_content: {
-        Row: {
-          id: string
-          data: Json
-        }
-        Insert: {
-          id: string
-          data: Json
-        }
-        Update: {
-          id?: string
-          data?: Json
-        }
+      Update: {
+        category?: string
+        colors?: Json
+        created_at?: string
+        description?: string
+        hsn_code?: string | null
+        id?: number
+        images?: string[]
+        mrp?: number
+        name?: string
+        price?: number
+        rating?: number
+        reviews?: number
+        sizes?: string[]
+        specifications?: Json
+        tags?: string[] | null
+        uuid?: string
       }
     }
-    Views: {}
-    Functions: {}
-    Enums: {}
-    CompositeTypes: {}
+    profiles: {
+      Row: {
+        avatar: string | null
+        cart: Json | null
+        dob: string | null
+        email: string | null
+        gender: string | null
+        id: string
+        mobile: string | null
+        name: string
+        notifications: Json | null
+        created_at: string | null
+        role: string | null
+        status: string | null
+        wishlist: Json | null
+        saved_items: Json | null
+      }
+      Insert: {
+        avatar?: string | null
+        cart?: Json | null
+        dob?: string | null
+        email?: string | null
+        gender?: string | null
+        id: string
+        mobile?: string | null
+        name: string
+        notifications?: Json | null
+        created_at?: string | null
+        role?: string | null
+        status?: string | null
+        wishlist?: Json | null
+        saved_items?: Json | null
+      }
+      Update: {
+        avatar?: string | null
+        cart?: Json | null
+        dob?: string | null
+        email?: string | null
+        gender?: string | null
+        id?: string
+        mobile?: string | null
+        name?: string
+        notifications?: Json | null
+        created_at?: string | null
+        role?: string | null
+        status?: string | null
+        wishlist?: Json | null
+        saved_items?: Json | null
+      }
+    }
+    reviews: {
+      Row: {
+        author: string
+        comment: string
+        date: string
+        id: number
+        product_id: number
+        product_images: string[]
+        rating: number
+        status: string
+        user_id: string | null
+        user_image: string
+      }
+      Insert: {
+        author: string
+        comment: string
+        date: string
+        id?: number
+        product_id: number
+        product_images: string[]
+        rating: number
+        status: string
+        user_id?: string | null
+        user_image: string
+      }
+      Update: {
+        author?: string
+        comment?: string
+        date?: string
+        id?: number
+        product_id?: number
+        product_images?: string[]
+        rating?: number
+        status?: string
+        user_id?: string | null
+        user_image?: string
+      }
+    }
+    slides: {
+      Row: {
+        id: string
+        media: Json | null
+        ordering: number | null
+        text: string
+        show_text: boolean
+      }
+      Insert: {
+        id: string
+        media?: Json | null
+        ordering?: number | null
+        text: string
+        show_text?: boolean
+      }
+      Update: {
+        id?: string
+        media?: Json | null
+        ordering?: number | null
+        text?: string
+        show_text?: boolean
+      }
+    }
+    subscribers: {
+      Row: {
+        id: number
+        email: string
+        subscribed_at: string
+      }
+      Insert: {
+        id?: number
+        email: string
+        subscribed_at?: string
+      }
+      Update: {
+        id?: number
+        email?: string
+        subscribed_at?: string
+      }
+    }
+    site_content: {
+      Row: {
+        id: string
+        data: Json
+      }
+      Insert: {
+        id: string
+        data: Json
+      }
+      Update: {
+        id?: string
+        data?: Json
+      }
+    }
   }
+  Views: {}
+  Functions: {}
+  Enums: {}
+  CompositeTypes: {}
+}
 }

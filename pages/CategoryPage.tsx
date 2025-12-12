@@ -13,7 +13,7 @@ import CardRenderer from '../components/CardRenderer.tsx';
 
 const CategoryPage: React.FC = () => {
   const { id: categoryId } = useParams<{ id: string }>();
-  const { categories, fetchProducts, lastProductUpdate, cardAddons } = useAppContext();
+  const { categories, fetchProducts, lastProductUpdate, cardAddons, products: allGlobalProducts } = useAppContext();
 
   const category = useMemo(() => categories.find(c => c.id === categoryId), [categoryId, categories]);
 
@@ -70,16 +70,22 @@ const CategoryPage: React.FC = () => {
   }, [page]);
 
 
-  const { availableSizes, availableColors, minPrice, maxPrice } = useMemo(() => {
-    // Note: This only calculates based on currently loaded products.
-    // For a full implementation, this might need a separate API call.
+  const { availableSizes, availableColors, availableTags, minPrice, maxPrice } = useMemo(() => {
+    // USE GLOBAL PRODUCTS for filters to ensure all tags/options are visible regardless of pagination
+    const categoryProducts = allGlobalProducts.filter(p => p.category === categoryId);
+
+    // If global products aren't fully loaded yet (e.g. initial load), fall back to local products? 
+    // Actually Context loads all products initially. If empty, it might mean loading.
+    // But let's use categoryProducts if available, else products (local).
+    const targetProducts = categoryProducts.length > 0 ? categoryProducts : products;
+
     const sizes = new Set<string>();
     const colors = new Map<string, { name: string; hex: string }>();
     const tags = new Set<string>();
     let min = Infinity;
     let max = 0;
 
-    products.forEach(product => {
+    targetProducts.forEach(product => {
       product.sizes.forEach(size => sizes.add(size));
       product.colors.forEach(color => {
         if (!colors.has(color.name)) {
@@ -98,7 +104,7 @@ const CategoryPage: React.FC = () => {
       minPrice: min === Infinity ? 0 : min,
       maxPrice: max === 0 ? 10000 : max,
     };
-  }, [products]);
+  }, [products, allGlobalProducts, categoryId]);
 
   // Reset price range when products change
   useEffect(() => {

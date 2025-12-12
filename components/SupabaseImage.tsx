@@ -2,17 +2,15 @@ import React, { useEffect, useState, forwardRef } from 'react';
 import { supabase } from '../services/supabaseClient.ts';
 import { BUCKETS } from '../constants.ts';
 
-interface SupabaseImageProps {
+interface SupabaseImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   bucket: string;
   imagePath: string | undefined | null;
-  alt: string;
-  className?: string;
-  width?: number;
-  height?: number;
+  // alt, className, width, height are already in ImgHTMLAttributes but we can leave explicit if we want or just remove. 
+  // keeping explicit ones that were there for clarity if needed, but extending covers them.
 }
 
 const SupabaseImage = forwardRef<HTMLImageElement, SupabaseImageProps>(
-  ({ bucket, imagePath, alt, className, width, height }, ref) => {
+  ({ bucket, imagePath, alt, className, width, height, ...props }, ref) => {
     const [imageUrl, setImageUrl] = useState<string>('');
 
     useEffect(() => {
@@ -27,12 +25,12 @@ const SupabaseImage = forwardRef<HTMLImageElement, SupabaseImageProps>(
         // Handle legacy placeholder paths
         currentBucket = BUCKETS.SITE_ASSETS;
       }
-      
+
       // Append .jpg if no extension is present. This handles legacy placeholder data.
       if (currentPath && !/\.[^/.]+$/.test(currentPath)) {
         currentPath += '.jpg';
       }
-      
+
       const { data } = supabase.storage
         .from(currentBucket)
         .getPublicUrl(currentPath);
@@ -55,6 +53,7 @@ const SupabaseImage = forwardRef<HTMLImageElement, SupabaseImageProps>(
         loading="lazy"
         width={width}
         height={height}
+        {...props}
       />
     );
   }

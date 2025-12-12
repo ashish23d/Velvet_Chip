@@ -18,7 +18,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const navigate = ReactRouterDOM.useNavigate();
   const location = ReactRouterDOM.useLocation();
   const imageRef = useRef<HTMLImageElement>(null);
-  
+
   const inWishlist = isProductInWishlist(product.id);
   const isSaved = isProductSaved(product.id);
 
@@ -41,11 +41,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }
     toggleSavedItem(product);
   };
-  
+
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
-     if (!currentUser) {
+    if (!currentUser) {
       navigate(`/login?redirect=${location.pathname}`);
       return;
     }
@@ -75,41 +75,48 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             />
           </div>
           <button
-            onClick={handleSaveClick}
-            className="absolute top-3 right-3 bg-white dark:bg-gray-700 rounded-full p-2 text-primary transition-all duration-300 hover:bg-pink-50 dark:hover:bg-gray-600 opacity-0 group-hover:opacity-100 shadow-md"
-            aria-label={isSaved ? 'Remove from saved items' : 'Save for later'}
-          >
-            <BookmarkIcon className="w-6 h-6" isFilled={isSaved} />
-          </button>
-          <button
             onClick={handleWishlistClick}
-            className="absolute top-16 right-3 bg-white dark:bg-gray-700 rounded-full p-2 text-primary transition-colors duration-300 hover:bg-pink-50 dark:hover:bg-gray-600 shadow-md"
+            className="absolute top-3 right-3 bg-white dark:bg-gray-700 rounded-full p-2 text-primary transition-colors duration-300 hover:bg-pink-50 dark:hover:bg-gray-600 shadow-md"
             aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
           >
             <WishlistIcon className="w-6 h-6" isFilled={inWishlist} />
+          </button>
+          <button
+            onClick={handleSaveClick}
+            className="absolute top-14 right-3 bg-white dark:bg-gray-700 rounded-full p-2 text-primary transition-all duration-300 hover:bg-pink-50 dark:hover:bg-gray-600 opacity-0 group-hover:opacity-100 shadow-md"
+            aria-label={isSaved ? 'Remove from saved items' : 'Save for later'}
+          >
+            <BookmarkIcon className="w-6 h-6" isFilled={isSaved} />
           </button>
           <div className="p-4 space-y-2">
             <h3 className="text-md font-semibold text-gray-800 dark:text-gray-100 truncate">{product.name}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 h-10">{product.description}</p>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">₹{product.price}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-500 line-through">₹{product.mrp}</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">₹{product.price}</p>
+                {product.mrp > product.price && (
+                  <>
+                    <p className="text-sm text-gray-500 dark:text-gray-500 line-through">₹{product.mrp}</p>
+                    <p className="text-xs font-bold text-green-600">
+                      {Math.round(((product.mrp - product.price) / product.mrp) * 100)}% OFF
+                    </p>
+                  </>
+                )}
               </div>
               <Rating rating={product.rating} />
             </div>
           </div>
         </ReactRouterDOM.Link>
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <button 
+          <button
             onClick={handleAddToCart}
             className="w-full bg-primary text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-pink-700 transition-colors duration-300"
           >
             Add to Cart
           </button>
         </div>
-      </div>
-    </EditableWrapper>
+      </div >
+    </EditableWrapper >
   );
 };
 

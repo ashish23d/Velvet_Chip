@@ -69,6 +69,7 @@ const ProductDetailPage: React.FC = () => {
   const [mainImage, setMainImage] = useState<string>('');
   const addToCartButtonRef = React.useRef<HTMLButtonElement>(null);
   const [isSimilarModalOpen, setIsSimilarModalOpen] = useState(false);
+  const [isGalleryExpanded, setIsGalleryExpanded] = useState(false);
 
   // State for delivery options
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -225,19 +226,54 @@ const ProductDetailPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Image Gallery */}
           <div className="flex flex-col-reverse md:flex-row gap-4">
-            <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto no-scrollbar md:w-24 flex-shrink-0">
-              {allImagesForProduct.map(img => (
+            <div className={`flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto no-scrollbar md:w-24 flex-shrink-0 transition-all duration-300`}>
+              {/* Show only first 4 images or all if expanded */}
+              {(isGalleryExpanded ? allImagesForProduct : allImagesForProduct.slice(0, 4)).map(img => (
                 <button
                   key={img}
                   onClick={() => setMainImage(img)}
-                  className={`w-20 h-24 md:w-full md:h-auto flex-shrink-0 rounded-md overflow-hidden border-2 ${mainImage === img ? 'border-primary' : 'border-transparent'}`}
+                  className={`w-20 h-24 md:w-full md:h-24 flex-shrink-0 rounded-md overflow-hidden border-2 ${mainImage === img ? 'border-primary' : 'border-transparent'}`}
                 >
                   <SupabaseImage bucket={BUCKETS.PRODUCTS} imagePath={img} alt={`${product.name} thumbnail`} className="w-full h-full object-cover" />
                 </button>
               ))}
+              {allImagesForProduct.length > 4 && (
+                <button
+                  onClick={() => setIsGalleryExpanded(!isGalleryExpanded)}
+                  className="w-20 h-24 md:w-full md:h-10 flex-shrink-0 bg-gray-100 rounded-md flex items-center justify-center text-xs font-medium text-gray-600 hover:bg-gray-200"
+                >
+                  {isGalleryExpanded ? 'Less' : `+${allImagesForProduct.length - 4} More`}
+                </button>
+              )}
             </div>
-            <div className="flex-grow aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden">
-              <SupabaseImage bucket={BUCKETS.PRODUCTS} imagePath={mainImage} alt={product.name} className="w-full h-full object-cover" />
+            <div className="flex-grow aspect-[6/7] bg-gray-100 rounded-lg overflow-hidden relative cursor-zoom-in">
+              <div
+                className="w-full h-full overflow-hidden"
+                onMouseMove={(e) => {
+                  const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+                  const x = ((e.clientX - left) / width) * 100;
+                  const y = ((e.clientY - top) / height) * 100;
+                  const img = e.currentTarget.querySelector('img');
+                  if (img) {
+                    img.style.transformOrigin = `${x}% ${y}%`;
+                    img.style.transform = "scale(2)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  const img = e.currentTarget.querySelector('img');
+                  if (img) {
+                    img.style.transform = "scale(1)";
+                    img.style.transformOrigin = "center center";
+                  }
+                }}
+              >
+                <SupabaseImage
+                  bucket={BUCKETS.PRODUCTS}
+                  imagePath={mainImage}
+                  alt={product.name}
+                  className="w-full h-full object-cover transition-transform duration-200 ease-out"
+                />
+              </div>
             </div>
           </div>
 
@@ -250,32 +286,45 @@ const ProductDetailPage: React.FC = () => {
                 <span className="text-sm text-gray-500">({product.reviews} reviews)</span>
               </div>
               <p className="text-sm text-gray-600 mt-4">{product.description}</p>
-              <div className="flex items-baseline gap-2 mt-4">
-                <p className="text-3xl font-bold text-gray-900">₹{product.price}</p>
-                <p className="text-xl text-gray-400 line-through">₹{product.mrp}</p>
-                <p className="text-lg font-semibold text-green-600">
-                  ({Math.round(((product.mrp - product.price) / product.mrp) * 100)}% OFF)
-                </p>
-              </div>
+
+              {(() => {
+                // Calculate price and MRP based on selected variant
+                const currentVariantSize = selectedColor?.sizes?.find(s => s.size === selectedSize);
+                const displayPrice = currentVariantSize?.price || product.price;
+                const displayMrp = currentVariantSize?.mrp || product.mrp;
+                const discountPercentage = Math.round(((displayMrp - displayPrice) / displayMrp) * 100);
+
+                return (
+                  <div className="flex items-baseline gap-2 mt-4">
+                    <p className="text-3xl font-bold text-gray-900">₹{displayPrice}</p>
+                    <p className="text-xl text-gray-400 line-through">₹{displayMrp}</p>
+                    <p className="text-lg font-semibold text-green-600">
+                      ({discountPercentage}% OFF)
+                    </p>
+                  </div>
+                );
+              })()}
             </EditableWrapper>
 
             <div className="mt-6 space-y-6">
               {/* Color Selector */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-900">Color: <span className="font-semibold">{selectedColor?.name}</span></h3>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {product.colors.map(color => (
-                    <button
-                      key={color.uuid}
-                      onClick={() => handleColorSelect(color)}
-                      className={`w-8 h-8 rounded-full border border-gray-300 transition-transform transform hover:scale-110 ${selectedColor?.name === color.name ? 'ring-2 ring-offset-1 ring-primary' : ''}`}
-                      style={{ backgroundColor: color.hex }}
-                      title={color.name}
-                      aria-label={`Select color ${color.name}`}
-                    />
-                  ))}
+              {product.show_colors !== false && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900">Color: <span className="font-semibold">{selectedColor?.name}</span></h3>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {product.colors.map(color => (
+                      <button
+                        key={color.uuid}
+                        onClick={() => handleColorSelect(color)}
+                        className={`w-8 h-8 rounded-full border border-gray-300 transition-transform transform hover:scale-110 ${selectedColor?.name === color.name ? 'ring-2 ring-offset-1 ring-primary' : ''}`}
+                        style={{ backgroundColor: color.hex }}
+                        title={color.name}
+                        aria-label={`Select color ${color.name}`}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Size Selector */}
               <div>

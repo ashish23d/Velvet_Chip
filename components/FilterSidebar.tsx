@@ -67,16 +67,52 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
     onPriceChange({ ...priceRange, max: value });
   };
 
+  const categorizedTags = React.useMemo(() => {
+    const groups: Record<string, string[]> = {
+      'Flavors': [],
+      'Dietary': [],
+      'Nutritional': [],
+      'Weight/Quantity': [],
+      'Other': []
+    };
+
+    const flavorKeywords = ['chocolate', 'vanilla', 'strawberry', 'fruit', 'berry', 'butterscotch', 'red velvet', 'pineapple', 'mango', 'coffee', 'dark', 'white'];
+    const dietaryKeywords = ['eggless', 'sugar free', 'vegan', 'gluten free', 'healthy', 'keto', 'paleo', 'organic', 'sugar-free'];
+    const nutrientKeywords = ['protein', 'fiber', 'carb', 'vitamin', 'mineral', 'sprout', 'calorie', 'fat', 'energy'];
+    const weightKeywords = ['kg', 'gm', 'g ', 'lb', 'oz'];
+
+    availableTags.forEach(tag => {
+      const lowerTag = tag.toLowerCase();
+      if (flavorKeywords.some(k => lowerTag.includes(k))) {
+        groups['Flavors'].push(tag);
+      } else if (dietaryKeywords.some(k => lowerTag.includes(k))) {
+        groups['Dietary'].push(tag);
+      } else if (nutrientKeywords.some(k => lowerTag.includes(k))) {
+        groups['Nutritional'].push(tag);
+      } else if (weightKeywords.some(k => lowerTag.includes(k))) {
+        groups['Weight/Quantity'].push(tag);
+      } else {
+        groups['Other'].push(tag);
+      }
+    });
+
+    return groups;
+  }, [availableTags]);
+
   const hasActiveFilters = selectedSizes.length > 0 || selectedColors.length > 0 || priceRange.min > minPrice || priceRange.max < maxPrice || selectedTags.length > 0;
 
   const rangeInputBaseClasses = [
     "absolute w-full h-1 bg-transparent appearance-none pointer-events-none -top-2 focus:outline-none focus:z-10",
-    // Thumb styles for Webkit (Chrome, Safari)
     "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:mt-2",
-    // Thumb styles for Firefox
     "[&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-none",
   ].join(' ');
 
+
+  // Helper to determine accurate Size label (e.g. Weight for cakes)
+  const sizeLabel = React.useMemo(() => {
+    const isWeight = availableSizes.some(s => s.toLowerCase().includes('kg') || s.toLowerCase().includes('g') || s.toLowerCase().includes('lb'));
+    return isWeight ? 'Weight' : 'Size';
+  }, [availableSizes]);
 
   return (
     <aside className="w-full lg:w-64 xl:w-72 space-y-8">
@@ -95,8 +131,6 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
       {/* Price Filter */}
       <div className="space-y-4">
         <h4 className="font-semibold text-gray-700 tracking-wide">PRICE</h4>
-
-        {/* Two-point slider container */}
         <div className="relative h-5 w-full">
           <div className="relative w-full h-1 rounded-full bg-gray-200 top-1/2 -translate-y-1/2">
             <div ref={rangeBarRef} className="absolute h-1 rounded-full bg-primary" />
@@ -122,7 +156,6 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
             aria-label="Maximum price"
           />
         </div>
-
         <div className="flex justify-center items-center text-sm pt-2">
           <span className="text-gray-800 font-medium">
             ₹{priceRange.min.toLocaleString()} - ₹{priceRange.max.toLocaleString()}
@@ -130,10 +163,54 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         </div>
       </div>
 
+      {/* Dynamic Tag Filters (Context Aware: Flavors, Dietary, etc.) */}
+      {Object.entries(categorizedTags).map(([category, tags]) => (
+        tags.length > 0 && (
+          <div key={category} className="space-y-4">
+            <h4 className="font-medium text-gray-700 uppercase tracking-wide text-sm">{category === 'Other' && Object.keys(categorizedTags).filter(k => k !== 'Other' && categorizedTags[k as keyof typeof categorizedTags].length > 0).length === 0 ? 'Tags' : category}</h4>
+            <div className="flex flex-wrap gap-2">
+              {tags.map(tag => {
+                const isSelected = selectedTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => onTagToggle(tag)}
+                    className={`px-3 py-1.5 text-xs font-medium border rounded-full transition-all duration-200 ${isSelected ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )
+      ))}
+
+      {/* Size / Weight Filter */}
+      {availableSizes.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="font-medium text-gray-700 uppercase tracking-wide text-sm">{sizeLabel.toUpperCase()}</h4>
+          <div className="flex flex-wrap gap-2">
+            {availableSizes.map(size => {
+              const isSelected = selectedSizes.includes(size);
+              return (
+                <button
+                  key={size}
+                  onClick={() => onSizeToggle(size)}
+                  className={`px-4 py-1.5 border rounded-md text-sm font-medium transition-colors ${isSelected ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white border-gray-200 text-gray-700 hover:border-primary hover:text-primary'}`}
+                >
+                  {size}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Color Filter */}
       {availableColors.length > 0 && (
         <div className="space-y-4">
-          <h4 className="font-medium text-gray-700">Color</h4>
+          <h4 className="font-medium text-gray-700 uppercase tracking-wide text-sm">Color</h4>
           <div className="flex flex-wrap gap-3">
             {availableColors.map(color => {
               const isSelected = selectedColors.includes(color.name);
@@ -141,11 +218,9 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
                 <button
                   key={color.name}
                   onClick={() => onColorToggle(color.name)}
-                  className={`w-8 h-8 rounded-full border border-gray-300 transition-transform transform hover:scale-110 flex items-center justify-center ${isSelected ? 'ring-2 ring-offset-1 ring-primary' : ''}`}
+                  className={`w-8 h-8 rounded-full border border-gray-200 shadow-sm transition-transform transform hover:scale-110 flex items-center justify-center ${isSelected ? 'ring-2 ring-offset-2 ring-primary' : ''}`}
                   style={{ backgroundColor: color.hex }}
                   title={color.name}
-                  aria-label={`Filter by color ${color.name}`}
-                  aria-pressed={isSelected}
                 >
                   {(color.hex.toUpperCase() === '#FFFFFF' || color.hex.toUpperCase() === '#FFFFF0') && isSelected && (
                     <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -159,50 +234,6 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
                   )}
                 </button>
               )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Size Filter */}
-      {availableSizes.length > 0 && (
-        <div className="space-y-4">
-          <h4 className="font-medium text-gray-700">Size</h4>
-          <div className="flex flex-wrap gap-2">
-            {availableSizes.map(size => {
-              const isSelected = selectedSizes.includes(size);
-              return (
-                <button
-                  key={size}
-                  onClick={() => onSizeToggle(size)}
-                  className={`px-4 py-1 border rounded-md text-sm font-medium transition-colors ${isSelected ? 'bg-primary text-white border-primary' : 'border-gray-300 hover:border-primary hover:text-primary'}`}
-                  aria-pressed={isSelected}
-                >
-                  {size}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Tags Filter */}
-      {availableTags.length > 0 && (
-        <div className="space-y-4">
-          <h4 className="font-medium text-gray-700">Tags</h4>
-          <div className="flex flex-wrap gap-2">
-            {availableTags.map(tag => {
-              const isSelected = selectedTags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  onClick={() => onTagToggle(tag)}
-                  className={`px-3 py-1 text-xs border rounded-full transition-colors ${isSelected ? 'bg-primary text-white border-primary' : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'}`}
-                  aria-pressed={isSelected}
-                >
-                  {tag}
-                </button>
-              );
             })}
           </div>
         </div>

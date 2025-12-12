@@ -478,6 +478,47 @@ const SiteContentPage: React.FC = () => {
                 )}
             </ContentBlockEditor>
 
+            <ContentBlockEditor
+                title="Login Page Settings"
+                description="Customize the image and text shown on the login page."
+                contentId="login_page_settings"
+            >
+                {(formData, handleChange) => (
+                    <div className="space-y-4">
+                        <div>
+                            <label className={labelClass}>Hero Image</label>
+                            <ImageUploader
+                                bucket={BUCKETS.SITE_ASSETS}
+                                pathPrefix="login_page"
+                                images={formData.imagePath ? [formData.imagePath] : []}
+                                onImageUpload={(path) => handleChange('imagePath', path)}
+                                onImageRemove={() => handleChange('imagePath', '')}
+                            />
+                        </div>
+                        <div>
+                            <label className={labelClass}>Hero Title</label>
+                            <input
+                                type="text"
+                                value={formData.title || ''}
+                                onChange={e => handleChange('title', e.target.value)}
+                                className={inputClass}
+                                placeholder="Elegance in Every Thread."
+                            />
+                        </div>
+                        <div>
+                            <label className={labelClass}>Hero Description</label>
+                            <textarea
+                                rows={2}
+                                value={formData.description || ''}
+                                onChange={e => handleChange('description', e.target.value)}
+                                className={inputClass}
+                                placeholder="Join our community..."
+                            />
+                        </div>
+                    </div>
+                )}
+            </ContentBlockEditor>
+
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
                 <ContentBlockEditor
                     title="Footer Description"
