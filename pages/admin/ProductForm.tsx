@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Product, Category } from '../../types.ts';
+import { Product, Category, CustomizationOption } from '../../types.ts';
 import PlusIcon from '../../components/icons/PlusIcon.tsx';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
 import ImageUploader from '../../components/admin/ImageUploader.tsx';
@@ -34,6 +34,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
   const [category, setCategory] = useState('');
   const [mrp, setMrp] = useState(0);
   const [price, setPrice] = useState(0);
+  const [allowCustomization, setAllowCustomization] = useState(false);
+  const [customizationOptions, setCustomizationOptions] = useState<CustomizationOption[]>([]);
 
   // State for color variants, which will hold images and sizes
   const [colorVariants, setColorVariants] = useState<ColorVariant[]>([]);
@@ -58,8 +60,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
       setDescription(productToEdit.description);
       setCategory(productToEdit.category);
       setMrp(productToEdit.mrp);
-      setMrp(productToEdit.mrp);
       setPrice(productToEdit.price);
+      setAllowCustomization(productToEdit.allow_customization || false);
+      setCustomizationOptions(productToEdit.customization_options || []);
       setTags(productToEdit.tags || []);
 
       const initialVariants: ColorVariant[] = productToEdit.colors.map((color, index) => ({
@@ -70,7 +73,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
         images: color.images || (index === 0 ? productToEdit.images : []), // Backward compatibility
         // The existing data doesn't have stock per size, so we'll mock it.
         // This is a reasonable assumption for a form migration.
-        sizes: productToEdit.sizes.map(size => ({ size, stock: 10 }))
+        sizes: (color.sizes && color.sizes.length > 0)
+          ? color.sizes
+          : productToEdit.sizes.map(size => ({ size, stock: 10 }))
       }));
       setColorVariants(initialVariants);
 
@@ -158,6 +163,35 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
     ));
   };
 
+  const addCustomizationOption = () => {
+    setCustomizationOptions(prev => [...prev, {
+      id: generateUUID(),
+      type: 'text',
+      label: '',
+      required: false,
+      options: []
+    }]);
+  };
+
+  const removeCustomizationOption = (id: string) => {
+    setCustomizationOptions(prev => prev.filter(opt => opt.id !== id));
+  };
+
+  const updateCustomizationOption = (id: string, field: keyof CustomizationOption, value: any) => {
+    setCustomizationOptions(prev => prev.map(opt => {
+      if (opt.id === id) {
+        return { ...opt, [field]: value };
+      }
+      return opt;
+    }));
+  };
+
+  const handleOptionValuesChange = (id: string, value: string) => {
+    // Split by comma and trim
+    const optionsArray = value.split(',').map(s => s.trim()).filter(Boolean);
+    updateCustomizationOption(id, 'options', optionsArray);
+  };
+
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
@@ -200,13 +234,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
         name: cv.name,
         hex: cv.hex,
         uuid: cv.uuid,
-        images: (cv.images && cv.images.length > 0) ? cv.images : [mainImages[0]]
+        images: (cv.images && cv.images.length > 0) ? cv.images : [mainImages[0]],
+        sizes: cv.sizes.map(s => ({ size: s.size, stock: s.stock }))
       })),
       sizes: Array.from(allSizes),
       images: mainImages,
-      images: mainImages,
       specifications: productToEdit?.specifications || {},
       tags: tags,
+      allow_customization: allowCustomization,
+      customization_options: allowCustomization ? customizationOptions : []
     };
 
     if (productToEdit) {
@@ -269,9 +305,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
           </div>
         </div>
       </div>
+    </div>
+      </div >
 
-      {/* Pricing */}
-      <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+  {/* Pricing */ }
+  < div className = "p-6 bg-white dark:bg-gray-800 rounded-lg shadow" >
         <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">Pricing</h3>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
@@ -283,10 +321,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
             <input type="number" id="price" value={price} onChange={e => setPrice(Number(e.target.value))} className={inputClass} required />
           </div>
         </div>
-      </div>
+      </div >
 
-      {/* Variants */}
-      <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+  {/* Variants */ }
+  < div className = "p-6 bg-white dark:bg-gray-800 rounded-lg shadow" >
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">Variants (Colors, Sizes & Images)</h3>
           <button type="button" onClick={addColorVariant} className="flex items-center gap-1 text-sm font-medium text-primary hover:text-pink-700">
@@ -355,14 +393,107 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
             <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">No variants defined. Please add at least one color variant.</p>
           )}
         </div>
-      </div>
+      </div >
 
-      {/* Actions */}
-      <div className="flex justify-end gap-4">
+  {/* Customization Section */ }
+  < div className = "p-6 bg-white dark:bg-gray-800 rounded-lg shadow" >
+        <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">Product Customization</h3>
+        <div className="flex items-center gap-3 mb-4">
+          <input
+            id="allowCustomization"
+            type="checkbox"
+            checked={allowCustomization}
+            onChange={(e) => setAllowCustomization(e.target.checked)}
+            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+          />
+          <div className="flex flex-col">
+            <label htmlFor="allowCustomization" className={labelClass}>
+              Allow Customization / Special Instructions
+            </label>
+            <p className="text-xs text-gray-500">Enable if users should be able to add custom text notes for this product.</p>
+          </div>
+        </div>
+
+{
+  allowCustomization && (
+    <div className="mt-4 p-4 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50/50 dark:bg-gray-900/50">
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="text-sm font-medium text-gray-900 dark:text-white">Customization Options</h4>
+        <button type="button" onClick={addCustomizationOption} className="text-sm text-primary hover:text-pink-700 font-medium flex items-center gap-1">
+          <PlusIcon className="w-4 h-4" /> Add Field
+        </button>
+      </div>
+      <div className="space-y-4">
+        {customizationOptions.map((opt, index) => (
+          <div key={opt.id} className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+            <div className="sm:col-span-4">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Label</label>
+              <input
+                type="text"
+                value={opt.label}
+                onChange={e => updateCustomizationOption(opt.id, 'label', e.target.value)}
+                placeholder="e.g. Engraving Name"
+                className={inputClass}
+                required
+              />
+            </div>
+            <div className="sm:col-span-3">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
+              <select
+                value={opt.type}
+                onChange={e => updateCustomizationOption(opt.id, 'type', e.target.value)}
+                className={inputClass}
+              >
+                <option value="text">Text Input</option>
+                <option value="radio">Radio Buttons</option>
+                <option value="checkbox">Checkbox</option>
+              </select>
+            </div>
+            {(opt.type === 'radio' || opt.type === 'checkbox') && (
+              <div className="sm:col-span-3">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Options (comma separated)</label>
+                <input
+                  type="text"
+                  value={opt.options?.join(', ') || ''}
+                  onChange={e => handleOptionValuesChange(opt.id, e.target.value)}
+                  placeholder="Option 1, Option 2"
+                  className={inputClass}
+                />
+              </div>
+            )}
+            <div className="sm:col-span-1 flex flex-col items-center justify-center pt-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={opt.required}
+                  onChange={e => updateCustomizationOption(opt.id, 'required', e.target.checked)}
+                  className="h-4 w-4 text-primary rounded"
+                />
+                <span className="text-xs text-gray-500">Req.</span>
+              </label>
+            </div>
+            <div className="sm:col-span-1 pt-6 flex justify-end">
+              <button type="button" onClick={() => removeCustomizationOption(opt.id)} className="text-gray-400 hover:text-red-500">
+                <TrashIcon className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        ))}
+        {customizationOptions.length === 0 && (
+          <p className="text-xs text-center text-gray-400">No options added yet.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+      </div >
+
+  {/* Actions */ }
+  < div className = "flex justify-end gap-4" >
         <button type="button" onClick={onCancel} className="bg-white dark:bg-gray-700 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">Cancel</button>
         <button type="submit" className="bg-primary text-white py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium hover:bg-pink-700">Save Product</button>
-      </div>
-    </form>
+      </div >
+    </form >
   );
 };
 

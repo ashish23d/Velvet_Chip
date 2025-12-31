@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext.tsx';
 import { Order, OrderStatus } from '../../types.ts';
 import EyeIcon from '../../components/icons/EyeIcon.tsx';
+import Pagination from '../../components/Pagination.tsx';
 
 const possibleNextStatuses: Record<OrderStatus, OrderStatus[]> = {
     'Processing': ['Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'],
@@ -27,6 +28,10 @@ const OrderListPage: React.FC = () => {
     const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'custom'>('all');
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     // State for bulk actions
     const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
@@ -113,6 +118,17 @@ const OrderListPage: React.FC = () => {
         return sorted;
 
     }, [orders, searchTerm, statusFilter, sortBy, dateFilter, customStartDate, customEndDate]);
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
+    const indexOfLastOrder = currentPage * itemsPerPage;
+    const indexOfFirstOrder = indexOfLastOrder - itemsPerPage;
+    const currentOrders = filteredAndSortedOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+
+    // Reset pagination when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter, sortBy, dateFilter, customStartDate, customEndDate]);
 
     const availableBulkStatuses = useMemo(() => {
         if (selectedOrders.length === 0) {
@@ -296,7 +312,7 @@ const OrderListPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredAndSortedOrders.map((order) => (
+                            {currentOrders.map((order) => (
                                 <tr key={order.id} className={selectedOrders.includes(order.id) ? 'bg-primary/5' : ''}>
                                     <td className="p-4">
                                         <input
@@ -347,6 +363,11 @@ const OrderListPage: React.FC = () => {
                         </div>
                     )}
                 </div>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                />
             </div>
             {selectedOrders.length > 0 && (
                 <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white shadow-lg p-4 border-t flex items-center justify-between gap-4 z-20 animate-slide-in-down">

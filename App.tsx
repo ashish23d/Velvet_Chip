@@ -8,6 +8,7 @@ import CategoryPage from './pages/CategoryPage.tsx';
 import ProductDetailPage from './pages/ProductDetailPage.tsx';
 import CartPage from './pages/CartPage.tsx';
 import { AppProvider, useAppContext } from './context/AppContext.tsx';
+import { supabase } from './services/supabaseClient.ts';
 import Breadcrumb from './components/Breadcrumb.tsx';
 import CartHeader from './components/CartHeader.tsx';
 import LoginPage from './pages/LoginPage.tsx';
@@ -68,6 +69,7 @@ import BulkInvoicePrintPage from './pages/admin/BulkInvoicePrintPage.tsx';
 import AnalyticsPage from './pages/admin/AnalyticsPage.tsx';
 import CardAddonsPage from './pages/admin/CardAddonsPage.tsx';
 import CardAddonFormPage from './pages/admin/CardAddonFormPage.tsx';
+import BroadcastsPage from './pages/admin/BroadcastsPage.tsx';
 
 
 const GlobalComponents = () => {
@@ -211,6 +213,7 @@ const AppRoutes: React.FC = () => (
       <ReactRouterDOM.Route path="mails" element={<MailsPage />} />
       <ReactRouterDOM.Route path="mails/new" element={<MailTemplateFormPage />} />
       <ReactRouterDOM.Route path="mails/edit/:id" element={<MailTemplateFormPage />} />
+      <ReactRouterDOM.Route path="broadcasts" element={<BroadcastsPage />} />
     </ReactRouterDOM.Route>
 
     {/* Print Layout */}
@@ -228,12 +231,16 @@ const StyleInjector = () => {
     if (siteSettings?.primaryColor) {
       document.documentElement.style.setProperty('--color-primary', siteSettings.primaryColor);
     }
+    if (siteSettings?.hoverColor) {
+      document.documentElement.style.setProperty('--color-primary-hover', siteSettings.hoverColor);
+    }
   }, [siteSettings]);
   return null; // This component does not render anything
 }
 
 const AppContent: React.FC = () => {
-  const { isLoading } = useAppContext();
+  const { isLoading, session } = useAppContext();
+  const navigate = ReactRouterDOM.useNavigate();
 
   if (isLoading) {
     return (
@@ -243,6 +250,7 @@ const AppContent: React.FC = () => {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
+          <p className="mt-4 font-medium text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     );
@@ -260,6 +268,75 @@ const AppContent: React.FC = () => {
 }
 
 const App: React.FC = () => {
+  const [isRecoveryMode, setIsRecoveryMode] = React.useState(
+    window.location.hash.includes('access_token') ||
+    window.location.href.includes('type=recovery')
+  );
+
+  useEffect(() => {
+    if (isRecoveryMode) {
+      console.log("Recovery Mode: Intercepting Supabase hash...");
+
+      // 1. If path has access_token but no hash, fix it for Supabase
+      if (!window.location.hash && window.location.href.includes('access_token')) {
+        console.log("Fixing malformed URL for Supabase...");
+        const newUrl = window.location.href.replace('access_token', '#access_token');
+        window.location.replace(newUrl);
+        return;
+      }
+
+      // 2. Listen for the session to be ready
+      const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        if (session || event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+          console.log("Supabase Auth Success! Redirecting to Reset Password.");
+          // Force the router hash
+          window.location.hash = '/reset-password';
+          setIsRecoveryMode(false);
+        }
+      });
+
+      // 3. Fallback: Check if session is already there (race condition)
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          console.log("Session found immediately. Proceeding.");
+          window.location.hash = '/reset-password';
+          setIsRecoveryMode(false);
+        }
+      });
+
+      // 4. Safety Timeout (10s)
+      const timer = setTimeout(() => {
+        console.warn("Recovery timeout. Mounting app anyway.");
+        // If we still have a token hash, clear it to prevent Router crash
+        if (window.location.hash.includes('access_token')) {
+          window.location.hash = '/'; // Fallback to home
+        }
+        setIsRecoveryMode(false);
+      }, 10000);
+
+      return () => {
+        authListener.subscription.unsubscribe();
+        clearTimeout(timer);
+      };
+    }
+  }, [isRecoveryMode]);
+
+  if (isRecoveryMode) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-white dark:bg-gray-900">
+        <div className="text-center">
+          <svg className="animate-spin h-8 w-8 text-primary mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p className="mt-4 font-medium text-gray-600 dark:text-gray-400">
+            Verifying secure link...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ReactRouterDOM.HashRouter>
       <AppProvider>

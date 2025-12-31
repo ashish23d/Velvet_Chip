@@ -1,5 +1,7 @@
 
 import React, { useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Category } from '../types';
 
 interface FilterSidebarProps {
   availableSizes: string[];
@@ -17,6 +19,8 @@ interface FilterSidebarProps {
   availableTags?: string[];
   selectedTags?: string[];
   onTagToggle?: (tag: string) => void;
+  categories?: Category[]; // Add categories prop
+  currentCategoryId?: string;
 }
 
 
@@ -36,10 +40,13 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   availableTags = [],
   selectedTags = [],
   onTagToggle = (tag) => { },
+  categories = [],
+  currentCategoryId
 }) => {
   const minRangeRef = useRef<HTMLInputElement>(null);
   const maxRangeRef = useRef<HTMLInputElement>(null);
   const rangeBarRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const getPercent = useCallback((value: number) => {
     if (maxPrice - minPrice === 0) return 0;
@@ -67,39 +74,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
     onPriceChange({ ...priceRange, max: value });
   };
 
-  const categorizedTags = React.useMemo(() => {
-    const groups: Record<string, string[]> = {
-      'Flavors': [],
-      'Dietary': [],
-      'Nutritional': [],
-      'Weight/Quantity': [],
-      'Other': []
-    };
-
-    const flavorKeywords = ['chocolate', 'vanilla', 'strawberry', 'fruit', 'berry', 'butterscotch', 'red velvet', 'pineapple', 'mango', 'coffee', 'dark', 'white'];
-    const dietaryKeywords = ['eggless', 'sugar free', 'vegan', 'gluten free', 'healthy', 'keto', 'paleo', 'organic', 'sugar-free'];
-    const nutrientKeywords = ['protein', 'fiber', 'carb', 'vitamin', 'mineral', 'sprout', 'calorie', 'fat', 'energy'];
-    const weightKeywords = ['kg', 'gm', 'g ', 'lb', 'oz'];
-
-    availableTags.forEach(tag => {
-      const lowerTag = tag.toLowerCase();
-      if (flavorKeywords.some(k => lowerTag.includes(k))) {
-        groups['Flavors'].push(tag);
-      } else if (dietaryKeywords.some(k => lowerTag.includes(k))) {
-        groups['Dietary'].push(tag);
-      } else if (nutrientKeywords.some(k => lowerTag.includes(k))) {
-        groups['Nutritional'].push(tag);
-      } else if (weightKeywords.some(k => lowerTag.includes(k))) {
-        groups['Weight/Quantity'].push(tag);
-      } else {
-        groups['Other'].push(tag);
-      }
-    });
-
-    return groups;
-  }, [availableTags]);
-
-  const hasActiveFilters = selectedSizes.length > 0 || selectedColors.length > 0 || priceRange.min > minPrice || priceRange.max < maxPrice || selectedTags.length > 0;
+  const hasActiveFilters = selectedSizes.length > 0 || selectedColors.length > 0 || priceRange.min > minPrice || priceRange.max < maxPrice; // Removed selectedTags check
 
   const rangeInputBaseClasses = [
     "absolute w-full h-1 bg-transparent appearance-none pointer-events-none -top-2 focus:outline-none focus:z-10",
@@ -128,9 +103,30 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         )}
       </div>
 
+      {/* Categories as Tags */}
+      {categories.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="font-medium text-gray-700 uppercase tracking-wide text-sm">Categories</h4>
+          <div className="flex flex-wrap gap-2">
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => navigate(`/category/${cat.id}`)}
+                className={`px-3 py-1.5 text-xs font-medium border rounded-full transition-all duration-200 ${currentCategoryId === cat.id
+                    ? 'bg-primary text-white border-primary shadow-sm'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Price Filter */}
       <div className="space-y-4">
-        <h4 className="font-semibold text-gray-700 tracking-wide">PRICE</h4>
+        <h4 className="font-medium text-gray-700 uppercase tracking-wide text-sm">PRICE</h4>
         <div className="relative h-5 w-full">
           <div className="relative w-full h-1 rounded-full bg-gray-200 top-1/2 -translate-y-1/2">
             <div ref={rangeBarRef} className="absolute h-1 rounded-full bg-primary" />
@@ -163,29 +159,6 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         </div>
       </div>
 
-      {/* Dynamic Tag Filters (Context Aware: Flavors, Dietary, etc.) */}
-      {Object.entries(categorizedTags).map(([category, tags]) => (
-        tags.length > 0 && (
-          <div key={category} className="space-y-4">
-            <h4 className="font-medium text-gray-700 uppercase tracking-wide text-sm">{category === 'Other' && Object.keys(categorizedTags).filter(k => k !== 'Other' && categorizedTags[k as keyof typeof categorizedTags].length > 0).length === 0 ? 'Tags' : category}</h4>
-            <div className="flex flex-wrap gap-2">
-              {tags.map(tag => {
-                const isSelected = selectedTags.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    onClick={() => onTagToggle(tag)}
-                    className={`px-3 py-1.5 text-xs font-medium border rounded-full transition-all duration-200 ${isSelected ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )
-      ))}
-
       {/* Size / Weight Filter */}
       {availableSizes.length > 0 && (
         <div className="space-y-4">
@@ -207,10 +180,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         </div>
       )}
 
-      {/* Color Filter */}
+      {/* Color Filter - Renamed to "Choose as per" */}
       {availableColors.length > 0 && (
         <div className="space-y-4">
-          <h4 className="font-medium text-gray-700 uppercase tracking-wide text-sm">Color</h4>
+          <h4 className="font-medium text-gray-700 uppercase tracking-wide text-sm">Choose as per</h4>
           <div className="flex flex-wrap gap-3">
             {availableColors.map(color => {
               const isSelected = selectedColors.includes(color.name);

@@ -1,108 +1,206 @@
-// FIX: Add Deno namespace to fix "Cannot find name 'Deno'" and type resolution errors in non-Deno environments.
-declare const Deno: any;
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from './cors.ts';
-import type { Order } from './types.ts';
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Initializes Supabase Client
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 serve(async (req) => {
-  console.log(`[send-order-update] Function invoked with method: ${req.method}`);
-
   if (req.method === 'OPTIONS') {
-    console.log('[send-order-update] Handling OPTIONS request.');
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    console.log('[send-order-update] Attempting to parse request body.');
-    const { orderId, templateName } = await req.json();
-    console.log(`[send-order-update] Successfully parsed orderId: ${orderId}, templateName: ${templateName}`);
+    const { templateName, returnId, orderId, email, status, body: extraBody, ...rest } = await req.json();
 
-    if (!orderId) throw new Error("Order ID is required.");
-    if (!templateName) throw new Error("Template name is required.");
+    console.log(`📧 Sending email via SendGrid: Template="${templateName}", To="${email || 'Default'}"`);
 
-    // Correctly reference Deno environment variables with proper types
-    const projectUrl = Deno.env.get('PROJECT_URL');
-    const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY');
-
-    if (!projectUrl || !serviceRoleKey) {
-        console.error("[send-order-update] Error: Missing PROJECT_URL or SERVICE_ROLE_KEY secrets.");
-        throw new Error("Supabase credentials are not configured correctly in function secrets.");
-    }
-    console.log("[send-order-update] Supabase credentials found.");
-
-    const supabaseAdmin = createClient(projectUrl, serviceRoleKey);
-    console.log("[send-order-update] Supabase admin client created.");
-    
-    // 1. Fetch Order and User data
-    console.log(`[send-order-update] Fetching order data for orderId: ${orderId}`);
-    const { data: orderResult, error: orderError } = await supabaseAdmin
-      .from('orders')
-      .select('*, profile:profiles(email)')
-      .eq('id', orderId)
-      .single();
-
-    if (orderError) throw orderError;
-    if (!orderResult) throw new Error(`Order ${orderId} not found.`);
-    console.log('[send-order-update] Order data fetched successfully.');
-    
-    // FIX: Map snake_case from DB to camelCase for application logic
-    const order: Order = {
-      id: orderResult.id,
-      userId: orderResult.user_id,
-      orderDate: orderResult.order_date,
-      currentStatus: orderResult.current_status,
-      statusHistory: orderResult.status_history || [],
-      totalAmount: orderResult.total_amount,
-      shippingAddress: orderResult.shipping_address,
-      items: orderResult.items || [],
-      payment: orderResult.payment,
-      customerEmail: (orderResult.profile as any)?.email,
-      customerName: orderResult.shipping_address.name,
-      promotionCode: orderResult.promotion_code,
-    };
-
-    if (!order.customerEmail) {
-      throw new Error(`Customer email not found for order ${orderId}`);
-    }
-
-    // 2. Fetch the specified Email Template
-    console.log(`[send-order-update] Fetching "${templateName}" email template.`);
-    const { data: templateData, error: templateError } = await supabaseAdmin
+    // 1. Fetch Template from Database
+    const { data: template, error: templateError } = await supabase
       .from('mail_templates')
-      .select('subject, html_content')
+      .select('*')
       .eq('name', templateName)
+      .eq('is_active', true)
       .single();
 
-    if (templateError || !templateData) throw new Error(`Could not find the "${templateName}" email template in the database.`);
-    console.log('[send-order-update] Email template fetched.');
+    let htmlContent = '';
+    let emailSubject = '';
 
-    // 3. Replace all placeholders
-    console.log('[send-order-update] Replacing placeholders in template.');
-    const finalHtml = templateData.html_content
-      .replaceAll('{{customer_name}}', order.shippingAddress.name)
-      .replaceAll('{{order_id}}', order.id)
-      .replaceAll('{{order_status}}', order.currentStatus)
-      .replaceAll('{{shipping_address}}', `${order.shippingAddress.name}<br>${order.shippingAddress.address}, ${order.shippingAddress.locality}<br>${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.pincode}`)
-      .replaceAll('{{tracking_link}}', `${Deno.env.get('SITE_URL') || 'https://awaany.com'}/#/track-order/${order.id}`);
+    if (templateError || !template) {
+      console.warn(`⚠️ Template "${templateName}" not found or inactive. Falling back to simple message.`);
+      // Fallback
+      emailSubject = `Notification: ${templateName}`;
+      htmlContent = `<p>Status Update: ${status || 'No status'}</p><p>Order ID: ${orderId || 'N/A'}</p>`;
+    } else {
+      emailSubject = template.subject || 'Notification';
+      htmlContent = template.html_content || '';
+    }
 
-    const finalSubject = templateData.subject.replaceAll('{{order_id}}', order.id).replaceAll('{{order_status}}', order.currentStatus);
-    console.log('[send-order-update] Placeholders replaced.');
+    // 1.5 FETCH ORDER DETAILS (Items, Address, Date) if orderId is present
+    let itemsHtml = '';
+    let addressHtml = '';
+    let orderDateFormatted = '';
+    let amountPaidFormatted = '';
+    let itemTitleSummary = 'Items';
 
-    // 4. Send email via SendGrid
-    console.log('[send-order-update] Preparing to send email via SendGrid.');
-    const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY');
-    if (!SENDGRID_API_KEY) throw new Error("SENDGRID_API_KEY is not set in function secrets.");
-    console.log('[send-order-update] SendGrid API Key found.');
-    
-    const emailPayload = {
-      personalizations: [{ to: [{ email: order.customerEmail }] }],
-      from: { email: "support@awaany.com", name: "Awaany" },
-      subject: finalSubject,
-      content: [{ type: 'text/html', value: finalHtml }],
+    if (orderId) {
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('items, total_amount, order_date, shipping_address, payment')
+        .eq('id', orderId)
+        .single();
+
+      if (orderData) {
+        // Format Date
+        if (orderData.order_date) {
+          const date = new Date(orderData.order_date);
+          orderDateFormatted = date.toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        // Format Amount & Payment Label
+        const isCOD = orderData.payment?.method === 'cod' || orderData.payment?.method === 'COD';
+        const isDelivered = status?.toLowerCase() === 'delivered';
+
+        // Logic: If COD and NOT Delivered -> "Amount to be Paid on Delivery"
+        // Else (Prepaid or already Delivered) -> "Total Amount Paid"
+        let paymentLabel = 'Total Amount Paid';
+        if (isCOD && !isDelivered) {
+          paymentLabel = 'Amount to be Paid on Delivery';
+        }
+        amountPaidFormatted = `Rs. ${orderData.total_amount?.toLocaleString('en-IN') || '0'}`;
+
+        // Format Address
+        if (orderData.shipping_address) {
+          const addr = orderData.shipping_address;
+          addressHtml = `
+                <div style="font-size: 14px; color: #333; line-height: 1.6;">
+                    <strong style="font-size: 16px;">${addr.name || 'Customer'}</strong><br/>
+                    ${addr.address || ''}, ${addr.locality || ''}<br/>
+                    ${addr.city || ''}, ${addr.state || ''} - ${addr.pincode || ''}<br/>
+                    <strong>Phone:</strong> ${addr.phone || 'N/A'}
+                </div>
+            `;
+        }
+
+        // Generate Items Table
+        if (orderData.items && orderData.items.length > 0) {
+          // Logic for Subject Line: "Product Name & X more"
+          const firstItemName = orderData.items[0].name;
+          const remainingCount = orderData.items.length - 1;
+          if (remainingCount > 0) {
+            itemTitleSummary = `${firstItemName} & ${remainingCount} more`;
+          } else {
+            itemTitleSummary = firstItemName;
+          }
+
+          const getPublicUrl = (path: string) => {
+            const fullPath = (path && !/\.[^/.]+$/.test(path)) ? `${path}.jpg` : path;
+            return supabase.storage.from('products').getPublicUrl(fullPath).data.publicUrl;
+          }
+
+          itemsHtml = `
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-family: sans-serif;">
+                    ${orderData.items.map((item: any) => `
+                        <tr>
+                            <td style="padding: 15px 0; border-bottom: 1px solid #eee; width: 60px; vertical-align: top;">
+                                <img src="${getPublicUrl(item.image)}" alt="${item.name}" width="60" height="auto" style="border-radius: 4px; object-fit: cover;" />
+                            </td>
+                            <td style="padding: 15px 10px; border-bottom: 1px solid #eee; vertical-align: top;">
+                                <div style="font-weight: 500; font-size: 14px; color: #333; margin-bottom: 4px;">${item.name}</div>
+                                <div style="font-size: 12px; color: #777; line-height: 1.4;">
+                                    Size: ${item.size} <br/>
+                                    Qty: ${item.quantity}
+                                </div>
+                            </td>
+                            <td style="padding: 15px 0; border-bottom: 1px solid #eee; text-align: right; vertical-align: top; font-weight: 600; font-size: 14px; color: #333;">
+                                Rs. ${(item.price * item.quantity).toLocaleString('en-IN')}
+                            </td>
+                        </tr>
+                    `).join('')}
+                    <tr>
+                        <td colspan="2" style="padding-top: 15px; text-align: right; font-size: 14px; color: #555;">${paymentLabel}</td>
+                        <td style="padding-top: 15px; text-align: right; font-size: 16px; font-weight: bold; color: #333;">${amountPaidFormatted}</td>
+                    </tr>
+                </table>`;
+        }
+      }
+    }
+
+    // 2. Prepare Replacements
+    const replacements: Record<string, string> = {
+      '{{order_id}}': orderId ? orderId.toString().slice(0, 8) : '',
+      '{{full_order_id}}': orderId || '',
+      '{{status}}': status || '',
+      '{{return_id}}': returnId || '',
+      '{{reason}}': rest.reason || '',
+      '{{user_name}}': rest.userName || 'Customer',
+      '{{items_summary}}': itemsHtml || rest.itemsSummary || '',
+      '{{tracking_id}}': rest.trackingId || '',
+      '{{courier_name}}': rest.courierName || '',
+      '{{shipping_address_html}}': addressHtml || 'Address not available',
+      '{{order_date}}': orderDateFormatted || '',
+      '{{amount_paid}}': amountPaidFormatted || '',
+      '{{item_title_summary}}': itemTitleSummary || 'Order'
     };
 
-    console.log(`[send-order-update] Sending email to: ${order.customerEmail}`);
+    // 3. Perform Replacement on Subject and Body
+    // Replace all occurrences
+    Object.keys(replacements).forEach(key => {
+      const value = replacements[key];
+      // Regex to replace all instances globally
+      const regex = new RegExp(key, 'g');
+      emailSubject = emailSubject.replace(regex, value);
+      htmlContent = htmlContent.replace(regex, value);
+    });
+
+    // 4. Send Email via SendGrid
+    const recipient = email || 'velvetchip2025@gmail.com'; // Fallback for dev/testing
+    const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY');
+
+    if (!SENDGRID_API_KEY) {
+      throw new Error("SENDGRID_API_KEY is missing from environment variables");
+    }
+
+    // 5. FETCH SENDER IDENTITY FROM DATABASE
+    let senderEmail = "support@awaany.com";
+    let senderName = "Velvet Chip";
+
+    try {
+      const { data: settingsData } = await supabase
+        .from('email_settings')
+        .select('*')
+        .single();
+
+      if (settingsData) {
+        if (settingsData.sender_email) senderEmail = settingsData.sender_email;
+        if (settingsData.sender_name) senderName = settingsData.sender_name;
+      }
+    } catch (err) {
+      console.warn("Could not fetch email settings, using defaults.", err);
+    }
+
+    console.log(`📤 Sending to ${recipient} with subject "${emailSubject}"`);
+    console.log(`📤 From: "${senderName}" <${senderEmail}>`);
+
+    const emailPayload = {
+      personalizations: [{
+        to: [{ email: recipient }],
+        subject: emailSubject,
+      }],
+      from: { email: senderEmail, name: senderName },
+      content: [{
+        type: 'text/html',
+        value: htmlContent,
+      }],
+    };
+
     const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
@@ -113,21 +211,19 @@ serve(async (req) => {
     });
 
     if (!res.ok) {
-        const errorBody = await res.text();
-        console.error(`[send-order-update] SendGrid API Error: ${res.statusText} - ${errorBody}`);
-        throw new Error(`SendGrid API error: ${res.statusText} - ${errorBody}`);
+      const errorBody = await res.text();
+      console.error(`❌ SendGrid API Error: ${res.statusText} - ${errorBody}`);
+      throw new Error(`SendGrid API error: ${res.statusText}`);
     }
-    console.log('[send-order-update] Email sent successfully via SendGrid.');
 
-    return new Response(JSON.stringify({ message: "Order update email sent successfully" }), {
+    console.log('✅ Email sent successfully via SendGrid.');
+
+    return new Response(JSON.stringify({ message: "Email sent successfully" }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
-
   } catch (error) {
-    console.error("!!! [send-order-update] An error occurred in the function !!!");
-    console.error("Error message:", error.message);
-    console.error("Error stack:", error.stack);
+    console.error("❌ Email Function Error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,

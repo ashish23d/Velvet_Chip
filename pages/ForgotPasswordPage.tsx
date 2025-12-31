@@ -16,9 +16,10 @@ const ForgotPasswordPage: React.FC = () => {
         setError(null);
         setMessage(null);
 
-        // Construct the redirect URL for the reset page, including the hash for HashRouter
-        const redirectUrl = `${window.location.origin}${window.location.pathname}#/reset-password`;
-        
+        // Use origin for redirect to avoid HashRouter duplication issues.
+        // The PASSWORD_RECOVERY event in AppContext will handle the routing to /reset-password
+        const redirectUrl = window.location.origin;
+
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: redirectUrl,
         });
@@ -30,7 +31,7 @@ const ForgotPasswordPage: React.FC = () => {
         }
         setIsLoading(false);
     };
-    
+
     const commonInputClasses = "mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white";
 
     return (
@@ -40,9 +41,9 @@ const ForgotPasswordPage: React.FC = () => {
                     <div className="text-center mb-6">
                         <Logo className="h-14 sm:h-16 w-auto text-primary mx-auto" />
                     </div>
-                    
+
                     <h2 className="text-2xl font-serif text-center text-gray-800 dark:text-white">Forgot Your Password?</h2>
-                    
+
                     {message ? (
                         <div className="mt-8 text-center">
                             <p className="text-green-700 bg-green-50 dark:bg-green-900/30 p-4 rounded-lg">{message}</p>
@@ -64,8 +65,8 @@ const ForgotPasswordPage: React.FC = () => {
                                     {isLoading ? 'Sending...' : 'Send Reset Link'}
                                 </button>
                             </form>
-                             {error && <p className="mt-4 text-sm text-center text-red-600 bg-red-50 dark:bg-red-900/30 p-2 rounded-lg">{error}</p>}
-                              <div className="text-center mt-6">
+                            {error && <p className="mt-4 text-sm text-center text-red-600 bg-red-50 dark:bg-red-900/30 p-2 rounded-lg">{error}</p>}
+                            <div className="text-center mt-6">
                                 <Link to="/login" className="text-sm font-medium text-primary hover:underline">
                                     &larr; Back to Login
                                 </Link>

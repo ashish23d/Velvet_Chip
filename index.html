@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Awaany - Women's Fashion</title>
+    <title>Velvet chip</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,6 +13,7 @@
     <style>
       :root {
         --color-primary: #C22255;
+        --color-primary-hover: #db2760; /* Default lighter/different shade */
       }
       /* Force light mode controls */
       :root {
@@ -72,6 +73,7 @@
           extend: {
             colors: {
               primary: 'var(--color-primary)',
+              'primary-hover': 'var(--color-primary-hover)',
             },
             fontFamily: {
               'sans': ['Inter', 'sans-serif'],

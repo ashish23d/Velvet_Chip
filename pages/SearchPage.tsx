@@ -153,7 +153,7 @@ const SearchPage: React.FC = () => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-serif font-bold text-gray-900">
-                        Search Results
+                        {searchQuery ? 'Search Results' : 'Our Collection'}
                     </h1>
                     {searchQuery && (
                         <p className="mt-2 text-lg text-gray-600">

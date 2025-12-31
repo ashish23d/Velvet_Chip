@@ -35,34 +35,32 @@ const PaymentPage: React.FC = () => {
 
   // Validate cart on page load
   useEffect(() => {
-    console.log('🔍 PaymentPage mounted');
-    console.log('📦 Cart on mount:', cart);
-    console.log('🔢 Cart length on mount:', cart.length);
-    console.log('👤 Current user:', currentUser);
+    // If we have completed an order, do no further validation
+    if (completedOrderId) return;
 
     if (!currentUser) {
-      console.error('❌ User not logged in!');
       navigate('/login');
       return;
     }
 
-    if (cart.length === 0) {
-      console.error('❌ Cart is empty on payment page! Redirecting to cart...');
-      setError('Your cart is empty. Please add items before proceeding to payment.');
-      setTimeout(() => navigate('/cart'), 2000);
-    }
-  }, [currentUser, navigate]);
+    // Only warn on mount if completely empty and not processing
+    // We rely on the second effect for dynamic checks, but this handles initial load
+  }, [currentUser, navigate, completedOrderId]);
 
   useEffect(() => {
     // Redirect if cart is empty or address not selected
-    // BUT only if we're not currently processing a payment
+    // BUT only if we're not currently processing a payment AND haven't completed an order
+    if (completedOrderId) return;
+
     if (!currentUser || cart.length === 0 || !checkoutState.selectedAddressId) {
       // Don't redirect if we're in the middle of placing an order
       if (!isProcessing && !isPlacingOrder) {
-        navigate('/cart');
+        // Use replace to prevent back-button loops
+        console.log("Redirecting to cart (empty/no address) - Processing:", isProcessing, "Placing:", isPlacingOrder);
+        navigate('/cart', { replace: true });
       }
     }
-  }, [currentUser, cart, checkoutState, navigate, isProcessing, isPlacingOrder]);
+  }, [currentUser, cart, checkoutState, navigate, isProcessing, isPlacingOrder, completedOrderId]);
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
@@ -106,7 +104,7 @@ const PaymentPage: React.FC = () => {
         console.log('💵 COD payment - passing cart snapshot');
         const newOrderId = await placeOrder('COD', cartSnapshot);
         if (newOrderId) {
-          navigate(`/order-confirmation/${newOrderId}`);
+          navigate(`/order/${newOrderId}`);
         } else {
           setError('Failed to place order. Please try again.');
         }
@@ -135,7 +133,7 @@ const PaymentPage: React.FC = () => {
         // Razorpay options
         const options = {
           key: paymentSettings.razorpay_key_id,
-          amount: totalAmount * 100, // Convert to paise
+          amount: Math.round(totalAmount * 100), // Convert to paise and round to integer
           currency: 'INR',
           name: siteSettings?.textLogo || 'Awaany',
           description: `Order Payment`,
@@ -196,7 +194,7 @@ const PaymentPage: React.FC = () => {
       const newOrderId = await placeOrder('Online');
       // The animation component will close on its own.
       if (newOrderId) {
-        navigate(`/order-confirmation/${newOrderId}`);
+        navigate(`/order/${newOrderId}`);
       } else {
         setIsProcessing(false);
         setError('There was an error placing your order. Please try again.');

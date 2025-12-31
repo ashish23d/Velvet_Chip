@@ -10,9 +10,12 @@ import { Database } from '../types.ts';
 // ---
 
 // TODO: Replace with your Supabase Project URL
-const supabaseUrl = 'https://nzffmjvurcwvrkaaoccz.supabase.co';
-// TODO: Replace with your Supabase Public Anon Key
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56ZmZtanZ1cmN3dnJrYWFvY2N6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4MjQxNDgsImV4cCI6MjA4MDQwMDE0OH0.KW3Ocgwn0IvTgTpIRKlf_PfV5fNlIakcNxzBhbehlUg';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase URL and Anon Key must be defined in .env file');
+}
 
 // --- END OF ACTION REQUIRED ---
 

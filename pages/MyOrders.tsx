@@ -7,12 +7,31 @@ import OrderCard from '../components/OrderCard.tsx';
 import ArchiveBoxIcon from '../components/icons/ArchiveBoxIcon.tsx';
 
 const MyOrders: React.FC = () => {
-  const { currentUser } = useAppContext();
-  
+  const { currentUser, isLoading } = useAppContext();
+
   // Sort orders by date, most recent first.
   const sortedOrders = (currentUser?.orders || []).sort(
     (a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
   );
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
+        <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3">
+              <div className="flex justify-between">
+                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+              </div>
+              <div className="h-16 bg-gray-100 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-md">

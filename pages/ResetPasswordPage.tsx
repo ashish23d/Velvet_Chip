@@ -6,9 +6,9 @@ import Logo from '../components/icons/Logo.tsx';
 import { useAppContext } from '../context/AppContext.tsx';
 
 const ResetPasswordPage: React.FC = () => {
-    const { session } = useAppContext();
+    const { session, isLoading: isAppLoading } = useAppContext();
     const navigate = useNavigate();
-    
+
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -50,17 +50,20 @@ const ResetPasswordPage: React.FC = () => {
             setError(error.message);
             setIsLoading(false); // Only stop loading on error
         } else {
-            setMessage('Your password has been updated successfully! You are now logged in. Redirecting to your profile...');
-            // The session is now permanent. We can navigate to a protected route.
+            setMessage('Your password has been updated successfully! Redirecting to login page...');
+
+            // Sign out the user so they can log in with their new password
+            await supabase.auth.signOut();
+
             setTimeout(() => {
-                navigate('/profile');
-            }, 3000);
+                navigate('/login');
+            }, 2000);
         }
     };
 
     const commonInputClasses = "mt-1 block w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white";
 
-    if (!session) {
+    if (isAppLoading || !session) {
         return (
             <div className="flex h-screen items-center justify-center bg-pink-50/30 dark:bg-gray-900">
                 <div className="text-center">
@@ -73,7 +76,7 @@ const ResetPasswordPage: React.FC = () => {
             </div>
         );
     }
-    
+
     return (
         <div className="min-h-[calc(100vh-160px)] bg-pink-50/30 dark:bg-gray-900 flex items-center justify-center p-4">
             <div className="w-full max-w-md mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
@@ -81,9 +84,9 @@ const ResetPasswordPage: React.FC = () => {
                     <div className="text-center mb-6">
                         <Logo className="h-14 sm:h-16 w-auto text-primary mx-auto" />
                     </div>
-                    
+
                     <h2 className="text-2xl font-serif text-center text-gray-800 dark:text-white">Set a New Password</h2>
-                    
+
                     {message ? (
                         <div className="mt-8 text-center">
                             <p className="text-green-700 bg-green-50 dark:bg-green-900/30 p-4 rounded-lg">{message}</p>
@@ -94,7 +97,7 @@ const ResetPasswordPage: React.FC = () => {
                                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
                                 <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className={commonInputClasses} />
                             </div>
-                             <div>
+                            <div>
                                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
                                 <input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required placeholder="••••••••" className={commonInputClasses} />
                             </div>

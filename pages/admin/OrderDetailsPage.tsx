@@ -118,7 +118,7 @@ const OrderDetailsPage: React.FC = () => {
                                 const productName = item.product?.name || item.name;
                                 const productImage = item.product?.images?.[0] || item.image;
                                 const productPrice = item.product?.price || item.price;
-                                const colorName = item.selectedColor?.name || item.color || 'N/A';
+                                const colorName = item.selectedColor?.name || (typeof item.color === 'object' ? item.color?.name : item.color) || 'N/A';
 
                                 return (
                                     <div key={item.id} className="py-4 flex items-center space-x-4">
@@ -131,6 +131,11 @@ const OrderDetailsPage: React.FC = () => {
                                         <div className="flex-grow">
                                             <p className="font-semibold text-gray-800">{productName}</p>
                                             <p className="text-sm text-gray-500">Size: {item.selectedSize} | Color: {colorName}</p>
+                                            {item.customization && (
+                                                <div className="mt-1 text-xs bg-yellow-50 p-2 rounded text-yellow-800 border border-yellow-200 whitespace-pre-wrap">
+                                                    <span className="font-bold">Customization:</span> {item.customization}
+                                                </div>
+                                            )}
                                             <p className="text-sm text-gray-500">SKU: {productId}</p>
                                         </div>
                                         <div className="text-right">
@@ -224,13 +229,13 @@ const OrderDetailsPage: React.FC = () => {
                         <div className="space-y-2 text-sm">
                             <p className="font-bold text-gray-800">{order.customerName}</p>
                             <p className="text-gray-600">{order.customerEmail}</p>
-                            <p className="text-gray-600">{order.shippingAddress.mobile}</p>
+                            <p className="text-gray-600">{order.shippingAddress?.mobile || 'N/A'}</p>
                             <hr className="my-2" />
                             <h4 className="font-semibold text-gray-700 pt-1">Shipping Address</h4>
                             <address className="not-italic text-gray-600">
-                                {order.shippingAddress.address}<br />
-                                {order.shippingAddress.locality}<br />
-                                {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.pincode}
+                                {order.shippingAddress?.address || ''}<br />
+                                {order.shippingAddress?.locality || ''}<br />
+                                {order.shippingAddress?.city || ''}, {order.shippingAddress?.state || ''} {order.shippingAddress?.pincode || ''}
                             </address>
                         </div>
                     </div>

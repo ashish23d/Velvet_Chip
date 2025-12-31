@@ -17,8 +17,19 @@ const OrderProductCard: React.FC<OrderProductCardProps> = ({ item, order }) => {
     const productName = item.product?.name || (item as any).name;
     const productImage = item.product?.images?.[0] || (item as any).image;
 
-    const { openReviewModal } = useAppContext();
+    const { openReviewModal, reviews, currentUser, deleteReview } = useAppContext();
     const [rating, setRating] = React.useState(0);
+
+    const existingReview = React.useMemo(() => {
+        if (!currentUser || !productId) return null;
+        return reviews.find(r => r.productId === Number(productId) && r.userId === currentUser.id);
+    }, [reviews, currentUser, productId]);
+
+    React.useEffect(() => {
+        if (existingReview) {
+            setRating(existingReview.rating);
+        }
+    }, [existingReview]);
 
     const getStatusStyles = () => {
         switch (order.currentStatus) {
@@ -77,24 +88,66 @@ const OrderProductCard: React.FC<OrderProductCardProps> = ({ item, order }) => {
             </div>
             {order.currentStatus === 'Delivered' && (
                 <div className="mt-4 pt-4 border-t border-dashed">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Rate this product</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                        {existingReview ? 'Your Review' : 'Rate this product'}
+                    </h4>
                     <div className="flex flex-col sm:flex-row items-center gap-4">
-                        <StarRatingInput rating={rating} setRating={setRating} />
-                        <button
-                            onClick={() => {
-                                // Reconstruct a partial product object if needed for the review modal
-                                const productForReview = item.product || {
-                                    id: (item as any).productId,
-                                    name: (item as any).name,
-                                    images: [(item as any).image],
-                                    price: (item as any).price
-                                } as any;
-                                openReviewModal(productForReview);
-                            }}
-                            className="w-full sm:w-auto text-sm font-semibold text-primary hover:underline"
-                        >
-                            Write a Review
-                        </button>
+                        <StarRatingInput rating={rating} setRating={setRating} readOnly={!!existingReview} />
+
+                        {existingReview ? (
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => {
+                                        const productForReview = item.product || {
+                                            id: (item as any).productId,
+                                            name: (item as any).name,
+                                            images: [(item as any).image],
+                                            price: (item as any).price,
+                                            category: 'Uncategorized'
+                                        } as any;
+                                        // Pass existing review data via the product object or separate logic
+                                        // We attach it to the product object for now as a quick context pass
+                                        const productWithReview = { ...productForReview, currentUserReview: existingReview };
+                                        openReviewModal(productWithReview);
+                                    }}
+                                    className="text-sm font-semibold text-indigo-600 hover:underline"
+                                >
+                                    Edit Review
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (window.confirm('Are you sure you want to delete your review?')) {
+                                            try {
+                                                await deleteReview(existingReview.id);
+                                                setRating(0); // Reset local state
+                                            } catch (e) {
+                                                console.error("Delete failed", e);
+                                                alert("Failed to delete review");
+                                            }
+                                        }
+                                    }}
+                                    className="text-sm font-semibold text-red-600 hover:underline"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => {
+                                    const productForReview = item.product || {
+                                        id: (item as any).productId,
+                                        name: (item as any).name,
+                                        images: [(item as any).image],
+                                        price: (item as any).price,
+                                        category: 'Uncategorized'
+                                    } as any;
+                                    openReviewModal(productForReview);
+                                }}
+                                className="w-full sm:w-auto text-sm font-semibold text-primary hover:underline"
+                            >
+                                Write a Review
+                            </button>
+                        )}
                     </div>
                 </div>
             )}

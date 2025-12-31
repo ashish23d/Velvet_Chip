@@ -37,7 +37,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
                 return { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' };
             case 'Return Requested':
             case 'Return Approved':
-                 return { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' };
+                return { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' };
             default:
                 return { bg: 'bg-gray-100', text: 'text-gray-700', dot: 'bg-gray-500' };
         }
@@ -70,38 +70,44 @@ const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
             {isOpen && (
                 <div className="p-4 border-t border-gray-200">
                     <div className="divide-y divide-gray-200">
-                        {order.items.map(item => <OrderItem key={item.id} item={item} orderStatus={order.currentStatus}/>)}
+                        {order.items.map(item => <OrderItem key={item.id} item={item} orderStatus={order.currentStatus} />)}
                     </div>
                     <div className="mt-4 pt-4 border-t">
                         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                             <h4 className="font-semibold text-gray-800">Shipping Address</h4>
-                             <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-semibold text-gray-800">Shipping Address</h4>
+                            <div className="flex items-center gap-2 flex-wrap">
                                 {order.currentStatus === 'Processing' && (
-                                     <button onClick={handleCancel} className="text-sm font-semibold text-red-600 border border-red-200 rounded-full px-4 py-1.5 hover:bg-red-50 transition-colors">
+                                    <button onClick={handleCancel} className="text-sm font-semibold text-red-600 border border-red-200 rounded-full px-4 py-1.5 hover:bg-red-50 transition-colors">
                                         Cancel Order
                                     </button>
                                 )}
-                                 {order.currentStatus === 'Delivered' && (
-                                     <ReactRouterDOM.Link to={`/help-and-returns/${order.id}`} className="text-sm font-semibold text-blue-600 border border-blue-200 rounded-full px-4 py-1.5 hover:bg-blue-50 transition-colors">
+                                {order.currentStatus === 'Delivered' && (
+                                    <ReactRouterDOM.Link to={`/help-and-returns/${order.id}`} className="text-sm font-semibold text-blue-600 border border-blue-200 rounded-full px-4 py-1.5 hover:bg-blue-50 transition-colors">
                                         Request Return
                                     </ReactRouterDOM.Link>
                                 )}
-                                <ReactRouterDOM.Link to={`/track-order/${order.id}`} className="text-sm font-semibold text-primary border border-primary/50 rounded-full px-4 py-1.5 hover:bg-primary/5 transition-colors">
-                                    Track Order
-                                </ReactRouterDOM.Link>
+                                {order.currentStatus === 'Delivered' ? (
+                                    <span className="text-sm font-semibold text-green-600 border border-green-200 rounded-full px-4 py-1.5 bg-green-50">
+                                        Delivered
+                                    </span>
+                                ) : (
+                                    <ReactRouterDOM.Link to={`/track-order/${order.id}`} className="text-sm font-semibold text-primary border border-primary/50 rounded-full px-4 py-1.5 hover:bg-primary/5 transition-colors">
+                                        Track Order
+                                    </ReactRouterDOM.Link>
+                                )}
                                 <ReactRouterDOM.Link to={`/help-and-returns/${order.id}`} className="text-sm font-semibold text-gray-600 border border-gray-200 rounded-full px-4 py-1.5 hover:bg-gray-100 transition-colors">
                                     Help
                                 </ReactRouterDOM.Link>
-                             </div>
+                            </div>
                         </div>
                         <div className="mt-3 text-sm text-gray-600 flex items-start gap-3">
-                           <MapPinIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                           <div>
+                            <MapPinIcon className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                            <div>
                                 <p className="font-semibold text-gray-800">{order.shippingAddress.name}</p>
                                 <p>{order.shippingAddress.address}, {order.shippingAddress.locality}</p>
                                 <p>{order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}</p>
                                 <p>Mobile: {order.shippingAddress.mobile}</p>
-                           </div>
+                            </div>
                         </div>
                     </div>
                 </div>

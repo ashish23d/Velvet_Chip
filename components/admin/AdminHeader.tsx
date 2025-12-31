@@ -1,60 +1,123 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
-import { useAppContext } from '../../context/AppContext.tsx';
-import { Bars3Icon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
-import Avatar from '../Avatar.tsx';
+import { Bars3Icon, BellIcon } from '@heroicons/react/24/outline';
+import { useAppContext } from '../../context/AppContext';
 
 interface AdminHeaderProps {
-    setSidebarOpen: (open: boolean) => void;
+  setSidebarOpen: (open: boolean) => void;
 }
 
 const AdminHeader: React.FC<AdminHeaderProps> = ({ setSidebarOpen }) => {
-    const location = ReactRouterDOM.useLocation();
-    const navigate = ReactRouterDOM.useNavigate();
-    const { currentUser, logout } = useAppContext();
+  const navigate = ReactRouterDOM.useNavigate();
 
-    const getTitle = () => {
-        const path = location.pathname.split('/').pop() || 'dashboard';
-        if (path === 'admin') return 'Dashboard';
-        if (path === 'new' || !isNaN(Number(path))) {
-            const parts = location.pathname.split('/');
-            const parentPath = parts[parts.length-2];
-            return `Manage ${parentPath.charAt(0).toUpperCase() + parentPath.slice(1, -1)}`;
-        }
-        return path.charAt(0).toUpperCase() + path.slice(1).replace('-', ' ');
-    };
-    
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
+  const {
+    notifications,
+    unreadNotificationCount,
+    markNotificationAsRead,
+  } = useAppContext();
+
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // 🔔 ONLY ADMIN NOTIFICATIONS
+  const adminNotifications = notifications.filter(
+    n => n.type === 'admin'
+  );
+
+  // 🔔 Auto-open dropdown when new notification arrives
+  useEffect(() => {
+    if (unreadNotificationCount > 0) {
+      setOpen(true);
     }
+  }, [unreadNotificationCount]);
 
-    return (
-        <header className="flex-shrink-0 bg-white border-b border-gray-200">
-            <div className="flex items-center justify-between p-4 h-16">
-                <div className="flex items-center">
-                    <button
-                        onClick={() => setSidebarOpen(true)}
-                        className="text-gray-500 focus:outline-none lg:hidden"
-                        aria-label="Open sidebar"
-                    >
-                        <Bars3Icon className="h-6 w-6" />
-                    </button>
-                    <h1 className="text-xl font-semibold text-gray-800 ml-4">{getTitle()}</h1>
-                </div>
+  // 🔔 Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
 
-                <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                        <Avatar user={currentUser} className="h-8 w-8 rounded-full object-cover" />
-                        <span className="hidden md:block text-sm font-medium text-gray-700">{currentUser?.name || 'Admin'}</span>
-                    </div>
-                    <button onClick={handleLogout} className="text-gray-500 hover:text-primary" aria-label="Log out">
-                        <ArrowRightOnRectangleIcon className="h-6 w-6" />
-                    </button>
-                </div>
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  return (
+    <header className="bg-white shadow px-4 py-3 flex justify-between items-center">
+
+      {/* LEFT */}
+      <div className="flex items-center gap-3">
+        <button onClick={() => setSidebarOpen(true)}>
+          <Bars3Icon className="w-6 h-6 text-gray-700" />
+        </button>
+        <h1 className="font-semibold text-lg">Admin Panel</h1>
+      </div>
+
+      {/* RIGHT */}
+      <div className="relative" ref={dropdownRef}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(prev => !prev);
+          }}
+          className="relative"
+        >
+          <BellIcon className="w-6 h-6 text-gray-700" />
+
+          {unreadNotificationCount > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-2">
+              {unreadNotificationCount}
+            </span>
+          )}
+        </button>
+
+        {/* 🔔 DROPDOWN */}
+        {open && (
+          <div className="absolute right-0 mt-2 w-80 bg-white border rounded shadow-lg z-50 max-h-96 overflow-y-auto">
+            <div className="p-3 border-b font-semibold">
+              Notifications
             </div>
-        </header>
-    );
+
+            {adminNotifications.length === 0 && (
+              <p className="p-3 text-gray-500 text-sm">
+                No notifications
+              </p>
+            )}
+
+            {adminNotifications.map(notification => (
+              <div
+                key={notification.id}
+                onClick={() => {
+                  markNotificationAsRead(notification.id);
+                  if (notification.link) navigate(notification.link);
+                }}
+                className={`p-3 cursor-pointer border-b transition ${notification.is_read
+                    ? 'bg-gray-100'
+                    : 'bg-yellow-50 hover:bg-yellow-100'
+                  }`}
+              >
+                <p className="font-medium">
+                  {notification.title}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {notification.message}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {new Date(notification.created_at).toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </header>
+  );
 };
 
 export default AdminHeader;

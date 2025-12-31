@@ -64,48 +64,50 @@ const SignUpPopup: React.FC = () => {
       >
         <div className="absolute -top-1/2 -right-1/4 w-64 h-64 bg-primary/10 rounded-full filter blur-3xl"></div>
         <div className="absolute -bottom-1/2 -left-1/4 w-64 h-64 bg-primary/10 rounded-full filter blur-3xl"></div>
-        
+
         <div className="relative z-10">
-            <button
-              onClick={handleClose}
-              className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:bg-gray-100"
-              aria-label="Close"
-            >
-              <XIcon className="h-6 w-6" />
+          <button
+            onClick={handleClose}
+            className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:bg-gray-100"
+            aria-label="Close"
+          >
+            <XIcon className="h-6 w-6" />
+          </button>
+
+          <div className="flex justify-center">
+            <Logo className="h-14 w-auto text-primary" />
+          </div>
+
+          <h2 className="text-2xl font-serif font-bold text-gray-800 mt-4">
+            Join Our Family
+          </h2>
+
+          <p className="text-gray-600 mt-2 text-md max-w-sm mx-auto">
+            Subscribe to our newsletter for exclusive offers, new arrivals, and a touch of elegance in your inbox.
+          </p>
+
+          <form onSubmit={handleSubmit} className="mt-6 flex flex-col sm:flex-row gap-2 max-w-sm mx-auto">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+            />
+            <button type="submit" className="bg-primary text-white py-3 px-6 rounded-lg font-semibold hover:bg-pink-700 transition-colors flex-shrink-0">
+              Subscribe
             </button>
-            
-            <Logo className="h-14 w-auto mx-auto text-primary" />
-            
-            <h2 className="text-2xl font-serif font-bold text-gray-800 mt-4">
-                Join Our Family
-            </h2>
+          </form>
 
-            <p className="text-gray-600 mt-2 text-md max-w-sm mx-auto">
-                Subscribe to our newsletter for exclusive offers, new arrivals, and a touch of elegance in your inbox.
-            </p>
-            
-            <form onSubmit={handleSubmit} className="mt-6 flex flex-col sm:flex-row gap-2 max-w-sm mx-auto">
-                <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
-                />
-                <button type="submit" className="bg-primary text-white py-3 px-6 rounded-lg font-semibold hover:bg-pink-700 transition-colors flex-shrink-0">
-                    Subscribe
-                </button>
-            </form>
+          <div className="h-5 mt-2">
+            {status === 'success' && <p className="text-sm text-green-600">{message}</p>}
+            {status === 'error' && <p className="text-sm text-red-600">{message}</p>}
+          </div>
 
-            <div className="h-5 mt-2">
-                {status === 'success' && <p className="text-sm text-green-600">{message}</p>}
-                {status === 'error' && <p className="text-sm text-red-600">{message}</p>}
-            </div>
-
-            <button onClick={handleClose} className="mt-4 text-xs text-gray-400 hover:underline">
-                No, thanks
-            </button>
+          <button onClick={handleClose} className="mt-4 text-xs text-gray-400 hover:underline">
+            No, thanks
+          </button>
         </div>
       </div>
     </div>

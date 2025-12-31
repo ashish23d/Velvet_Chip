@@ -14,9 +14,10 @@ const AboutSectionEditor: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
 
+    const hasUserEdited = React.useRef(false);
     useEffect(() => {
         const aboutContent = siteContent.find(c => c.id === 'home_about_section');
-        if (aboutContent) {
+        if (aboutContent && !hasUserEdited.current) {
             setContent(JSON.parse(JSON.stringify(aboutContent))); // Deep copy
         }
     }, [siteContent]);
@@ -29,14 +30,17 @@ const AboutSectionEditor: React.FC = () => {
     const isChanged = JSON.stringify(originalContent) !== JSON.stringify(content);
 
     const handleChange = (field: 'title' | 'text', value: string) => {
+        hasUserEdited.current = true;
         setContent(prev => prev ? ({ ...prev, data: { ...prev.data, [field]: value } }) : null);
     };
 
     const handleImageUpload = (publicId: string) => {
+        hasUserEdited.current = true;
         setContent(prev => prev ? ({ ...prev, data: { ...prev.data, imagePath: publicId } }) : null);
     };
 
     const handleImageRemove = () => {
+        hasUserEdited.current = true;
         setContent(prev => prev ? ({ ...prev, data: { ...prev.data, imagePath: '' } }) : null);
     };
 
@@ -47,6 +51,7 @@ const AboutSectionEditor: React.FC = () => {
         setSuccess(false);
         try {
             await updateSiteContent(content);
+            hasUserEdited.current = false;
             setSuccess(true);
             setTimeout(() => setSuccess(false), 2000);
         } catch (err: any) {
@@ -216,27 +221,34 @@ const AppearancePage: React.FC = () => {
     const [isSavingSlides, setIsSavingSlides] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const hasUserEditedSlides = React.useRef(false);
     useEffect(() => {
         // Deep copy to avoid direct state mutation
-        setFormSlides(JSON.parse(JSON.stringify(slides)));
+        if (slides && !hasUserEditedSlides.current) {
+            setFormSlides(JSON.parse(JSON.stringify(slides)));
+        }
     }, [slides]);
 
     const handleTextChange = (id: string, newText: string) => {
+        hasUserEditedSlides.current = true;
         setFormSlides(prev => prev.map(slide => slide.id === id ? { ...slide, text: newText } : slide));
     };
 
     const handleShowTextToggle = (id: string, isChecked: boolean) => {
+        hasUserEditedSlides.current = true;
         setFormSlides(prev => prev.map(slide => slide.id === id ? { ...slide, showText: isChecked } : slide));
     };
 
     const handleMediaUpload = (id: string, publicId: string) => {
         const type = /\.(mp4|webm)$/i.test(publicId) ? 'video' : 'image';
+        hasUserEditedSlides.current = true;
         setFormSlides(prev => prev.map(slide =>
             slide.id === id ? { ...slide, media: [...slide.media, { path: publicId, type }] } : slide
         ));
     };
 
     const handleMediaRemove = (id: string, publicIdToRemove: string) => {
+        hasUserEditedSlides.current = true;
         setFormSlides(prev => prev.map(slide =>
             slide.id === id ? { ...slide, media: slide.media.filter(item => item.path !== publicIdToRemove) } : slide
         ));
@@ -260,6 +272,7 @@ const AppearancePage: React.FC = () => {
             text: 'New Slide Caption',
             showText: true,
         };
+        hasUserEditedSlides.current = true;
         setFormSlides(prev => [...prev, newSlide]);
     };
 
@@ -268,6 +281,7 @@ const AppearancePage: React.FC = () => {
             alert('The slider must have at least one slide.');
             return;
         }
+        hasUserEditedSlides.current = true;
         setFormSlides(prev => prev.filter(slide => slide.id !== id));
     };
 
@@ -276,6 +290,7 @@ const AppearancePage: React.FC = () => {
         setError(null);
         try {
             await updateSlides(formSlides);
+            hasUserEditedSlides.current = false;
             alert("Homepage slides saved successfully!");
         } catch (err: any) {
             const message = err.message || 'An error occurred while saving slides.';

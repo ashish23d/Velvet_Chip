@@ -19,6 +19,24 @@ interface RichTextEditorProps {
 
 const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange }) => {
     const editorRef = useRef<HTMLDivElement>(null);
+    const [isFocused, setIsFocused] = useState(false);
+
+    // Sync external value changes to valid HTML, but prevent cursor jumps when typing
+    useEffect(() => {
+        if (editorRef.current) {
+            // Only update DOM if the new value is substantially different 
+            // from current content, effectively ignoring updates caused by our own typing
+            if (editorRef.current.innerHTML !== value) {
+                // Determine if the difference is meaningful (e.g. not just trailing newline differences)
+                // For simplicity in this project: 
+                // If we are focused, we assume the user is typing and we TRUST the DOM over the prop 
+                // UNLESS the prop is completely different (e.g. reset/undo).
+                // But for a simple fix: direct comparison works if the loop is fast enough 
+                // and the "value" coming back hasn't been modified by a sanitizer yet.
+                editorRef.current.innerHTML = value;
+            }
+        }
+    }, [value]);
 
     const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
         onChange(e.currentTarget.innerHTML);
@@ -28,6 +46,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange }) => {
         document.execCommand(command, false, value);
         if (editorRef.current) {
             onChange(editorRef.current.innerHTML);
+            editorRef.current.focus();
         }
     };
 
@@ -45,7 +64,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange }) => {
                 ref={editorRef}
                 contentEditable
                 onInput={handleInput}
-                dangerouslySetInnerHTML={{ __html: value }}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
                 className={editorClasses}
             />
         </div>
@@ -82,28 +102,38 @@ const ContentBlockEditor: React.FC<ContentBlockEditorProps> = ({ title, descript
     };
 
     const handleSave = async () => {
+        console.log(`[${title}] Starting save...`);
         setIsSaving(true);
         setError('');
         setSuccess(false);
 
-        // Safety timeout to prevent infinite loading state
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Request timed out')), 30000)
-        );
+        // Safety timeout
+        const timeoutMs = 15000; // 15s timeout
+        const timer = setTimeout(() => {
+            if (isSaving) { // Check if still strictly saving
+                console.error(`[${title}] Save timed out after ${timeoutMs}ms`);
+                setError('Request timed out. Please try again.');
+                setIsSaving(false);
+            }
+        }, timeoutMs);
 
         try {
+            console.log(`[${title}] Calling updateSiteContent...`);
             const contentToUpdate: SiteContent = { id: contentId, data: formData };
-            await Promise.race([
-                updateSiteContent(contentToUpdate),
-                timeoutPromise
-            ]);
+
+            // Direct call without race to see if race was preventing stack traces
+            await updateSiteContent(contentToUpdate);
+
+            console.log(`[${title}] Update successful.`);
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
         } catch (err: any) {
-            console.error("Save error:", err);
+            console.error(`[${title}] Save error:`, err);
             setError(err.message || 'Failed to save content.');
         } finally {
+            clearTimeout(timer);
             setIsSaving(false);
+            console.log(`[${title}] Save process finished.`);
         }
     };
 
@@ -436,6 +466,74 @@ const SiteContentPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <ContentBlockEditor
+                title="About Page Settings"
+                description="Customize the story and image on the About Us page."
+                contentId="home_about_section"
+            >
+                {(formData, handleChange) => (
+                    <div className="space-y-4">
+                        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
+                            <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Hero Section (Top)</h4>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className={labelClass}>Hero Title</label>
+                                    <input
+                                        type="text"
+                                        value={formData.heroTitle || ''}
+                                        onChange={e => handleChange('heroTitle', e.target.value)}
+                                        className={inputClass}
+                                        placeholder="Our Story"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Hero Description (Quote)</label>
+                                    <textarea
+                                        rows={3}
+                                        value={formData.heroDescription || ''}
+                                        onChange={e => handleChange('heroDescription', e.target.value)}
+                                        className={inputClass}
+                                        placeholder="Explore easy-to-make recipes..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
+                            <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Main Content Section</h4>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className={labelClass}>Section Title</label>
+                                    <input
+                                        type="text"
+                                        value={formData.title || ''}
+                                        onChange={e => handleChange('title', e.target.value)}
+                                        className={inputClass}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Main Image</label>
+                                    <ImageUploader
+                                        bucket={BUCKETS.SITE_ASSETS}
+                                        pathPrefix="about"
+                                        images={formData.imagePath ? [formData.imagePath] : []}
+                                        onImageUpload={(path) => handleChange('imagePath', path)}
+                                        onImageRemove={() => handleChange('imagePath', '')}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Description Content</label>
+                                    <RichTextEditor
+                                        value={formData.text || ''}
+                                        onChange={html => handleChange('text', html)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </ContentBlockEditor>
 
             <ContentBlockEditor
                 title="Get in Touch Page"

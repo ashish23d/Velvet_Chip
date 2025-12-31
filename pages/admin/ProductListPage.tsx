@@ -6,6 +6,7 @@ import PencilIcon from '../../components/icons/PencilIcon.tsx';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
 import PlusIcon from '../../components/icons/PlusIcon.tsx';
 import SupabaseImage from '../../components/SupabaseImage.tsx';
+import Pagination from '../../components/Pagination.tsx';
 import { BUCKETS } from '../../constants.ts';
 
 const ProductListPage: React.FC = () => {
@@ -14,11 +15,27 @@ const ProductListPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date-desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = products
       .filter(product => categoryFilter === 'all' || product.category === categoryFilter)
-      .filter(product => product.name && product.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      .filter(product => categoryFilter === 'all' || product.category === categoryFilter)
+      .filter(product => {
+        const lowerTerm = searchTerm.toLowerCase();
+        // Search by Product Name or Main SKU
+        // Note: Main SKU might not be in product root in some versions, but checking just in case
+        if (product.name?.toLowerCase().includes(lowerTerm)) return true;
+        if ((product as any).sku?.toLowerCase().includes(lowerTerm)) return true;
+
+        // Search by Variant SKUs
+        const hasVariantSkuMatch = product.colors?.some(color =>
+          color.sizes?.some(size => size.sku?.toLowerCase().includes(lowerTerm))
+        );
+
+        return hasVariantSkuMatch;
+      });
 
     const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
@@ -35,12 +52,28 @@ const ProductListPage: React.FC = () => {
         case 'date-desc':
         default:
           return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        case 'stock-asc':
+          return (
+            (a.colors?.reduce((acc, c) => acc + (c.sizes?.reduce((s, si) => s + (Number(si.stock) || 0), 0) || 0), 0) || 0) -
+            (b.colors?.reduce((acc, c) => acc + (c.sizes?.reduce((s, si) => s + (Number(si.stock) || 0), 0) || 0), 0) || 0)
+          );
       }
     });
 
     return sorted;
 
   }, [products, searchTerm, categoryFilter, sortBy]);
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredAndSortedProducts.length / itemsPerPage);
+  const indexOfLastProduct = currentPage * itemsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - itemsPerPage;
+  const currentProducts = filteredAndSortedProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoryFilter, sortBy]);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
@@ -73,6 +106,7 @@ const ProductListPage: React.FC = () => {
             <option value="name-desc">Name: Z-A</option>
             <option value="price-desc">Price: High to Low</option>
             <option value="price-asc">Price: Low to High</option>
+            <option value="stock-asc">Stock: Low to High</option>
           </select>
           <Link
             to="/admin/products/new"
@@ -96,7 +130,7 @@ const ProductListPage: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredAndSortedProducts.map((product) => (
+            {currentProducts.map((product) => (
               <tr key={product.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
@@ -116,8 +150,27 @@ const ProductListPage: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">₹{product.price}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {/* Simplified stock display */}
-                  {product.sizes.length} variants
+                  {(() => {
+                    const totalStock = product.colors?.reduce((acc, color) =>
+                      acc + (color.sizes?.reduce((sAcc, size) => sAcc + (Number(size.stock) || 0), 0) || 0), 0) || 0;
+
+                    const variantBreakdown = product.colors?.flatMap(c =>
+                      c.sizes?.map(s => `${c.name}-${s.size}: ${s.stock}`)
+                    ).join(', ');
+
+                    let colorClass = 'text-green-800 bg-green-100'; // > 50
+                    if (totalStock < 20) colorClass = 'text-red-800 bg-red-100';
+                    else if (totalStock < 50) colorClass = 'text-orange-800 bg-orange-100';
+
+                    return (
+                      <div title={variantBreakdown}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${colorClass}`}>
+                          {totalStock} Left
+                        </span>
+                        <div className="text-xs text-gray-400 truncate max-w-[150px] mt-1">{variantBreakdown}</div>
+                      </div>
+                    );
+                  })()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end items-center gap-4">
@@ -139,6 +192,12 @@ const ProductListPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 };

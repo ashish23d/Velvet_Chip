@@ -49,67 +49,76 @@ const CategoryShowcase: React.FC = () => {
   };
 
   return (
-    <div className="relative group/container bg-white dark:bg-gray-900/50 rounded-3xl shadow-xl p-4 sm:p-8 border border-gray-100 dark:border-gray-800 w-full">
+    <div className="relative group/container w-full py-8">
       {/* Navigation Arrows */}
       <button
         onClick={() => scroll('left')}
-        className={`absolute top-1/2 -left-2 sm:-left-5 z-10 -translate-y-1/2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg text-primary border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:scale-110 disabled:opacity-0 ${showLeftArrow ? 'opacity-0 group-hover/container:opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`absolute top-1/2 -left-2 sm:-left-5 z-10 -translate-y-1/2 p-3 bg-white/90 backdrop-blur-sm dark:bg-gray-800/90 rounded-full shadow-xl text-primary border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:scale-110 disabled:opacity-0 ${showLeftArrow ? 'opacity-0 group-hover/container:opacity-100' : 'opacity-0 pointer-events-none'}`}
         aria-label="Scroll left"
       >
-        <ChevronLeftIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+        <ChevronLeftIcon className="w-5 h-5" />
       </button>
 
       <button
         onClick={() => scroll('right')}
-        className={`absolute top-1/2 -right-2 sm:-right-5 z-10 -translate-y-1/2 p-2 bg-white dark:bg-gray-800 rounded-full shadow-lg text-primary border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:scale-110 ${showRightArrow ? 'opacity-0 group-hover/container:opacity-100 animate-pulse' : 'opacity-0 pointer-events-none'}`}
+        className={`absolute top-1/2 -right-2 sm:-right-5 z-10 -translate-y-1/2 p-3 bg-white/90 backdrop-blur-sm dark:bg-gray-800/90 rounded-full shadow-xl text-primary border border-gray-100 dark:border-gray-700 transition-all duration-300 hover:scale-110 ${showRightArrow ? 'opacity-0 group-hover/container:opacity-100' : 'opacity-0 pointer-events-none'}`}
         aria-label="Scroll right"
       >
-        <ChevronRightIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+        <ChevronRightIcon className="w-5 h-5" />
       </button>
 
       {/* Scroll Container */}
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="overflow-x-auto pb-4 -mx-2 px-2 scroll-smooth no-scrollbar snap-x snap-mandatory"
+        className="category-showcase-grid overflow-x-auto pb-6 -mx-4 px-4 scroll-smooth no-scrollbar snap-x snap-mandatory"
         style={{
           display: 'grid',
-          gridTemplateRows: 'repeat(2, 1fr)',
+          gridTemplateRows: 'repeat(1, 1fr)', // Changed to 1 row for larger cards to look cleaner
           gridAutoFlow: 'column',
-          gridAutoColumns: 'minmax(140px, 1fr)', // Increased from 120px for better mobile view
-          gap: '1rem', // Reduced gap slightly for better density
+          gridAutoColumns: 'minmax(200px, 1fr)', // Wider cards
+          gap: '1.5rem',
         }}
       >
-        {/* Responsive column sizing */}
         <style>{`
-            @media (min-width: 640px) { .category-grid { grid-auto-columns: minmax(160px, 1fr) !important; } }
-            @media (min-width: 1024px) { .category-grid { grid-auto-columns: calc((100% - 4rem) / 5) !important; } } 
+            /* Responsive Grid adjustments */
+            @media (max-width: 640px) {
+                .category-showcase-grid {
+                    grid-template-rows: repeat(2, 1fr) !important; /* 2 rows on mobile */
+                    grid-auto-columns: minmax(140px, 1fr) !important;
+                    gap: 1rem !important;
+                }
+            }
         `}</style>
 
         {categories.map((category) => (
-          <div key={category.id} className="category-grid flex-shrink-0 snap-start">
+          <div key={category.id} className="flex-shrink-0 snap-start h-full">
             <EditableWrapper editUrl={`/admin/categories/edit/${category.id}`}>
               <ReactRouterDOM.Link
                 to={`/category/${category.id}`}
-                className="group relative block h-full bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700 transition-all duration-300 ease-in-out hover:shadow-md hover:-translate-y-1"
+                className="group relative block w-full aspect-[3/4] overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-800 shadow-sm transition-all duration-500 hover:shadow-xl hover:-translate-y-1"
               >
-                {/* Image Wrapper */}
-                <div className="aspect-[4/5] w-full overflow-hidden">
-                  <SupabaseImage
-                    bucket={BUCKETS.CATEGORIES}
-                    imagePath={category.heroImage}
-                    alt={category.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    width={200}
-                    height={250}
-                  />
-                </div>
+                {/* Full Background Image */}
+                <SupabaseImage
+                  bucket={BUCKETS.CATEGORIES}
+                  imagePath={category.heroImage}
+                  alt={category.name}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  width={400}
+                  height={533}
+                />
 
-                {/* Text */}
-                <div className="p-3 text-center">
-                  <h3 className="text-gray-800 dark:text-gray-200 text-sm font-semibold tracking-wide truncate">
+                {/* Modern Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 transition-opacity duration-300 group-hover:opacity-75" />
+
+                {/* Content */}
+                <div className="absolute inset-0 p-4 flex flex-col justify-end items-center text-center">
+                  <h3 className="text-white text-lg sm:text-xl font-bold tracking-wide transform transition-transform duration-300 group-hover:-translate-y-2 drop-shadow-md">
                     {category.name}
                   </h3>
+                  <span className="opacity-0 group-hover:opacity-100 text-white/90 text-xs font-medium uppercase tracking-wider transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                    Explore
+                  </span>
                 </div>
               </ReactRouterDOM.Link>
             </EditableWrapper>

@@ -15,9 +15,9 @@ const Footer: React.FC = () => {
     const { addSubscriber, categories, siteContent } = useAppContext();
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
-    
-    const footerDesc = siteContent.find(c => c.id === 'footer_description')?.data?.text || "Elegance in every thread. Discover your signature style with Awaany.";
-    const subscribeText = siteContent.find(c => c.id === 'footer_subscribe_text')?.data?.text || "Subscribe to our newsletter for the latest updates and offers.";
+
+    const footerDesc = siteContent.find(c => c.id === 'footer_description')?.data?.text;
+    const subscribeText = siteContent.find(c => c.id === 'footer_subscribe_text')?.data?.text;
     const socialLinks = siteContent.find(c => c.id === 'social_links')?.data || {};
 
 
@@ -44,7 +44,7 @@ const Footer: React.FC = () => {
         { key: 'myntra', icon: <MyntraIcon className="h-6 text-gray-700 dark:text-gray-300" />, label: 'Myntra' },
         { key: 'website', icon: <WebsiteIcon className="h-6 text-gray-700 dark:text-gray-300" />, label: 'Website' },
     ];
-    
+
     const activeSocials = allPlatforms.filter(p => ['facebook', 'instagram', 'twitter'].includes(p.key) && socialLinks[p.key]);
     const activeMarketplaces = allPlatforms.filter(p => ['amazon', 'flipkart', 'myntra', 'website'].includes(p.key) && socialLinks[p.key]);
 
@@ -54,10 +54,17 @@ const Footer: React.FC = () => {
                 {/* Top Section: Newsletter and Logo */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-6 border-b dark:border-gray-800">
                     <div className="md:col-span-1 space-y-4">
-                         <Logo className="h-12 md:h-14 w-auto text-primary" />
-                         <p className="text-sm text-gray-600 dark:text-gray-400">{footerDesc}</p>
-                         
-                         {activeSocials.length > 0 && (
+                        <Logo className="h-12 md:h-14 w-auto text-primary" />
+                        {footerDesc ? (
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{footerDesc}</p>
+                        ) : (
+                            <div className="space-y-2">
+                                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full animate-pulse"></div>
+                                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
+                            </div>
+                        )}
+
+                        {activeSocials.length > 0 && (
                             <div>
                                 <h4 className="text-sm font-semibold tracking-wider text-gray-700 dark:text-gray-300 uppercase mb-3">Follow Us</h4>
                                 <div className="flex items-center gap-4">
@@ -68,9 +75,9 @@ const Footer: React.FC = () => {
                                     ))}
                                 </div>
                             </div>
-                         )}
+                        )}
 
-                         {activeMarketplaces.length > 0 && (
+                        {activeMarketplaces.length > 0 && (
                             <div>
                                 <h4 className="text-sm font-semibold tracking-wider text-gray-700 dark:text-gray-300 uppercase mb-3">Also available on</h4>
                                 <div className="flex items-center gap-4">
@@ -81,11 +88,15 @@ const Footer: React.FC = () => {
                                     ))}
                                 </div>
                             </div>
-                         )}
+                        )}
                     </div>
                     <div className="md:col-span-2">
                         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Stay Connected</h3>
-                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{subscribeText}</p>
+                        {subscribeText ? (
+                            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{subscribeText}</p>
+                        ) : (
+                            <div className="mt-2 h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 animate-pulse"></div>
+                        )}
                         <form onSubmit={handleSubscribe} className="mt-4 flex flex-col sm:flex-row gap-2">
                             <input
                                 type="email"
@@ -104,7 +115,7 @@ const Footer: React.FC = () => {
                 </div>
 
                 {/* Middle Section: Links */}
-                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-6">
                     <div>
                         <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">Shop</h4>
                         <ul className="space-y-1.5">
@@ -125,10 +136,10 @@ const Footer: React.FC = () => {
                         <ul className="space-y-1.5">
                             <li><ReactRouterDOM.Link to="/help-and-returns" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary">Shipping & Returns</ReactRouterDOM.Link></li>
                             <li><ReactRouterDOM.Link to="/profile" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary">Track Your Order</ReactRouterDOM.Link></li>
-                             <li><ReactRouterDOM.Link to="/coupons" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary">Coupons</ReactRouterDOM.Link></li>
+                            <li><ReactRouterDOM.Link to="/coupons" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary">Coupons</ReactRouterDOM.Link></li>
                         </ul>
                     </div>
-                     <div>
+                    <div>
                         <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-3">Legal</h4>
                         <ul className="space-y-1.5">
                             <li><ReactRouterDOM.Link to="/terms-and-conditions" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary">Terms of Service</ReactRouterDOM.Link></li>
@@ -136,11 +147,11 @@ const Footer: React.FC = () => {
                         </ul>
                     </div>
                 </div>
-                
+
                 {/* Bottom Section: Copyright */}
                 <div className="pt-6 border-t dark:border-gray-800 mt-6">
                     <p className="text-center text-sm text-gray-500">
-                        &copy; {new Date().getFullYear()} Awaany. All Rights Reserved.
+                        &copy; {new Date().getFullYear()} Velvet Chip. All Rights Reserved.
                     </p>
                 </div>
             </div>

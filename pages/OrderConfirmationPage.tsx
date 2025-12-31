@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import CheckCircleIcon from '../components/icons/CheckCircleIcon.tsx';
 import SupabaseImage from '../components/SupabaseImage.tsx';
@@ -9,6 +9,19 @@ import { BUCKETS } from '../constants.ts';
 const OrderConfirmationPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const { getOrderById, currentUser } = useAppContext();
+    const navigate = useNavigate();
+    const [countdown, setCountdown] = React.useState(5);
+
+    React.useEffect(() => {
+        if (!id) return;
+
+        if (countdown > 0) {
+            const timer = setTimeout(() => setCountdown(prev => prev - 1), 1000);
+            return () => clearTimeout(timer);
+        } else {
+            navigate(`/order/${id}`);
+        }
+    }, [countdown, navigate, id]);
 
     const order = getOrderById(id);
 
@@ -33,6 +46,9 @@ const OrderConfirmationPage: React.FC = () => {
                     </p>
                     <p className="text-gray-500 text-sm mt-1">
                         An email confirmation has been sent to {currentUser?.email}.
+                    </p>
+                    <p className="text-primary font-medium text-sm mt-4 animate-pulse">
+                        Redirecting to order details in {countdown}s...
                     </p>
 
                     <div className="text-left mt-8 border-t pt-6">
@@ -74,8 +90,8 @@ const OrderConfirmationPage: React.FC = () => {
                     </div>
 
                     <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
-                        <Link to="/profile" className="bg-gray-100 text-gray-800 py-3 px-6 rounded-full font-medium hover:bg-gray-200 transition-colors">
-                            View My Orders
+                        <Link to={`/order/${order.id}`} className="bg-gray-100 text-gray-800 py-3 px-6 rounded-full font-medium hover:bg-gray-200 transition-colors">
+                            View Order Details Now
                         </Link>
                         <Link to="/" className="bg-primary text-white py-3 px-6 rounded-full font-medium hover:bg-pink-700 transition-colors">
                             Continue Shopping

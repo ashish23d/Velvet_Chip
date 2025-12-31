@@ -89,8 +89,8 @@ const SimilarProductsModal: React.FC<SimilarProductsModalProps> = ({ isOpen, onC
             </>
           ) : (
             // Single, centered, larger product view
-            <div className="flex items-center justify-center h-full">
-              <div className="w-full max-w-sm">
+            <div className="flex items-center justify-center p-4">
+              <div className="w-full max-w-[320px] shadow-lg rounded-lg overflow-hidden">
                 {products[0] && <SimilarProductCard product={products[0]} onNavigate={onClose} />}
               </div>
             </div>

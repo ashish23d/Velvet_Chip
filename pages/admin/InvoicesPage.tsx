@@ -13,7 +13,7 @@ import { generateShippingLabelPDF } from '../../utils/labelGenerator.ts';
 const InvoicesPage: React.FC = () => {
     const { adminData, generateInvoice, getAllPromotions, siteSettings, contactDetails } = useAppContext();
     const navigate = useNavigate();
-    
+
     // --- Filter States ---
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'generated' | 'pending'>('all');
@@ -29,7 +29,7 @@ const InvoicesPage: React.FC = () => {
     const [downloadingId, setDownloadingId] = useState<string | null>(null); // Tracks row currently downloading
     const [error, setError] = useState<string | null>(null);
     const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
-    const [isProcessing, setIsProcessing] = useState(false); 
+    const [isProcessing, setIsProcessing] = useState(false);
 
     // --- Preview States ---
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -51,7 +51,7 @@ const InvoicesPage: React.FC = () => {
         // TRIM applied here to fix copy-paste issues
         const lowerSearchTerm = searchTerm.trim().toLowerCase();
         if (lowerSearchTerm) {
-            processed = processed.filter(order => 
+            processed = processed.filter(order =>
                 (order.id && order.id.toLowerCase().includes(lowerSearchTerm)) ||
                 (order.customerName && order.customerName.toLowerCase().includes(lowerSearchTerm)) ||
                 (order.invoice?.invoice_number && order.invoice.invoice_number.toLowerCase().includes(lowerSearchTerm))
@@ -70,11 +70,11 @@ const InvoicesPage: React.FC = () => {
         // 4. Date Filter
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
+
         if (dateFilter !== 'all') {
             processed = processed.filter(order => {
                 const orderDate = new Date(order.orderDate);
-                orderDate.setHours(0,0,0,0);
+                orderDate.setHours(0, 0, 0, 0);
 
                 switch (dateFilter) {
                     case 'today':
@@ -94,9 +94,9 @@ const InvoicesPage: React.FC = () => {
                     case 'custom':
                         const start = customStartDate ? new Date(customStartDate) : null;
                         const end = customEndDate ? new Date(customEndDate) : null;
-                        if (start) start.setHours(0,0,0,0);
-                        if (end) end.setHours(23,59,59,999);
-                        
+                        if (start) start.setHours(0, 0, 0, 0);
+                        if (end) end.setHours(23, 59, 59, 999);
+
                         if (start && end) return orderDate >= start && orderDate <= end;
                         if (start) return orderDate >= start;
                         if (end) return orderDate <= end;
@@ -154,7 +154,7 @@ const InvoicesPage: React.FC = () => {
             setIsGenerating(null);
         }
     };
-    
+
     // Checkbox Handlers
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
@@ -166,9 +166,9 @@ const InvoicesPage: React.FC = () => {
     };
 
     const handleSelectOne = (orderId: string) => {
-        setSelectedOrderIds(prev => 
-            prev.includes(orderId) 
-                ? prev.filter(id => id !== orderId) 
+        setSelectedOrderIds(prev =>
+            prev.includes(orderId)
+                ? prev.filter(id => id !== orderId)
                 : [...prev, orderId]
         );
     };
@@ -197,7 +197,7 @@ const InvoicesPage: React.FC = () => {
         // Removed target="_blank" to prevent popup blocking for direct downloads
         document.body.appendChild(link);
         link.click();
-        
+
         setTimeout(() => {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
@@ -211,19 +211,39 @@ const InvoicesPage: React.FC = () => {
             const zip = new JSZip();
             const folder = zip.folder("invoices");
             let count = 0;
-            
+
             const promises = selectedOrderIds.map(async (orderId) => {
                 const item = adminData.invoices.find(inv => inv.order_id === orderId);
+                // Try clean path first, then raw path
                 if (item?.pdf_url) {
-                    const { data, error } = await supabase.storage.from(BUCKETS.SITE_ASSETS).download(item.pdf_url);
-                    if (data && !error) {
-                        folder?.file(`${item.invoice_number}.pdf`, data);
-                        count++;
+                    try {
+                        const { data, error } = await supabase.storage.from(BUCKETS.SITE_ASSETS).download(item.pdf_url);
+                        if (data && !error) {
+                            folder?.file(`${item.invoice_number}.pdf`, data);
+                            count++;
+                            return;
+                        } else {
+                            // Fallback: try stripping spaces from path if it fails
+                            const cleanPath = item.pdf_url.replace(/\s+/g, '');
+                            if (cleanPath !== item.pdf_url) {
+                                const { data: cleanData, error: cleanError } = await supabase.storage.from(BUCKETS.SITE_ASSETS).download(cleanPath);
+                                if (cleanData && !cleanError) {
+                                    folder?.file(`${item.invoice_number}.pdf`, cleanData);
+                                    count++;
+                                    return;
+                                }
+                            }
+                            console.warn(`Failed to download invoice for ${orderId}:`, error);
+                        }
+                    } catch (err) {
+                        console.error(`Exception downloading invoice for ${orderId}:`, err);
                     }
                 }
             });
 
-            await Promise.all(promises);
+            // Use allSettled to ensure we wait for all, regardless of failures
+            await Promise.allSettled(promises);
+
             if (count === 0) {
                 alert("No invoice PDFs found for the selected orders. Please generate them first.");
                 return;
@@ -255,7 +275,7 @@ const InvoicesPage: React.FC = () => {
         }
 
         if (!confirm(`You are about to download ${invoiceTargets.length} files sequentially.\n\nPlease allow "Automatic Downloads" if your browser prompts you.`)) return;
-        
+
         setIsProcessing(true);
         let downloadedCount = 0;
 
@@ -263,11 +283,25 @@ const InvoicesPage: React.FC = () => {
             for (const item of invoiceTargets) {
                 if (item?.pdf_url) {
                     try {
+                        let blob = null;
                         const { data, error } = await supabase.storage.from(BUCKETS.SITE_ASSETS).download(item.pdf_url);
                         if (data && !error) {
-                            triggerDownload(data, `${item.invoice_number}.pdf`);
+                            blob = data;
+                        } else {
+                            // Retry with clean path
+                            const cleanPath = item.pdf_url.replace(/\s+/g, '');
+                            if (cleanPath !== item.pdf_url) {
+                                const { data: cleanData, error: cleanError } = await supabase.storage.from(BUCKETS.SITE_ASSETS).download(cleanPath);
+                                if (cleanData && !cleanError) blob = cleanData;
+                            }
+                        }
+
+                        if (blob) {
+                            triggerDownload(blob, `${item.invoice_number}.pdf`);
                             downloadedCount++;
-                            await delay(1500);
+                            await delay(1000); // Reduced delay slightly
+                        } else {
+                            console.error(`Failed to download invoice for ${item.order_id}`);
                         }
                     } catch (innerErr) {
                         console.error(`Error downloading invoice for order ${item.order_id}`, innerErr);
@@ -406,7 +440,7 @@ const InvoicesPage: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Invoices & Labels</h1>
                 {/* Reset Filters Button */}
-                <button 
+                <button
                     onClick={handleResetFilters}
                     className="text-sm text-gray-500 hover:text-red-600 flex items-center gap-1 transition-colors"
                 >
@@ -522,7 +556,7 @@ const InvoicesPage: React.FC = () => {
                     </div>
                 </div>
             </div>
-            
+
             {error && <div className="p-3 bg-red-100 text-red-700 rounded-md mb-4">{error}</div>}
 
             {/* Table */}
@@ -531,8 +565,8 @@ const InvoicesPage: React.FC = () => {
                     <thead className="bg-gray-50">
                         <tr>
                             <th className="p-4 w-4">
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
                                     onChange={handleSelectAll}
                                     checked={selectedOrderIds.length > 0 && selectedOrderIds.length === ordersWithInvoiceStatus.length}
@@ -552,8 +586,8 @@ const InvoicesPage: React.FC = () => {
                             return (
                                 <tr key={orderId} className={selectedOrderIds.includes(orderId) ? 'bg-primary/5' : ''}>
                                     <td className="p-4">
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
                                             checked={selectedOrderIds.includes(orderId)}
                                             onChange={() => handleSelectOne(orderId)}
@@ -571,17 +605,17 @@ const InvoicesPage: React.FC = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         {invoice ? (
                                             <div className="flex items-center justify-end gap-3">
-                                                <button 
-                                                    onClick={() => handleDownloadSingleInvoice(orderId)} 
+                                                <button
+                                                    onClick={() => handleDownloadSingleInvoice(orderId)}
                                                     className="text-gray-500 hover:text-primary disabled:opacity-50"
                                                     disabled={!!downloadingId}
                                                     title="Download Invoice"
                                                 >
                                                     {downloadingId === `invoice-${orderId}` ? '...' : <ArrowDownTrayIcon className="w-5 h-5" />}
                                                 </button>
-                                                <button 
-                                                    onClick={() => handleDownloadSingleLabel(orderId)} 
-                                                    className="text-gray-500 hover:text-primary disabled:opacity-50" 
+                                                <button
+                                                    onClick={() => handleDownloadSingleLabel(orderId)}
+                                                    className="text-gray-500 hover:text-primary disabled:opacity-50"
                                                     disabled={!!downloadingId}
                                                     title="Download Label"
                                                 >
@@ -592,7 +626,7 @@ const InvoicesPage: React.FC = () => {
                                                 </button>
                                             </div>
                                         ) : (
-                                            <button 
+                                            <button
                                                 onClick={() => handleGenerate(orderId)}
                                                 disabled={isGenerating === orderId}
                                                 className="bg-primary text-white text-xs py-1 px-3 rounded-md font-medium hover:bg-pink-700 disabled:bg-gray-400"
@@ -606,20 +640,20 @@ const InvoicesPage: React.FC = () => {
                         })}
                     </tbody>
                 </table>
-                 {ordersWithInvoiceStatus.length === 0 && (
+                {ordersWithInvoiceStatus.length === 0 && (
                     <div className="text-center py-12 text-gray-500">
                         No orders match your filters.
                     </div>
-                 )}
+                )}
             </div>
-            
+
             {/* Bulk Action Bar */}
             {selectedOrderIds.length > 0 && (
-                 <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] p-4 border-t flex flex-wrap items-center justify-between gap-4 z-20 animate-slide-in-down">
+                <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] p-4 border-t flex flex-wrap items-center justify-between gap-4 z-20 animate-slide-in-down">
                     <p className="text-sm font-medium text-gray-700 hidden sm:block">{selectedOrderIds.length} selected</p>
-                    
+
                     <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                        
+
                         {/* Print Group */}
                         <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-md border border-gray-200">
                             <span className="text-xs font-semibold text-gray-400 uppercase px-2">Print</span>
@@ -648,9 +682,9 @@ const InvoicesPage: React.FC = () => {
                                     <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50">Invoices</div>
                                     <button onClick={handleBulkDownloadInvoicesZip} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-primary">Download as ZIP</button>
                                     <button onClick={handleBulkDownloadInvoicesIndividual} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-primary">Download Individual Files</button>
-                                    
+
                                     <div className="border-t border-gray-100 my-1"></div>
-                                    
+
                                     <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50">Shipping Labels</div>
                                     <button onClick={handleBulkDownloadLabelsZip} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-primary">Download as ZIP</button>
                                     <button onClick={handleBulkDownloadLabelsIndividual} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-primary">Download Individual Files</button>
@@ -658,7 +692,7 @@ const InvoicesPage: React.FC = () => {
                             </div>
                         </div>
 
-                         <button onClick={() => setSelectedOrderIds([])} className="text-sm text-gray-500 hover:underline ml-2">
+                        <button onClick={() => setSelectedOrderIds([])} className="text-sm text-gray-500 hover:underline ml-2">
                             Cancel
                         </button>
                     </div>
@@ -666,7 +700,7 @@ const InvoicesPage: React.FC = () => {
             )}
 
             {previewOrder && (
-                <DocumentPreviewModal 
+                <DocumentPreviewModal
                     isOpen={isPreviewOpen}
                     onClose={closePreview}
                     order={previewOrder}

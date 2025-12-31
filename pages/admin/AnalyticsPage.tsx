@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext.tsx';
+import { Link } from 'react-router-dom';
 import {
     Area,
     AreaChart,
@@ -20,7 +21,8 @@ import {
     BanknotesIcon,
     ShoppingBagIcon,
     ArrowPathIcon,
-    UserGroupIcon
+    UserGroupIcon,
+    ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
 const AnalyticsPage: React.FC = () => {
@@ -72,29 +74,38 @@ const AnalyticsPage: React.FC = () => {
 
         safeOrders.forEach(order => {
             if (!order.items) return;
-            order.items.forEach((item: any) => {
-                if (!item?.product?.id) return;
+            // Ensure items is an array
+            const items = Array.isArray(order.items) ? order.items : [];
 
-                const productId = item.product.id;
-                const productName = item.product.name || 'Unknown Product';
-                const productPrice = Number(item.product.price) || 0;
+            items.forEach((item: any) => {
+                // Robust extraction handling both nested 'product' object and flat properties
+                const productId = item.product?.id || item.productId || item.id;
+
+                // Skip if no valid identifier found
+                if (!productId) return;
+
+                const productName = item.product?.name || item.name || 'Unknown Product';
+                // Try to derive price from total/quantity if unit price is missing, or default to 0
+                let productPrice = Number(item.product?.price) || Number(item.price) || 0;
                 const quantity = Number(item.quantity) || 0;
 
-                if (!productSales[productId]) {
+                // If sales data is missing but specific fields exist
+                if (productSales[productId]) {
+                    productSales[productId].sales += productPrice * quantity;
+                    productSales[productId].quantity += quantity;
+                } else {
                     productSales[productId] = {
                         name: productName,
-                        sales: 0,
-                        quantity: 0
+                        sales: productPrice * quantity,
+                        quantity: quantity
                     };
                 }
-                productSales[productId].sales += productPrice * quantity;
-                productSales[productId].quantity += quantity;
             });
         });
 
         return Object.values(productSales)
-            .sort((a, b) => b.sales - a.sales)
-            .slice(0, 5);
+            .sort((a, b) => b.quantity - a.quantity) // Sort by quantity sold as requested (usually "top selling" implies volume)
+            .slice(0, 10);
     }, [safeOrders]);
 
     // Order Status Distribution
@@ -106,6 +117,16 @@ const AnalyticsPage: React.FC = () => {
         });
         return Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
     }, [safeOrders]);
+
+    // Low Stock Products
+    const lowStockProducts = useMemo(() => {
+        return (products || []).map(p => {
+            const stock = p.colors?.reduce((acc, c) => acc + (c.sizes?.reduce((s, si) => s + (Number(si.stock) || 0), 0) || 0), 0) || 0;
+            return { ...p, totalStock: stock };
+        })
+            .filter(p => p.totalStock < 15)
+            .sort((a, b) => a.totalStock - b.totalStock);
+    }, [products]);
 
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
@@ -200,6 +221,47 @@ const AnalyticsPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Low Stock Alerts */}
+            {lowStockProducts.length > 0 && (
+                <div className="bg-white rounded-lg shadow-sm border border-red-100 overflow-hidden">
+                    <div className="p-6 border-b border-red-100 bg-red-50/50 flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                            <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
+                            <h3 className="text-lg font-semibold text-gray-800">Low Stock Alerts (&lt; 15 units)</h3>
+                        </div>
+                        <span className="bg-red-100 text-red-800 text-xs font-bold px-2.5 py-0.5 rounded-full">{lowStockProducts.length} Products</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm text-gray-600">
+                            <thead className="bg-gray-50 text-gray-900 font-medium">
+                                <tr>
+                                    <th className="px-6 py-4">Product Name</th>
+                                    <th className="px-6 py-4">Total Stock</th>
+                                    <th className="px-6 py-4 text-right">Price</th>
+                                    <th className="px-6 py-4 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {lowStockProducts.map(product => (
+                                    <tr key={product.id} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4 font-medium text-gray-900">{product.name}</td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-red-600 font-bold">{product.totalStock} units</span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">₹{product.price}</td>
+                                        <td className="px-6 py-4 text-right">
+                                            <Link to={`/admin/products/edit/${product.id}`} className="text-primary hover:text-pink-700 font-medium">
+                                                Restock
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {/* Top Products Table */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">

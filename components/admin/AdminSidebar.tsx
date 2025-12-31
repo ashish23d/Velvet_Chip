@@ -43,6 +43,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, setOpen }) => {
         { to: '/admin/mails', icon: EnvelopeOpenIcon, label: 'Mails' },
         { to: '/admin/subscribers', icon: EnvelopeIcon, label: 'Subscribers' },
         { to: '/admin/marketing', icon: MegaphoneIcon, label: 'Marketing' },
+        { to: '/admin/broadcasts', icon: MegaphoneIcon, label: 'Broadcasts' },
         { to: '/admin/settings', icon: Cog6ToothIcon, label: 'Settings' },
     ];
 

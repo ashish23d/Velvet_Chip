@@ -9,9 +9,9 @@ const PaymentSuccessAnimation: React.FC<PaymentSuccessAnimationProps> = ({ order
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Redirect to profile orders page after 5 seconds
+        // Redirect to order details page after 5 seconds
         const timer = setTimeout(() => {
-            navigate('/profile');
+            navigate(`/order/${orderId}`);
         }, 5000);
 
         return () => clearTimeout(timer);
@@ -62,7 +62,7 @@ const PaymentSuccessAnimation: React.FC<PaymentSuccessAnimationProps> = ({ order
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                    <span className="ml-2">Redirecting to your orders...</span>
+                    <span className="ml-2">Redirecting to order details...</span>
                 </div>
             </div>
 

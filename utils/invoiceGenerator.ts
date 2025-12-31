@@ -54,16 +54,19 @@ function generateBarcodeDataUrl(text: string): string {
 }
 
 export const generateInvoicePDF = async (
-    order: Order, 
-    siteSettings: SiteSettings | null, 
+    order: Order,
+    siteSettings: SiteSettings | null,
     contactDetails: ContactDetails
 ): Promise<GenerateInvoiceResult> => {
     const doc = new jsPDF();
 
     const invoiceNumber = order.invoice_number || `INV-${new Date().getFullYear()}-${order.id.slice(-6).toUpperCase()}`;
     const packetId = `PKT-${Date.now()}`;
-    
-    const subtotal = order.items.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+
+    const subtotal = order.items.reduce((acc, item: any) => {
+        const price = item.product?.price || item.price || 0;
+        return acc + (price * item.quantity);
+    }, 0);
     const taxRate = 0.18;
     const taxableValue = subtotal / (1 + taxRate);
     const totalTax = subtotal - taxableValue;
@@ -83,7 +86,7 @@ export const generateInvoicePDF = async (
                 const logoBase64 = btoa(binary);
                 const ext = siteSettings.activeLogoPath.split('.').pop()?.toLowerCase();
                 const format = ext === 'png' ? 'PNG' : 'JPEG';
-                doc.addImage(logoBase64, format, 15, 15, 50, 15, undefined, 'FAST'); 
+                doc.addImage(logoBase64, format, 15, 15, 50, 15, undefined, 'FAST');
             }
         }
     } catch (e) {
@@ -94,7 +97,7 @@ export const generateInvoicePDF = async (
     doc.setFontSize(22);
     doc.setTextColor(siteSettings?.primaryColor || '#C22255');
     doc.text("TAX INVOICE", 195, 20, { align: "right" });
-    
+
     // Barcode (Order ID)
     const barcodeData = generateBarcodeDataUrl(order.id);
     if (barcodeData) {
@@ -110,7 +113,7 @@ export const generateInvoicePDF = async (
 
     // --- Sold By & Bill To ---
     const startY = 65;
-    
+
     // Sold By
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
@@ -118,7 +121,7 @@ export const generateInvoicePDF = async (
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.text("Awaany Fashions", 15, startY + 5);
-    
+
     const sellerAddrLines = doc.splitTextToSize(contactDetails.address, 80);
     doc.text(sellerAddrLines, 15, startY + 10);
     let currentY = startY + 10 + (sellerAddrLines.length * 4);
@@ -133,7 +136,7 @@ export const generateInvoicePDF = async (
     doc.setFontSize(10);
     const customerName = order.customerName || order.shippingAddress.name || 'Customer';
     doc.text(customerName, 110, startY + 5);
-    
+
     const buyerAddr = `${order.shippingAddress.address}, ${order.shippingAddress.locality}, ${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.pincode}`;
     const buyerAddrLines = doc.splitTextToSize(buyerAddr, 80);
     doc.text(buyerAddrLines, 110, startY + 10);
@@ -142,15 +145,23 @@ export const generateInvoicePDF = async (
 
     // --- Items Table ---
     const tableStartY = Math.max(currentY + 15, buyerY + 15);
-    
-    const tableData = order.items.map((item, index) => [
-        index + 1,
-        `${item.product.name}\nSize: ${item.selectedSize} | Color: ${item.selectedColor.name}`,
-        item.product.hsnCode || 'N/A',
-        item.quantity,
-        formatCurrency(item.product.price / 1.18).replace('INR ', ''),
-        formatCurrency(item.product.price * item.quantity).replace('INR ', '')
-    ]);
+
+    const tableData = order.items.map((item: any, index: number) => {
+        const name = item.product?.name || item.name || 'Unknown Product';
+        const hsn = item.product?.hsnCode || 'N/A';
+        const price = item.product?.price || item.price || 0;
+        const colorName = item.selectedColor?.name || item.selectedColor || '';
+        const size = item.selectedSize || '';
+
+        return [
+            index + 1,
+            `${name}\nSize: ${size} | Color: ${colorName}`,
+            hsn,
+            item.quantity,
+            formatCurrency(price / 1.18).replace('INR ', ''),
+            formatCurrency(price * item.quantity).replace('INR ', '')
+        ];
+    });
 
     autoTable(doc, {
         startY: tableStartY,
@@ -179,14 +190,14 @@ export const generateInvoicePDF = async (
 
     const totalsX = 130;
     const valuesX = 195;
-    
+
     doc.text("Subtotal:", totalsX, finalY);
     doc.text(formatCurrency(taxableValue), valuesX, finalY, { align: "right" });
-    
+
     finalY += 6;
     doc.text("IGST (18%):", totalsX, finalY);
     doc.text(formatCurrency(totalTax), valuesX, finalY, { align: "right" });
-    
+
     finalY += 8;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
@@ -195,14 +206,14 @@ export const generateInvoicePDF = async (
 
     // --- QR Code ---
     try {
-        const qrCodeDataUrl = await QRCode.toDataURL(`https://awaany.com/#/invoice/${order.id}`, { 
+        const qrCodeDataUrl = await QRCode.toDataURL(`https://awaany.com/#/invoice/${order.id}`, {
             errorCorrectionLevel: 'M',
             type: 'image/png',
             margin: 1,
             width: 100
         });
         const qrBase64 = qrCodeDataUrl.split(',')[1];
-        
+
         if (finalY > 240) {
             doc.addPage();
             finalY = 20;
@@ -215,7 +226,7 @@ export const generateInvoicePDF = async (
     } catch (e) {
         console.warn("Failed to generate QR code:", e);
     }
-    
+
     // Footer
     const pageHeight = doc.internal.pageSize.height;
     doc.setFontSize(8);

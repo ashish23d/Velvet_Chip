@@ -17,7 +17,9 @@ const ProductFormPage: React.FC = () => {
   useEffect(() => {
     if (isEditing && id) {
       const fetchProduct = async () => {
-        setIsLoading(true);
+        if (!productToEdit || productToEdit.id !== Number(id)) {
+          setIsLoading(true);
+        }
         try {
           const product = await getProductById(Number(id));
           setProductToEdit(product);
@@ -102,6 +104,7 @@ const ProductFormPage: React.FC = () => {
           categories={categories}
           onSave={handleSave}
           onCancel={handleCancel}
+          isSaving={isSaving}
         />
       ) : (
         !isLoading && <div>Product not found.</div>

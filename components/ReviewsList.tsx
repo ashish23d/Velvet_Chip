@@ -20,49 +20,59 @@ const ReviewsList: React.FC<ReviewsListProps> = ({ reviews, productRating, total
     });
     return counts;
   }, [reviews]);
-  
+
   const totalRatings = reviews.length;
 
   if (totalRatings === 0) {
     return (
-        <div className="text-center py-10 bg-white rounded-lg shadow-sm border border-gray-200">
-            <p className="text-gray-500">This product has no reviews yet.</p>
-            <p className="text-sm text-gray-400 mt-1">Be the first to share your thoughts!</p>
-        </div>
+      <div className="text-center py-10 bg-white rounded-lg shadow-sm border border-gray-200">
+        <p className="text-gray-500">This product has no reviews yet.</p>
+        <p className="text-sm text-gray-400 mt-1">Be the first to share your thoughts!</p>
+      </div>
     );
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 border-b pb-6 mb-6">
+
+    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+      <h3 className="text-lg font-bold text-gray-800 mb-6">Ratings & Reviews</h3>
+      <div className="flex flex-col md:flex-row gap-8 mb-8 border-b border-gray-100 pb-8">
         {/* Overall Rating */}
-        <div className="md:col-span-1 flex flex-col items-center justify-center text-center">
-          <p className="text-5xl font-bold text-gray-800">{productRating.toFixed(1)}</p>
+        <div className="md:w-1/3 flex flex-col items-center justify-center text-center border-r-0 md:border-r border-gray-100 pr-0 md:pr-8">
+          <div className="flex items-baseline gap-2">
+            <p className="text-4xl font-bold text-gray-900">{productRating.toFixed(1)}</p>
+            <span className="text-sm text-gray-400">/ 5</span>
+          </div>
           <div className="flex my-2">
             {[...Array(5)].map((_, i) => (
-              <StarIcon key={i} className={`w-6 h-6 ${i < Math.round(productRating) ? 'text-yellow-400' : 'text-gray-300'}`} />
+              <StarIcon key={i} className={`w-5 h-5 ${i < Math.round(productRating) ? 'text-green-500' : 'text-gray-200'}`} />
             ))}
           </div>
-          <p className="text-sm text-gray-500">{totalReviews} Ratings & {totalRatings} Reviews</p>
+          <p className="text-sm text-gray-500 font-medium">{totalReviews} Verified {totalReviews === 1 ? 'Review' : 'Reviews'}</p>
         </div>
 
         {/* Rating Breakdown */}
-        <div className="md:col-span-2">
-          {Object.entries(ratingCounts).reverse().map(([star, count]) => {
-            const percentage = totalRatings > 0 ? ((count as number) / totalRatings) * 100 : 0;
-            return (
-              <div key={star} className="flex items-center gap-4 text-sm">
-                <span className="font-medium text-gray-600">{star} ★</span>
-                <div className="flex-grow bg-gray-200 rounded-full h-2">
-                  <div className="bg-yellow-400 h-2 rounded-full" style={{ width: `${percentage}%` }}></div>
+        <div className="md:w-2/3 pl-0 md:pl-4">
+          <div className="space-y-2">
+            {Object.entries(ratingCounts).reverse().map(([star, count]) => {
+              const percentage = totalRatings > 0 ? ((count as number) / totalRatings) * 100 : 0;
+              return (
+                <div key={star} className="flex items-center gap-3 text-xs sm:text-sm">
+                  <span className="font-semibold w-6 text-gray-600 flex items-center gap-0.5">{star} <span className="text-xs">★</span></span>
+                  <div className="flex-grow bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${['bg-green-500', 'bg-green-400', 'bg-yellow-400', 'bg-orange-400', 'bg-red-500'][5 - parseInt(star)]}`} // Color coding
+                      style={{ width: `${percentage}%` }}
+                    ></div>
+                  </div>
+                  <span className="w-10 text-right text-gray-400 text-xs">{count.toLocaleString()}</span>
                 </div>
-                <span className="w-12 text-right text-gray-500">{count.toLocaleString()}</span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
-      
+
       {/* Individual Reviews */}
       <div className="space-y-8">
         {reviews.map(review => (

@@ -66,6 +66,8 @@ const ProductDetailPage: React.FC = () => {
   const [selectedColor, setSelectedColor] = useState<Product['colors'][0] | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [customizationValues, setCustomizationValues] = useState<Record<string, string>>({});
+  const [customizationText, setCustomizationText] = useState(''); // Legacy simple text
   const [mainImage, setMainImage] = useState<string>('');
   const addToCartButtonRef = React.useRef<HTMLButtonElement>(null);
   const [isSimilarModalOpen, setIsSimilarModalOpen] = useState(false);
@@ -125,7 +127,9 @@ const ProductDetailPage: React.FC = () => {
     }
   }, [currentUser]);
 
-  const productReviews = useMemo(() => reviews.filter(r => r.productId === product?.id && r.status === 'approved'), [reviews, product]);
+  const productReviews = useMemo(() => reviews.filter(r =>
+    r.productId === product?.id && (r.status === 'approved' || r.userId === currentUser?.id)
+  ), [reviews, product, currentUser]);
 
   const customerPhotos = useMemo(() => {
     return productReviews.flatMap(r => r.productImages || []);
@@ -198,7 +202,37 @@ const ProductDetailPage: React.FC = () => {
     }
     if (selectedSize && selectedColor && addToCartButtonRef.current) {
       triggerFlyToCartAnimation(product, addToCartButtonRef.current);
-      addToCart(product, selectedSize, selectedColor, quantity);
+
+      let finalCustomizationString = '';
+
+      // Handle dynamic options
+      if (product.customization_options && product.customization_options.length > 0) {
+        const parts: string[] = [];
+
+        // Validate required fields
+        const missingRequired = product.customization_options
+          .filter(opt => opt.required && !customizationValues[opt.id])
+          .map(opt => opt.label);
+
+        if (missingRequired.length > 0) {
+          alert(`Please fill in the following required customization fields: ${missingRequired.join(', ')}`);
+          return;
+        }
+
+        product.customization_options.forEach(opt => {
+          if (customizationValues[opt.id]) {
+            parts.push(`${opt.label}: ${customizationValues[opt.id]}`);
+          }
+        });
+        finalCustomizationString = parts.join('\n');
+      } else {
+        // Fallback to legacy text
+        finalCustomizationString = customizationText;
+      }
+
+      addToCart(product, selectedSize, selectedColor, quantity, finalCustomizationString);
+      setCustomizationText(''); // Reset
+      setCustomizationValues({});
     } else {
       alert("Please select a size and color.");
     }
@@ -328,7 +362,7 @@ const ProductDetailPage: React.FC = () => {
 
               {/* Size Selector */}
               <div>
-                <h3 className="text-sm font-medium text-gray-900">Size</h3>
+                <h3 className="text-sm font-medium text-gray-900">{product.variant_label || 'Size'}</h3>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {currentAvailableSizes.length > 0 ? currentAvailableSizes.map(size => (
                     <button
@@ -353,6 +387,98 @@ const ProductDetailPage: React.FC = () => {
                   <button onClick={() => setQuantity(q => q + 1)} className="p-2 text-gray-600 hover:text-primary"><PlusIcon className="w-4 h-4" /></button>
                 </div>
               </div>
+
+              {/* Customization / Special Instructions */}
+              {product.allow_customization && (
+                <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">
+                    Customization Options
+                  </h3>
+
+                  {product.customization_options && product.customization_options.length > 0 ? (
+                    <div className="space-y-4">
+                      {product.customization_options.map(opt => (
+                        <div key={opt.id}>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {opt.label} {opt.required && <span className="text-red-500">*</span>}
+                          </label>
+
+                          {opt.type === 'text' && (
+                            <input
+                              type="text"
+                              value={customizationValues[opt.id] || ''}
+                              onChange={e => setCustomizationValues(prev => ({ ...prev, [opt.id]: e.target.value }))}
+                              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                              placeholder={`Enter ${opt.label}`}
+                            />
+                          )}
+
+                          {opt.type === 'radio' && (
+                            <div className="space-y-2">
+                              {opt.options?.map(val => (
+                                <div key={val} className="flex items-center">
+                                  <input
+                                    type="radio"
+                                    id={`${opt.id}-${val}`}
+                                    name={opt.id}
+                                    value={val}
+                                    checked={customizationValues[opt.id] === val}
+                                    onChange={e => setCustomizationValues(prev => ({ ...prev, [opt.id]: e.target.value }))}
+                                    className="focus:ring-primary h-4 w-4 text-primary border-gray-300"
+                                  />
+                                  <label htmlFor={`${opt.id}-${val}`} className="ml-3 block text-sm font-medium text-gray-700">
+                                    {val}
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {opt.type === 'checkbox' && (
+                            <div className="space-y-2">
+                              {opt.options?.map(val => {
+                                const currentVals = customizationValues[opt.id] ? customizationValues[opt.id].split(', ') : [];
+                                const isChecked = currentVals.includes(val);
+                                return (
+                                  <div key={val} className="flex items-center">
+                                    <input
+                                      type="checkbox"
+                                      id={`${opt.id}-${val}`}
+                                      checked={isChecked}
+                                      onChange={e => {
+                                        let newVals: string[];
+                                        if (e.target.checked) {
+                                          newVals = [...currentVals, val];
+                                        } else {
+                                          newVals = currentVals.filter(v => v !== val);
+                                        }
+                                        setCustomizationValues(prev => ({ ...prev, [opt.id]: newVals.join(', ') }));
+                                      }}
+                                      className="focus:ring-primary h-4 w-4 text-primary border-gray-300 rounded"
+                                    />
+                                    <label htmlFor={`${opt.id}-${val}`} className="ml-3 block text-sm font-medium text-gray-700">
+                                      {val}
+                                    </label>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    /* Fallback to legacy textarea */
+                    <textarea
+                      value={customizationText}
+                      onChange={(e) => setCustomizationText(e.target.value)}
+                      placeholder="Enter any specific instructions or customization details here..."
+                      rows={3}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm resize-y"
+                    />
+                  )}
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex gap-4">
@@ -471,7 +597,7 @@ const ProductDetailPage: React.FC = () => {
         {similarProducts.length > 0 && (
           <div className="my-16 border-t pt-12" id="similar-products-section">
             <h2 className="text-2xl lg:text-3xl font-serif text-center text-gray-800 mb-8">Similar Products</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
               {similarProducts.slice(0, 4).map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           </div>

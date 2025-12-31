@@ -15,15 +15,26 @@ interface ReviewProductPageProps {
 }
 
 const ReviewProductPage: React.FC<ReviewProductPageProps> = ({ isOpen, onClose, product }) => {
-  const { currentUser, addReview } = useAppContext();
-  
+  const { currentUser, addReview, updateUserReview } = useAppContext();
+
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showThankYou, setShowThankYou] = useState(false);
+
+  const currentUserReview = (product as any).currentUserReview;
+  const isEditMode = !!currentUserReview;
+
+  React.useEffect(() => {
+    if (currentUserReview) {
+      setRating(currentUserReview.rating);
+      setComment(currentUserReview.comment || '');
+      setUploadedImages(currentUserReview.productImages || []);
+    }
+  }, [currentUserReview]);
 
   const resetForm = () => {
     setRating(0);
@@ -32,10 +43,10 @@ const ReviewProductPage: React.FC<ReviewProductPageProps> = ({ isOpen, onClose, 
     setError(null);
     setIsSubmitting(false);
   };
-  
+
   const handleClose = () => {
-      resetForm();
-      onClose();
+    resetForm();
+    onClose();
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,28 +59,37 @@ const ReviewProductPage: React.FC<ReviewProductPageProps> = ({ isOpen, onClose, 
       setError('Please select a star rating before submitting.');
       return;
     }
-    
+
     setIsSubmitting(true);
     setError(null);
 
-    const reviewData: Omit<Review, 'id' | 'date' | 'status'> = {
-      productId: product.id,
-      userId: currentUser.id,
-      author: currentUser.name,
-      rating: rating,
-      comment: comment,
-      userImage: currentUser.avatar || '',
-      productImages: uploadedImages,
-    };
-    
     try {
-      await addReview(reviewData);
+      if (isEditMode) {
+        await updateUserReview(currentUserReview.id, {
+          rating, // Though UI is readonly, we pass it or just keep old.
+          comment,
+          productImages: uploadedImages
+        });
+      } else {
+        const reviewData: Omit<Review, 'id' | 'date' | 'status'> = {
+          productId: product.id,
+          userId: currentUser.id,
+          author: currentUser.name,
+          rating: rating,
+          comment: comment,
+          userImage: currentUser.avatar || '',
+          productImages: uploadedImages,
+        };
+        await addReview(reviewData);
+      }
+
       setShowThankYou(true);
       setTimeout(() => {
         setShowThankYou(false);
         handleClose();
       }, 2500);
     } catch (err: any) {
+      console.error(err);
       setError(err.message || "An unexpected error occurred.");
     } finally {
       setIsSubmitting(false);
@@ -93,7 +113,7 @@ const ReviewProductPage: React.FC<ReviewProductPageProps> = ({ isOpen, onClose, 
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-3xl">
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
-            <h1 id="review-page-title" className="text-2xl font-serif text-gray-800">Review Product</h1>
+            <h1 id="review-page-title" className="text-2xl font-serif text-gray-800">{isEditMode ? 'Edit Review' : 'Review Product'}</h1>
             <button
               onClick={handleClose}
               className="p-1 rounded-full text-gray-500 hover:bg-gray-100"
@@ -113,7 +133,7 @@ const ReviewProductPage: React.FC<ReviewProductPageProps> = ({ isOpen, onClose, 
             />
             <div>
               <h2 className="font-semibold text-gray-800">{product.name}</h2>
-              <p className="text-sm text-gray-500">{product.category.replace('-', ' ')}</p>
+              <p className="text-sm text-gray-500">{product.category ? product.category.replace('-', ' ') : 'Uncategorized'}</p>
             </div>
           </div>
 
@@ -135,7 +155,7 @@ const ReviewProductPage: React.FC<ReviewProductPageProps> = ({ isOpen, onClose, 
                 />
               )}
             </div>
-            
+
             {/* Written Review */}
             <div>
               <label htmlFor="comment" className="block text-lg font-semibold text-gray-700 mb-2">Write a Review</label>
@@ -148,15 +168,16 @@ const ReviewProductPage: React.FC<ReviewProductPageProps> = ({ isOpen, onClose, 
                 placeholder="How was your experience with the product?"
               />
             </div>
-            
+
             {/* Star Rating */}
             <div>
               <h3 className="text-lg font-semibold text-gray-700 mb-2">Rate the Product *</h3>
-              <StarRatingInput rating={rating} setRating={setRating} />
+              {isEditMode && <p className="text-xs text-gray-500 mb-2">Rating cannot be changed while editing.</p>}
+              <StarRatingInput rating={rating} setRating={setRating} readOnly={isEditMode} />
             </div>
 
             {error && <p className="text-red-600 text-sm text-center">{error}</p>}
-            
+
             {/* Action Buttons */}
             <div className="flex justify-end items-center gap-4 pt-4 border-t">
               <button
@@ -171,7 +192,7 @@ const ReviewProductPage: React.FC<ReviewProductPageProps> = ({ isOpen, onClose, 
                 disabled={isSubmitting}
                 className="py-2 px-6 bg-primary text-white rounded-md font-semibold hover:bg-pink-700 transition-colors disabled:bg-gray-400"
               >
-                {isSubmitting ? 'Submitting...' : 'Continue'}
+                {isSubmitting ? 'Submitting...' : (isEditMode ? 'Update Review' : 'Continue')}
               </button>
             </div>
           </form>

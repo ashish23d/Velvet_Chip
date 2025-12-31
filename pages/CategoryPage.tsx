@@ -216,6 +216,8 @@ const CategoryPage: React.FC = () => {
               minPrice={minPrice}
               maxPrice={maxPrice}
               availableTags={availableTags}
+              categories={categories}
+              currentCategoryId={category?.id}
             />
           </div>
 

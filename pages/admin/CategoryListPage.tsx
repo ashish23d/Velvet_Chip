@@ -6,6 +6,7 @@ import { Category } from '../../types.ts';
 import PlusIcon from '../../components/icons/PlusIcon.tsx';
 import PencilIcon from '../../components/icons/PencilIcon.tsx';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
+import ConfirmationModal from '../../components/ConfirmationModal.tsx';
 
 const CategoryListPage: React.FC = () => {
   const { categories, updateCategory, deleteCategory } = useAppContext();
@@ -15,6 +16,9 @@ const CategoryListPage: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const filteredCategories = useMemo(() => {
     return categories.filter(category =>
@@ -66,13 +70,21 @@ const CategoryListPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      try {
-        await deleteCategory(id);
-      } catch (err: any) {
-        alert('Failed to delete category: ' + err.message);
-      }
+  const handleDeleteClick = (id: string, name: string) => {
+    setDeleteConfirmation({ id, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmation) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteCategory(deleteConfirmation.id);
+      setDeleteConfirmation(null);
+    } catch (err: any) {
+      alert('Failed to delete category: ' + err.message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -221,7 +233,7 @@ const CategoryListPage: React.FC = () => {
                         </svg>
                       </Link>
                       <button
-                        onClick={() => handleDelete(category.id, category.name)}
+                        onClick={() => handleDeleteClick(category.id, category.name)}
                         className="inline-flex items-center p-2 text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded"
                         title="Delete"
                       >
@@ -241,6 +253,21 @@ const CategoryListPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={!!deleteConfirmation}
+        onClose={() => setDeleteConfirmation(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Category"
+        isDestructive={true}
+        isConfirming={isDeleting}
+        confirmText="Delete"
+      >
+        <p>
+          Are you sure you want to delete <span className="font-bold">{deleteConfirmation?.name}</span>?
+          This action cannot be undone.
+        </p>
+      </ConfirmationModal>
     </div>
   );
 };

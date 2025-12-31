@@ -22,6 +22,7 @@ export type Json = any;
 
 export interface SiteSettings {
   primaryColor: string;
+  hoverColor?: string;
   activeLogoPath: string | null;
   previousLogoPaths: string[];
   // New Logo Settings
@@ -38,6 +39,13 @@ export interface PaymentSettings {
   cod_enabled: boolean;
   upi_enabled?: boolean;
   test_mode: boolean;
+}
+
+export interface EmailSettings {
+  id: number;
+  sender_email: string;
+  sender_name: string;
+  last_updated_at: string;
 }
 
 export interface ContactDetails {
@@ -123,8 +131,18 @@ export interface Notification {
   title: string;
   message: string;
   link?: string;
-  timestamp: string; // ISO 8601 date string
-  read: boolean;
+  created_at: string; // ISO 8601 date string
+  is_read: boolean;
+}
+
+export interface BroadcastNotification {
+  id: number;
+  title: string;
+  message: string;
+  image_path: string | null;
+  target_platform: 'all' | 'android' | 'web';
+  is_active: boolean;
+  created_at: string;
 }
 
 export type OrderStatus = 'Processing' | 'Shipped' | 'Out for Delivery' | 'Delivered' | 'Cancelled' | 'Cancelled by User' | 'Return Requested' | 'Return Approved' | 'In Transit';
@@ -191,20 +209,38 @@ export interface Product {
     hex: string;
     uuid: string;
     images?: string[];
-    size: string;
-    stock: number;
+    sizes?: {
+      size: string;
+      stock: number;
+      price?: number;
+      mrp?: number;
+      sku?: string;
+    }[];
+    // Legacy fields for backward compatibility if needed, though better to migrate
+    size?: string;
+    stock?: number;
     price?: number;
     mrp?: number;
     sku?: string;
   }[];
-}[];
-sizes: string[];
-specifications: { [key: string]: string };
-tags ?: string[];
-createdAt ?: string;
-hsnCode ?: string;
-show_colors ?: boolean;
-sku ?: string;
+  sizes: string[];
+  specifications: { [key: string]: string };
+  tags?: string[];
+  createdAt?: string;
+  hsnCode?: string;
+  show_colors?: boolean;
+  sku?: string;
+  variant_label?: string;
+  allow_customization?: boolean;
+  customization_options?: CustomizationOption[];
+}
+
+export interface CustomizationOption {
+  id: string;
+  type: 'text' | 'radio' | 'checkbox';
+  label: string;
+  options?: string[]; // For radio and checkbox
+  required: boolean;
 }
 
 export type CardType =
@@ -276,6 +312,7 @@ export interface CartItem {
   quantity: number;
   selectedSize: string;
   selectedColor: { name: string; hex: string };
+  customization?: string;
 }
 
 export interface User {
@@ -879,6 +916,7 @@ export type Database = {
         specifications: Json
         tags: string[] | null
         uuid: string
+        variant_label: string | null
       }
       Insert: {
         category: string
@@ -897,6 +935,7 @@ export type Database = {
         specifications: Json
         tags?: string[] | null
         uuid: string
+        variant_label?: string | null
       }
       Update: {
         category?: string
@@ -915,6 +954,7 @@ export type Database = {
         specifications?: Json
         tags?: string[] | null
         uuid?: string
+        variant_label?: string | null
       }
     }
     profiles: {
@@ -1064,5 +1104,4 @@ export type Database = {
   Functions: {}
   Enums: {}
   CompositeTypes: {}
-}
 }

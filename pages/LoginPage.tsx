@@ -100,8 +100,8 @@ const LoginPage: React.FC = () => {
 
         {/* Form Column */}
         <div className="p-8 sm:p-12 flex flex-col justify-center">
-          <div className="text-center mb-6">
-            <Logo className="h-14 sm:h-16 w-auto text-primary mx-auto" />
+          <div className="flex justify-center mb-6">
+            <Logo className="h-14 sm:h-16 w-auto text-primary" />
           </div>
 
           {isRegisterView ? (

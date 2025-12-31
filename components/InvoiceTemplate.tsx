@@ -14,9 +14,12 @@ interface InvoiceTemplateProps {
 }
 
 const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ order, promotions, siteSettings, contactDetails, invoiceData }) => {
-    
+
     const appliedPromotion = promotions.find(p => p.code === order.promotionCode);
-    const subtotal = order.items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+    const subtotal = order.items.reduce((acc, item) => {
+        const price = item.product?.price || item.price || 0;
+        return acc + (price * item.quantity);
+    }, 0);
     const shipping = subtotal > 499 ? 0 : 50;
     const promoDiscount = useMemo(() => {
         if (!appliedPromotion) return 0;
@@ -36,11 +39,11 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ order, promotions, si
                 <div className="flex-shrink-0">
                     {/* Use Image if available in settings, else fallback to component */}
                     {siteSettings?.activeLogoPath ? (
-                         <SupabaseMedia bucket={BUCKETS.SITE_ASSETS} imagePath={siteSettings.activeLogoPath} alt="Logo" className="h-14 w-auto object-contain" />
+                        <SupabaseMedia bucket={BUCKETS.SITE_ASSETS} imagePath={siteSettings.activeLogoPath} alt="Logo" className="h-14 w-auto object-contain" />
                     ) : (
-                         <Logo className="h-14 sm:h-16 w-auto text-primary" />
+                        <Logo className="h-14 sm:h-16 w-auto text-primary" />
                     )}
-                    
+
                     <div className="text-xs text-gray-500 mt-2">
                         <p>{contactDetails.address}</p>
                         <p>{contactDetails.email}</p>
@@ -81,19 +84,27 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ order, promotions, si
                         </tr>
                     </thead>
                     <tbody className="text-sm text-gray-700">
-                        {order.items.map((item, index) => (
-                            <tr key={item.id} className="border-b">
-                                <td className="p-3">{index + 1}</td>
-                                <td className="p-3">
-                                    <p className="font-medium text-gray-800">{item.product.name}</p>
-                                    <p className="text-xs text-gray-500">Size: {item.selectedSize}, Color: {item.selectedColor.name}</p>
-                                </td>
-                                <td className="p-3 text-center">{item.product.hsnCode || 'N/A'}</td>
-                                <td className="p-3 text-center">{item.quantity}</td>
-                                <td className="p-3 text-right">₹{item.product.price.toFixed(2)}</td>
-                                <td className="p-3 text-right">₹{(item.product.price * item.quantity).toFixed(2)}</td>
-                            </tr>
-                        ))}
+                        {order.items.map((item, index) => {
+                            const productName = item.product?.name || item.name;
+                            const size = item.selectedSize;
+                            const colorName = item.selectedColor?.name || (typeof item.color === 'object' ? item.color?.name : item.color) || 'N/A';
+                            const hsnCode = item.product?.hsnCode || 'N/A';
+                            const price = item.product?.price || item.price || 0;
+
+                            return (
+                                <tr key={item.id} className="border-b">
+                                    <td className="p-3">{index + 1}</td>
+                                    <td className="p-3">
+                                        <p className="font-medium text-gray-800">{productName}</p>
+                                        <p className="text-xs text-gray-500">Size: {size}, Color: {colorName}</p>
+                                    </td>
+                                    <td className="p-3 text-center">{hsnCode}</td>
+                                    <td className="p-3 text-center">{item.quantity}</td>
+                                    <td className="p-3 text-right">₹{price.toFixed(2)}</td>
+                                    <td className="p-3 text-right">₹{(price * item.quantity).toFixed(2)}</td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
@@ -106,12 +117,12 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ order, promotions, si
                         <span className="font-medium">₹{subtotal.toFixed(2)}</span>
                     </div>
                     {promoDiscount > 0 && (
-                            <div className="flex justify-between py-2 border-b text-green-600">
+                        <div className="flex justify-between py-2 border-b text-green-600">
                             <span>Discount ({order.promotionCode})</span>
                             <span className="font-medium">- ₹{promoDiscount.toFixed(2)}</span>
                         </div>
                     )}
-                        <div className="flex justify-between py-2 border-b">
+                    <div className="flex justify-between py-2 border-b">
                         <span className="text-gray-600">Shipping</span>
                         <span className="font-medium">₹{shipping.toFixed(2)}</span>
                     </div>
@@ -130,14 +141,14 @@ const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ order, promotions, si
                         <p>This is a computer-generated invoice and does not require a signature.</p>
                         <p>Returns are accepted within 10 days of delivery for unworn items with tags attached.</p>
                     </div>
-                     {invoiceData?.qr_code_url && (
+                    {invoiceData?.qr_code_url && (
                         <div className="text-center ml-4">
-                             <SupabaseMedia bucket={BUCKETS.SITE_ASSETS} imagePath={invoiceData.qr_code_url} alt="QR Code" className="h-20 w-20" />
-                             <p className="text-[8px] mt-1">Scan to verify</p>
+                            <SupabaseMedia bucket={BUCKETS.SITE_ASSETS} imagePath={invoiceData.qr_code_url} alt="QR Code" className="h-20 w-20" />
+                            <p className="text-[8px] mt-1">Scan to verify</p>
                         </div>
                     )}
                 </div>
-                 <p className="mt-4 font-semibold text-center text-gray-800">Thank you for shopping with Awaany!</p>
+                <p className="mt-4 font-semibold text-center text-gray-800">Thank you for shopping with Awaany!</p>
             </div>
         </div>
     );
