@@ -19,6 +19,7 @@ const CategoryFormPage: React.FC = () => {
     const [pageHeroMedia, setPageHeroMedia] = useState<MediaItem[]>([]);
     const [pageHeroText, setPageHeroText] = useState('');
     const [showPageHeroText, setShowPageHeroText] = useState(true);
+    const [taxRate, setTaxRate] = useState<number>(0);
 
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -34,6 +35,7 @@ const CategoryFormPage: React.FC = () => {
                 setPageHeroMedia(categoryToEdit.pageHeroMedia || []);
                 setPageHeroText(categoryToEdit.pageHeroText || '');
                 setShowPageHeroText(categoryToEdit.showPageHeroText ?? true);
+                setTaxRate(categoryToEdit.tax_rate || 0);
             }
         }
     }, [isEditing, id, getCategoryById]);
@@ -50,6 +52,7 @@ const CategoryFormPage: React.FC = () => {
             pageHeroMedia,
             pageHeroText,
             showPageHeroText,
+            tax_rate: Number(taxRate) || 0
         };
 
         try {
@@ -102,10 +105,26 @@ const CategoryFormPage: React.FC = () => {
             <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
                 <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">Category Details</h3>
                 <div className="space-y-6">
-                    <div>
-                        <label htmlFor="name" className={labelClass}>Category Name</label>
-                        <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} className={inputClass} required />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label htmlFor="name" className={labelClass}>Category Name</label>
+                            <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} className={inputClass} required />
+                        </div>
+                        <div>
+                            <label htmlFor="taxRate" className={labelClass}>Tax Rate (%)</label>
+                            <input
+                                type="number"
+                                id="taxRate"
+                                value={taxRate}
+                                onChange={e => setTaxRate(Number(e.target.value))}
+                                className={inputClass}
+                                min="0" max="100" step="0.01"
+                                placeholder="e.g. 18"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">Used if Global Tax Mode is set to 'Category'.</p>
+                        </div>
                     </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className={labelClass}>Web Showcase Card Image</label>

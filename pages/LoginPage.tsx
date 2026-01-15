@@ -62,7 +62,16 @@ const LoginPage: React.FC = () => {
   const handleOAuthLogin = async (provider: 'google') => {
     setIsLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithOAuth({ provider });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      }
+    });
     if (error) {
       setError(error.message);
       setIsLoading(false);

@@ -13,7 +13,7 @@ interface OrderSummaryProps {
 }
 
 const OrderSummary: React.FC<OrderSummaryProps> = ({ cart, ctaText, ctaLink, onClick, disabled = false, isPaymentPage = false }) => {
-  const { checkoutState, applyPromotion, removePromotion, getAvailablePromotions } = useAppContext();
+  const { checkoutState, applyPromotion, removePromotion, getAvailablePromotions, taxSettings, categories } = useAppContext();
   const { appliedPromotion, discount } = checkoutState;
 
   const [promotionCode, setPromotionCode] = useState('');
@@ -22,8 +22,30 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ cart, ctaText, ctaLink, onC
   const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   const totalMrp = cart.reduce((acc, item) => acc + item.product.mrp * item.quantity, 0);
   const totalDiscount = totalMrp - subtotal;
+  // Tax Calculation Logic
+  let taxAmount = 0;
+  let taxBreakdown: Record<string, number> = {};
+
+  if (taxSettings && taxSettings.enabled) {
+    if (taxSettings.mode === 'global') {
+      const rate = taxSettings.global_rate || 0;
+      taxAmount = (subtotal * rate) / 100;
+      taxBreakdown[`${taxSettings.label || 'Tax'} (${rate}%)`] = taxAmount;
+    } else if (taxSettings.mode === 'category') {
+      cart.forEach(item => {
+        const productCategory = categories.find(c => c.name === item.product.category);
+        const rate = productCategory?.tax_rate || 0;
+        const itemTax = (item.product.price * item.quantity * rate) / 100;
+        taxAmount += itemTax;
+
+        const label = `${taxSettings.label || 'Tax'} (${rate}%)`;
+        taxBreakdown[label] = (taxBreakdown[label] || 0) + itemTax;
+      });
+    }
+  }
+
   const deliveryCharge = subtotal > 499 ? 0 : 50;
-  const totalAmount = (subtotal - discount) + deliveryCharge;
+  const totalAmount = (subtotal - discount) + taxAmount + deliveryCharge;
 
   const CtaComponent = onClick || disabled ? 'button' : ReactRouterDOM.Link;
 
@@ -64,22 +86,40 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ cart, ctaText, ctaLink, onC
             <span className="font-medium text-green-600">- ₹{totalDiscount.toLocaleString()}</span>
           </div>
         )}
-        {appliedPromotion && (
-          <div className="flex justify-between items-center bg-green-50 p-2 rounded-md">
-            <span className="text-green-700">Promotion "{appliedPromotion.code}"</span>
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-green-700">- ₹{discount.toFixed(2)}</span>
-              {!isPaymentPage && (
-                <button onClick={removePromotion} className="text-red-500 text-xs hover:underline">[Remove]</button>
-              )}
-            </div>
-          </div>
-        )}
+
         <div className="flex justify-between">
           <span className="text-gray-600">Delivery Charges</span>
           <span className="font-medium text-gray-800">{deliveryCharge === 0 ? <span className="text-green-600">FREE</span> : `₹${deliveryCharge.toLocaleString()}`}</span>
         </div>
       </div>
+
+      {/* Tax Breakdown */}
+      {taxSettings?.enabled && taxAmount > 0 && (
+        <div className="border-t border-dashed pt-2 mt-2">
+          <div className="flex justify-between font-medium text-gray-700">
+            <span>Total Tax</span>
+            <span>₹{taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          {Object.entries(taxBreakdown).map(([label, amount]) => (
+            <div key={label} className="flex justify-between text-xs text-gray-500 pl-2">
+              <span>{label}</span>
+              <span>₹{amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {appliedPromotion && (
+        <div className="flex justify-between items-center bg-green-50 p-2 rounded-md mt-2">
+          <span className="text-green-700">Promotion "{appliedPromotion.code}"</span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-green-700">- ₹{discount.toFixed(2)}</span>
+            {!isPaymentPage && (
+              <button onClick={removePromotion} className="text-red-500 text-xs hover:underline">[Remove]</button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="border-t mt-4 pt-4">
         <label htmlFor="promotion" className="text-sm font-medium text-gray-700">Have a promotion code?</label>
@@ -104,32 +144,34 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ cart, ctaText, ctaLink, onC
       </div>
 
       {/* Available Coupons Section */}
-      {getAvailablePromotions().length > 0 && !appliedPromotion && (
-        <div className="mt-4 border-t pt-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Available Coupons</h3>
-          <div className="space-y-2">
-            {getAvailablePromotions().map(promo => (
-              <div key={promo.id} className="border border-green-200 bg-green-50 rounded-md p-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-semibold text-green-700">{promo.code}</p>
-                    <p className="text-xs text-green-600">
-                      {promo.type === 'percentage' ? `${promo.value}% Off` : `₹${promo.value} Off`}
-                      {promo.min_purchase ? ` on orders above ₹${promo.min_purchase}` : ''}
-                    </p>
+      {
+        getAvailablePromotions().length > 0 && !appliedPromotion && (
+          <div className="mt-4 border-t pt-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Available Coupons</h3>
+            <div className="space-y-2">
+              {getAvailablePromotions().map(promo => (
+                <div key={promo.id} className="border border-green-200 bg-green-50 rounded-md p-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-green-700">{promo.code}</p>
+                      <p className="text-xs text-green-600">
+                        {promo.type === 'percentage' ? `${promo.value}% Off` : `₹${promo.value} Off`}
+                        {promo.min_purchase ? ` on orders above ₹${promo.min_purchase}` : ''}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => applyPromotion(promo.code)}
+                      className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                    >
+                      Apply
+                    </button>
                   </div>
-                  <button
-                    onClick={() => applyPromotion(promo.code)}
-                    className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
-                  >
-                    Apply
-                  </button>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <div className="border-t mt-4 pt-4">
         <div className="flex justify-between items-baseline">
@@ -142,7 +184,7 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({ cart, ctaText, ctaLink, onC
           {ctaText}
         </CtaComponent>
       </div>
-    </div>
+    </div >
   );
 };
 

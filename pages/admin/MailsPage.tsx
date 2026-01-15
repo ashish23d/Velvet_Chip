@@ -7,18 +7,24 @@ import TrashIcon from '../../components/icons/TrashIcon.tsx';
 import { MailTemplate } from '../../types.ts';
 
 const MailsPage: React.FC = () => {
-  const { getAllMailTemplates, deleteMailTemplate, toggleMailTemplateStatus } = useAppContext();
+  const { getAllMailTemplates, deleteMailTemplate, toggleMailTemplateStatus, showConfirmationModal } = useAppContext();
   const mailTemplates = getAllMailTemplates();
 
   const handleDelete = async (id: number, name: string) => {
-    if (confirm(`Are you sure you want to delete the "${name}" template? This cannot be undone.`)) {
-      try {
-        await deleteMailTemplate(id);
-      } catch (error) {
-        console.error("Failed to delete template:", error);
-        alert(`Error: ${(error as Error).message}`);
+    showConfirmationModal({
+      title: 'Delete Template',
+      message: `Are you sure you want to delete the "${name}" template? This action cannot be undone.`,
+      confirmText: 'Delete',
+      isDestructive: true,
+      onConfirm: async () => {
+        try {
+          await deleteMailTemplate(id);
+        } catch (error) {
+          console.error("Failed to delete template:", error);
+          alert(`Error: ${(error as Error).message}`);
+        }
       }
-    }
+    });
   };
 
   const TypeBadge: React.FC<{ type: MailTemplate['templateType'] }> = ({ type }) => {
@@ -67,15 +73,15 @@ const MailsPage: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap"><TypeBadge type={template.templateType} /></td>
                 <td className="px-6 py-4 text-sm text-gray-500">{template.subject}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                   <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={template.isActive}
-                            onChange={() => toggleMailTemplateStatus(template.id, template.isActive)}
-                            className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/30 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={template.isActive}
+                      onChange={() => toggleMailTemplateStatus(template.id, template.isActive)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/30 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end items-center gap-4">

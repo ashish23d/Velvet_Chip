@@ -10,7 +10,7 @@ import Pagination from '../../components/Pagination.tsx';
 import { BUCKETS } from '../../constants.ts';
 
 const ProductListPage: React.FC = () => {
-  const { adminData, categories, deleteProduct } = useAppContext();
+  const { adminData, categories, deleteProduct, showConfirmationModal } = useAppContext();
   const products = adminData?.products || [];
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -177,7 +177,15 @@ const ProductListPage: React.FC = () => {
                     <Link to={`/admin/products/edit/${product.id}`} className="text-indigo-600 hover:text-indigo-900">
                       <PencilIcon className="h-5 w-5" />
                     </Link>
-                    <button onClick={() => { if (window.confirm('Are you sure you want to delete this product?')) deleteProduct(product.id); }} className="text-red-600 hover:text-red-900">
+                    <button onClick={() => {
+                      showConfirmationModal({
+                        title: 'Delete Product',
+                        message: `Are you sure you want to delete "${product.name}"? This action cannot be undone.`,
+                        confirmText: 'Delete',
+                        isDestructive: true,
+                        onConfirm: () => deleteProduct(product.id)
+                      });
+                    }} className="text-red-600 hover:text-red-900">
                       <TrashIcon className="h-5 w-5" />
                     </button>
                   </div>

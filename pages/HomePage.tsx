@@ -45,7 +45,7 @@ const HomePage: React.FC = () => {
             setIsLoadingCarousel(true);
             try {
                 // Fetch latest 10 products
-                const { data } = await fetchProducts({ limit: 10 });
+                const { data } = await fetchProducts({ limit: 10, sort: 'latest' });
                 setCarouselProducts(data);
             } catch (error) {
                 console.error("Failed to fetch carousel products:", error);

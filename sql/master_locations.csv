@@ -1,0 +1,558 @@
+pincode,city,state,country
+530001,Visakhapatnam,Andhra Pradesh,IN
+520001,Vijayawada,Andhra Pradesh,IN
+522002,Guntur,Andhra Pradesh,IN
+524001,Nellore,Andhra Pradesh,IN
+518001,Kurnool,Andhra Pradesh,IN
+516001,Kadapa,Andhra Pradesh,IN
+533101,Rajahmundry,Andhra Pradesh,IN
+517501,Tirupati,Andhra Pradesh,IN
+515001,Anantapur,Andhra Pradesh,IN
+517001,Chittoor,Andhra Pradesh,IN
+533001,East Godavari,Andhra Pradesh,IN
+520001,Krishna,Andhra Pradesh,IN
+523001,Prakasam,Andhra Pradesh,IN
+532001,Srikakulam,Andhra Pradesh,IN
+535001,Vizianagaram,Andhra Pradesh,IN
+534001,West Godavari,Andhra Pradesh,IN
+791111,Itanagar,Arunachal Pradesh,IN
+792001,Pasighat,Arunachal Pradesh,IN
+791102,Tawang,Arunachal Pradesh,IN
+790001,West Kameng,Arunachal Pradesh,IN
+790003,East Kameng,Arunachal Pradesh,IN
+791111,Papum Pare,Arunachal Pradesh,IN
+791120,Kurung Kumey,Arunachal Pradesh,IN
+791118,Kra Daadi,Arunachal Pradesh,IN
+791119,Lower Subansiri,Arunachal Pradesh,IN
+791122,Upper Subansiri,Arunachal Pradesh,IN
+791001,West Siang,Arunachal Pradesh,IN
+791103,East Siang,Arunachal Pradesh,IN
+791104,Siang,Arunachal Pradesh,IN
+791105,Upper Siang,Arunachal Pradesh,IN
+792001,Lower Siang,Arunachal Pradesh,IN
+792102,Lower Dibang Valley,Arunachal Pradesh,IN
+792101,Dibang Valley,Arunachal Pradesh,IN
+792002,Anjaw,Arunachal Pradesh,IN
+792103,Lohit,Arunachal Pradesh,IN
+792104,Namsai,Arunachal Pradesh,IN
+792110,Changlang,Arunachal Pradesh,IN
+792130,Tirap,Arunachal Pradesh,IN
+792131,Longding,Arunachal Pradesh,IN
+781001,Guwahati,Assam,IN
+786001,Dibrugarh,Assam,IN
+788001,Silchar,Assam,IN
+785001,Jorhat,Assam,IN
+784001,Tezpur,Assam,IN
+781301,Baksa,Assam,IN
+781325,Barpeta,Assam,IN
+783380,Bongaigaon,Assam,IN
+788151,Cachar,Assam,IN
+785685,Charaideo,Assam,IN
+783370,Chirang,Assam,IN
+784125,Darrang,Assam,IN
+787057,Dhemaji,Assam,IN
+783324,Dhubri,Assam,IN
+788812,Dima Hasao,Assam,IN
+783301,Goalpara,Assam,IN
+785621,Golaghat,Assam,IN
+788110,Hailakandi,Assam,IN
+781001,Kamrup,Assam,IN
+782435,Karbi Anglong,Assam,IN
+788710,Karimganj,Assam,IN
+783373,Kokrajhar,Assam,IN
+787001,Lakhimpur,Assam,IN
+782104,Morigaon,Assam,IN
+782001,Nagaon,Assam,IN
+781335,Nalbari,Assam,IN
+785697,Sivasagar,Assam,IN
+784001,Sonitpur,Assam,IN
+786125,Tinsukia,Assam,IN
+784501,Udalguri,Assam,IN
+787035,Majuli,Assam,IN
+800001,Patna,Bihar,IN
+823001,Gaya,Bihar,IN
+812001,Bhagalpur,Bihar,IN
+842001,Muzaffarpur,Bihar,IN
+854301,Purnia,Bihar,IN
+802301,Arrah,Bihar,IN
+846004,Darbhanga,Bihar,IN
+854311,Araria,Bihar,IN
+804401,Arwal,Bihar,IN
+824101,Aurangabad,Bihar,IN
+813102,Banka,Bihar,IN
+851101,Begusarai,Bihar,IN
+802301,Bhojpur,Bihar,IN
+802101,Buxar,Bihar,IN
+845401,East Champaran,Bihar,IN
+841428,Gopalganj,Bihar,IN
+811307,Jamui,Bihar,IN
+804408,Jehanabad,Bihar,IN
+802105,Kaimur,Bihar,IN
+854105,Katihar,Bihar,IN
+851204,Khagaria,Bihar,IN
+855108,Kishanganj,Bihar,IN
+811105,Lakhisarai,Bihar,IN
+852113,Madhepura,Bihar,IN
+847211,Madhubani,Bihar,IN
+811201,Munger,Bihar,IN
+803101,Nalanda,Bihar,IN
+824233,Nawada,Bihar,IN
+845103,Pashchim Champaran,Bihar,IN
+821109,Rohtas,Bihar,IN
+852201,Saharsa,Bihar,IN
+848101,Samastipur,Bihar,IN
+841301,Saran,Bihar,IN
+811310,Sheikhpura,Bihar,IN
+843329,Sheohar,Bihar,IN
+843302,Sitamarhi,Bihar,IN
+841226,Siwan,Bihar,IN
+852131,Supaul,Bihar,IN
+844101,Vaishali,Bihar,IN
+492001,Raipur,Chhattisgarh,IN
+490006,Bhilai,Chhattisgarh,IN
+495001,Bilaspur,Chhattisgarh,IN
+495677,Korba,Chhattisgarh,IN
+491223,Balod,Chhattisgarh,IN
+493338,Baloda Bazar,Chhattisgarh,IN
+497119,Balrampur,Chhattisgarh,IN
+494001,Bastar,Chhattisgarh,IN
+491335,Bemetara,Chhattisgarh,IN
+494226,Bijapur,Chhattisgarh,IN
+494111,Dantewada,Chhattisgarh,IN
+493773,Dhamtari,Chhattisgarh,IN
+491001,Durg,Chhattisgarh,IN
+493889,Gariaband,Chhattisgarh,IN
+495689,Janjgir-Champa,Chhattisgarh,IN
+496225,Jashpur,Chhattisgarh,IN
+491995,Kabirdham,Chhattisgarh,IN
+494334,Kanker,Chhattisgarh,IN
+494223,Kondagaon,Chhattisgarh,IN
+497442,Koriya,Chhattisgarh,IN
+493441,Mahasamund,Chhattisgarh,IN
+495330,Mungeli,Chhattisgarh,IN
+494661,Narayanpur,Chhattisgarh,IN
+496001,Raigarh,Chhattisgarh,IN
+491441,Rajnandgaon,Chhattisgarh,IN
+494114,Sukma,Chhattisgarh,IN
+497001,Surajpur,Chhattisgarh,IN
+497229,Surguja,Chhattisgarh,IN
+403001,Panaji,Goa,IN
+403601,Margao,Goa,IN
+403802,Vasco da Gama,Goa,IN
+403001,North Goa,Goa,IN
+403601,South Goa,Goa,IN
+380001,Ahmedabad,Gujarat,IN
+395003,Surat,Gujarat,IN
+390001,Vadodara,Gujarat,IN
+360001,Rajkot,Gujarat,IN
+364001,Bhavnagar,Gujarat,IN
+361001,Jamnagar,Gujarat,IN
+382010,Gandhinagar,Gujarat,IN
+362001,Junagadh,Gujarat,IN
+365601,Amreli,Gujarat,IN
+388001,Anand,Gujarat,IN
+383001,Aravalli,Gujarat,IN
+385001,Banaskantha,Gujarat,IN
+392001,Bharuch,Gujarat,IN
+364710,Botad,Gujarat,IN
+391135,Chhota Udaipur,Gujarat,IN
+389151,Dahod,Gujarat,IN
+394365,Dang,Gujarat,IN
+361335,Devbhoomi Dwarka,Gujarat,IN
+362265,Gir Somnath,Gujarat,IN
+370001,Kutch,Gujarat,IN
+387001,Kheda,Gujarat,IN
+388255,Mahisagar,Gujarat,IN
+384001,Mehsana,Gujarat,IN
+363641,Morbi,Gujarat,IN
+393145,Narmada,Gujarat,IN
+396445,Navsari,Gujarat,IN
+389001,Panchmahal,Gujarat,IN
+384265,Patan,Gujarat,IN
+360575,Porbandar,Gujarat,IN
+383315,Sabarkantha,Gujarat,IN
+363001,Surendranagar,Gujarat,IN
+394650,Tapi,Gujarat,IN
+396001,Valsad,Gujarat,IN
+121001,Faridabad,Haryana,IN
+122001,Gurgaon,Haryana,IN
+132103,Panipat,Haryana,IN
+133001,Ambala,Haryana,IN
+135001,Yamunanagar,Haryana,IN
+124001,Rohtak,Haryana,IN
+125001,Hisar,Haryana,IN
+127309,Bhiwani,Haryana,IN
+127306,Charkhi Dadri,Haryana,IN
+125050,Fatehabad,Haryana,IN
+124103,Jhajjar,Haryana,IN
+126102,Jind,Haryana,IN
+136027,Kaithal,Haryana,IN
+132001,Karnal,Haryana,IN
+136118,Kurukshetra,Haryana,IN
+123001,Mahendragarh,Haryana,IN
+122107,Nuh,Haryana,IN
+121102,Palwal,Haryana,IN
+134109,Panchkula,Haryana,IN
+123401,Rewari,Haryana,IN
+125055,Sirsa,Haryana,IN
+131001,Sonipat,Haryana,IN
+171001,Shimla,Himachal Pradesh,IN
+176215,Dharamshala,Himachal Pradesh,IN
+175001,Mandi,Himachal Pradesh,IN
+173212,Solan,Himachal Pradesh,IN
+174001,Bilaspur,Himachal Pradesh,IN
+176310,Chamba,Himachal Pradesh,IN
+177001,Hamirpur,Himachal Pradesh,IN
+176001,Kangra,Himachal Pradesh,IN
+172107,Kinnaur,Himachal Pradesh,IN
+175101,Kullu,Himachal Pradesh,IN
+172114,Lahaul and Spiti,Himachal Pradesh,IN
+173001,Sirmaur,Himachal Pradesh,IN
+174303,Una,Himachal Pradesh,IN
+192101,Anantnag,Jammu and Kashmir,IN
+195001,Bandipora,Jammu and Kashmir,IN
+193101,Baramulla,Jammu and Kashmir,IN
+191111,Budgam,Jammu and Kashmir,IN
+182202,Doda,Jammu and Kashmir,IN
+191201,Ganderbal,Jammu and Kashmir,IN
+180001,Jammu,Jammu and Kashmir,IN
+184101,Kathua,Jammu and Kashmir,IN
+182204,Kishtwar,Jammu and Kashmir,IN
+192231,Kulgam,Jammu and Kashmir,IN
+193222,Kupwara,Jammu and Kashmir,IN
+185111,Poonch,Jammu and Kashmir,IN
+192301,Pulwama,Jammu and Kashmir,IN
+185131,Rajouri,Jammu and Kashmir,IN
+182144,Ramban,Jammu and Kashmir,IN
+182301,Reasi,Jammu and Kashmir,IN
+184120,Samba,Jammu and Kashmir,IN
+192303,Shopian,Jammu and Kashmir,IN
+190001,Srinagar,Jammu and Kashmir,IN
+182101,Udhampur,Jammu and Kashmir,IN
+831001,Jamshedpur,Jharkhand,IN
+826001,Dhanbad,Jharkhand,IN
+834001,Ranchi,Jharkhand,IN
+827001,Bokaro Steel City,Jharkhand,IN
+814112,Deoghar,Jharkhand,IN
+825401,Chatra,Jharkhand,IN
+814101,Dumka,Jharkhand,IN
+831001,East Singhbhum,Jharkhand,IN
+822114,Garhwa,Jharkhand,IN
+815301,Giridih,Jharkhand,IN
+814133,Godda,Jharkhand,IN
+835207,Gumla,Jharkhand,IN
+825301,Hazaribagh,Jharkhand,IN
+815351,Jamtara,Jharkhand,IN
+835217,Khunti,Jharkhand,IN
+825316,Koderma,Jharkhand,IN
+829206,Latehar,Jharkhand,IN
+835302,Lohardaga,Jharkhand,IN
+816101,Pakur,Jharkhand,IN
+822101,Palamu,Jharkhand,IN
+829122,Ramgarh,Jharkhand,IN
+816109,Sahibganj,Jharkhand,IN
+833201,Seraikela-Kharsawan,Jharkhand,IN
+835223,Simdega,Jharkhand,IN
+833201,West Singhbhum,Jharkhand,IN
+560001,Bangalore,Karnataka,IN
+570001,Mysore,Karnataka,IN
+580001,Hubli,Karnataka,IN
+575001,Mangalore,Karnataka,IN
+590001,Belgaum,Karnataka,IN
+585101,Gulbarga,Karnataka,IN
+577201,Shimoga,Karnataka,IN
+574104,Udupi,Karnataka,IN
+587101,Bagalkot,Karnataka,IN
+562110,Bangalore Rural,Karnataka,IN
+583101,Bellary,Karnataka,IN
+585401,Bidar,Karnataka,IN
+586101,Bijapur,Karnataka,IN
+571313,Chamarajanagar,Karnataka,IN
+562101,Chikkaballapur,Karnataka,IN
+577101,Chikmagalur,Karnataka,IN
+577501,Chitradurga,Karnataka,IN
+574201,Dakshina Kannada,Karnataka,IN
+577002,Davangere,Karnataka,IN
+580001,Dharwad,Karnataka,IN
+582101,Gadag,Karnataka,IN
+573201,Hassan,Karnataka,IN
+581110,Haveri,Karnataka,IN
+571201,Kodagu,Karnataka,IN
+563101,Kolar,Karnataka,IN
+583231,Koppal,Karnataka,IN
+571401,Mandya,Karnataka,IN
+584101,Raichur,Karnataka,IN
+562159,Ramanagara,Karnataka,IN
+572101,Tumkur,Karnataka,IN
+581355,Uttara Kannada,Karnataka,IN
+585201,Yadgir,Karnataka,IN
+695001,Thiruvananthapuram,Kerala,IN
+682001,Kochi,Kerala,IN
+673001,Kozhikode,Kerala,IN
+680001,Thrissur,Kerala,IN
+670001,Kannur,Kerala,IN
+691001,Kollam,Kerala,IN
+688001,Alappuzha,Kerala,IN
+686001,Kottayam,Kerala,IN
+682001,Ernakulam,Kerala,IN
+685603,Idukki,Kerala,IN
+671121,Kasaragod,Kerala,IN
+676505,Malappuram,Kerala,IN
+678001,Palakkad,Kerala,IN
+689645,Pathanamthitta,Kerala,IN
+673121,Wayanad,Kerala,IN
+452001,Indore,Madhya Pradesh,IN
+462001,Bhopal,Madhya Pradesh,IN
+482001,Jabalpur,Madhya Pradesh,IN
+474001,Gwalior,Madhya Pradesh,IN
+456001,Ujjain,Madhya Pradesh,IN
+470002,Sagar,Madhya Pradesh,IN
+485001,Satna,Madhya Pradesh,IN
+465441,Agar Malwa,Madhya Pradesh,IN
+491881,Alirajpur,Madhya Pradesh,IN
+484224,Anuppur,Madhya Pradesh,IN
+473331,Ashoknagar,Madhya Pradesh,IN
+481001,Balaghat,Madhya Pradesh,IN
+451551,Barwani,Madhya Pradesh,IN
+460001,Betul,Madhya Pradesh,IN
+477001,Bhind,Madhya Pradesh,IN
+450331,Burhanpur,Madhya Pradesh,IN
+471001,Chhatarpur,Madhya Pradesh,IN
+480001,Chhindwara,Madhya Pradesh,IN
+470661,Damoh,Madhya Pradesh,IN
+475661,Datia,Madhya Pradesh,IN
+455001,Dewas,Madhya Pradesh,IN
+454001,Dhar,Madhya Pradesh,IN
+481880,Dindori,Madhya Pradesh,IN
+473001,Guna,Madhya Pradesh,IN
+461331,Harda,Madhya Pradesh,IN
+461001,Hoshangabad,Madhya Pradesh,IN
+457661,Jhabua,Madhya Pradesh,IN
+483501,Katni,Madhya Pradesh,IN
+450001,Khandwa,Madhya Pradesh,IN
+451001,Khargone,Madhya Pradesh,IN
+481661,Mandla,Madhya Pradesh,IN
+458001,Mandsaur,Madhya Pradesh,IN
+476001,Morena,Madhya Pradesh,IN
+487001,Narsinghpur,Madhya Pradesh,IN
+458441,Neemuch,Madhya Pradesh,IN
+488001,Panna,Madhya Pradesh,IN
+464551,Raisen,Madhya Pradesh,IN
+465661,Rajgarh,Madhya Pradesh,IN
+457001,Ratlam,Madhya Pradesh,IN
+486001,Rewa,Madhya Pradesh,IN
+466001,Sehore,Madhya Pradesh,IN
+480661,Seoni,Madhya Pradesh,IN
+484001,Shahdol,Madhya Pradesh,IN
+465001,Shajapur,Madhya Pradesh,IN
+476337,Sheopur,Madhya Pradesh,IN
+473660,Shivpuri,Madhya Pradesh,IN
+486661,Sidhi,Madhya Pradesh,IN
+486885,Singrauli,Madhya Pradesh,IN
+472001,Tikamgarh,Madhya Pradesh,IN
+484661,Umaria,Madhya Pradesh,IN
+464001,Vidisha,Madhya Pradesh,IN
+400001,Mumbai,Maharashtra,IN
+411001,Pune,Maharashtra,IN
+440001,Nagpur,Maharashtra,IN
+422001,Nashik,Maharashtra,IN
+431001,Aurangabad,Maharashtra,IN
+413001,Solapur,Maharashtra,IN
+416001,Kolhapur,Maharashtra,IN
+444601,Amravati,Maharashtra,IN
+425001,Jalgaon,Maharashtra,IN
+400601,Thane,Maharashtra,IN
+410206,Panvel,Maharashtra,IN
+414001,Ahmednagar,Maharashtra,IN
+444001,Akola,Maharashtra,IN
+431122,Beed,Maharashtra,IN
+441904,Bhandara,Maharashtra,IN
+443001,Buldhana,Maharashtra,IN
+442401,Chandrapur,Maharashtra,IN
+424001,Dhule,Maharashtra,IN
+442605,Gadchiroli,Maharashtra,IN
+441601,Gondia,Maharashtra,IN
+431203,Hingoli,Maharashtra,IN
+431203,Jalna,Maharashtra,IN
+413512,Latur,Maharashtra,IN
+400001,Mumbai City,Maharashtra,IN
+400051,Mumbai Suburban,Maharashtra,IN
+431601,Nanded,Maharashtra,IN
+425412,Nandurbar,Maharashtra,IN
+413501,Osmanabad,Maharashtra,IN
+401404,Palghar,Maharashtra,IN
+431401,Parbhani,Maharashtra,IN
+402107,Raigad,Maharashtra,IN
+415612,Ratnagiri,Maharashtra,IN
+416410,Sangli,Maharashtra,IN
+415001,Satara,Maharashtra,IN
+416803,Sindhudurg,Maharashtra,IN
+442001,Wardha,Maharashtra,IN
+444105,Washim,Maharashtra,IN
+445001,Yavatmal,Maharashtra,IN
+795001,Imphal,Manipur,IN
+793001,Shillong,Meghalaya,IN
+796001,Aizawl,Mizoram,IN
+797001,Kohima,Nagaland,IN
+797112,Dimapur,Nagaland,IN
+751001,Bhubaneswar,Odisha,IN
+753001,Cuttack,Odisha,IN
+769001,Rourkela,Odisha,IN
+760001,Berhampur,Odisha,IN
+768001,Sambalpur,Odisha,IN
+752001,Puri,Odisha,IN
+759001,Angul,Odisha,IN
+767001,Balangir,Odisha,IN
+756001,Balasore,Odisha,IN
+768028,Bargarh,Odisha,IN
+756100,Bhadrak,Odisha,IN
+762014,Boudh,Odisha,IN
+768108,Deogarh,Odisha,IN
+759001,Dhenkanal,Odisha,IN
+761200,Gajapati,Odisha,IN
+760001,Ganjam,Odisha,IN
+754100,Jagatsinghpur,Odisha,IN
+755001,Jajpur,Odisha,IN
+768201,Jharsuguda,Odisha,IN
+766001,Kalahandi,Odisha,IN
+762001,Kandhamal,Odisha,IN
+754211,Kendrapara,Odisha,IN
+758001,Keonjhar,Odisha,IN
+752055,Khordha,Odisha,IN
+764020,Koraput,Odisha,IN
+764040,Malkangiri,Odisha,IN
+757001,Mayurbhanj,Odisha,IN
+764059,Nabarangpur,Odisha,IN
+752069,Nayagarh,Odisha,IN
+766105,Nuapada,Odisha,IN
+765001,Rayagada,Odisha,IN
+767017,Subarnapur,Odisha,IN
+770001,Sundargarh,Odisha,IN
+141001,Ludhiana,Punjab,IN
+143001,Amritsar,Punjab,IN
+144001,Jalandhar,Punjab,IN
+147001,Patiala,Punjab,IN
+151001,Bathinda,Punjab,IN
+160055,Mohali,Punjab,IN
+302001,Jaipur,Rajasthan,IN
+342001,Jodhpur,Rajasthan,IN
+324001,Kota,Rajasthan,IN
+334001,Bikaner,Rajasthan,IN
+305001,Ajmer,Rajasthan,IN
+313001,Udaipur,Rajasthan,IN
+311001,Bhilwara,Rajasthan,IN
+301001,Alwar,Rajasthan,IN
+327001,Banswara,Rajasthan,IN
+325205,Baran,Rajasthan,IN
+344001,Barmer,Rajasthan,IN
+321001,Bharatpur,Rajasthan,IN
+323001,Bundi,Rajasthan,IN
+312001,Chittorgarh,Rajasthan,IN
+331001,Churu,Rajasthan,IN
+303303,Dausa,Rajasthan,IN
+328001,Dholpur,Rajasthan,IN
+314025,Dungarpur,Rajasthan,IN
+335002,Hanumangarh,Rajasthan,IN
+345001,Jaisalmer,Rajasthan,IN
+343001,Jalore,Rajasthan,IN
+326001,Jhalawar,Rajasthan,IN
+333001,Jhunjhunu,Rajasthan,IN
+322241,Karauli,Rajasthan,IN
+341001,Nagaur,Rajasthan,IN
+306401,Pali,Rajasthan,IN
+312605,Pratapgarh,Rajasthan,IN
+313324,Rajsamand,Rajasthan,IN
+322001,Sawai Madhopur,Rajasthan,IN
+332001,Sikar,Rajasthan,IN
+307001,Sirohi,Rajasthan,IN
+335001,Sri Ganganagar,Rajasthan,IN
+304001,Tonk,Rajasthan,IN
+737101,Gangtok,Sikkim,IN
+600001,Chennai,Tamil Nadu,IN
+641001,Coimbatore,Tamil Nadu,IN
+625001,Madurai,Tamil Nadu,IN
+620001,Tiruchirappalli,Tamil Nadu,IN
+636001,Salem,Tamil Nadu,IN
+627001,Tirunelveli,Tamil Nadu,IN
+638001,Erode,Tamil Nadu,IN
+632001,Vellore,Tamil Nadu,IN
+621704,Ariyalur,Tamil Nadu,IN
+607001,Cuddalore,Tamil Nadu,IN
+636701,Dharmapuri,Tamil Nadu,IN
+624001,Dindigul,Tamil Nadu,IN
+602001,Kanchipuram,Tamil Nadu,IN
+629001,Kanyakumari,Tamil Nadu,IN
+639001,Karur,Tamil Nadu,IN
+635001,Krishnagiri,Tamil Nadu,IN
+611001,Nagapattinam,Tamil Nadu,IN
+637001,Namakkal,Tamil Nadu,IN
+643001,Nilgiris,Tamil Nadu,IN
+621212,Perambalur,Tamil Nadu,IN
+622001,Pudukkottai,Tamil Nadu,IN
+623501,Ramanathapuram,Tamil Nadu,IN
+630561,Sivaganga,Tamil Nadu,IN
+613001,Thanjavur,Tamil Nadu,IN
+625531,Theni,Tamil Nadu,IN
+642126,Tiruppur,Tamil Nadu,IN
+632001,Tiruvallur,Tamil Nadu,IN
+606601,Tiruvannamalai,Tamil Nadu,IN
+610001,Tiruvarur,Tamil Nadu,IN
+605602,Viluppuram,Tamil Nadu,IN
+626001,Virudhunagar,Tamil Nadu,IN
+500001,Hyderabad,Telangana,IN
+506001,Warangal,Telangana,IN
+505001,Karimnagar,Telangana,IN
+503001,Nizamabad,Telangana,IN
+507001,Khammam,Telangana,IN
+504001,Adilabad,Telangana,IN
+508116,Bhadradri Kothagudem,Telangana,IN
+505327,Jagtial,Telangana,IN
+506167,Jangaon,Telangana,IN
+506132,Jayashankar Bhupalpally,Telangana,IN
+509126,Jogulamba Gadwal,Telangana,IN
+503111,Kamareddy,Telangana,IN
+504293,Komaram Bheem,Telangana,IN
+507123,Mahabubabad,Telangana,IN
+509001,Mahbubnagar,Telangana,IN
+504208,Mancherial,Telangana,IN
+502271,Medak,Telangana,IN
+500088,Medchal,Telangana,IN
+509202,Nagarkurnool,Telangana,IN
+508001,Nalgonda,Telangana,IN
+504106,Nirmal,Telangana,IN
+505172,Peddapalli,Telangana,IN
+505404,Rajanna Sircilla,Telangana,IN
+501510,Ranga Reddy,Telangana,IN
+502001,Sangareddy,Telangana,IN
+502103,Siddipet,Telangana,IN
+508204,Suryapet,Telangana,IN
+501111,Vikarabad,Telangana,IN
+509102,Wanaparthy,Telangana,IN
+506002,Warangal Urban,Telangana,IN
+506381,Warangal Rural,Telangana,IN
+508126,Yadadri Bhuvanagiri,Telangana,IN
+799001,Agartala,Tripura,IN
+226001,Lucknow,Uttar Pradesh,IN
+208001,Kanpur,Uttar Pradesh,IN
+221001,Varanasi,Uttar Pradesh,IN
+201001,Ghaziabad,Uttar Pradesh,IN
+211001,Allahabad,Uttar Pradesh,IN
+250001,Meerut,Uttar Pradesh,IN
+282001,Agra,Uttar Pradesh,IN
+243001,Bareilly,Uttar Pradesh,IN
+202001,Aligarh,Uttar Pradesh,IN
+244001,Moradabad,Uttar Pradesh,IN
+201301,Noida,Uttar Pradesh,IN
+248001,Dehradun,Uttarakhand,IN
+249401,Haridwar,Uttarakhand,IN
+263001,Nainital,Uttarakhand,IN
+263153,Rudrapur,Uttarakhand,IN
+700001,Kolkata,West Bengal,IN
+711101,Howrah,West Bengal,IN
+734001,Siliguri,West Bengal,IN
+713216,Durgapur,West Bengal,IN
+713301,Asansol,West Bengal,IN
+110001,Delhi,Delhi,IN
+160001,Chandigarh,Chandigarh,IN
+605001,Puducherry,Puducherry,IN
+744101,Port Blair,Andaman and Nicobar Islands,IN

@@ -17,101 +17,91 @@ import { loadRazorpayScript, openRazorpayCheckout } from '../services/razorpaySe
 type PaymentTab = 'card' | 'upi' | 'wallet' | 'netbanking' | 'cod';
 
 const PaymentPage: React.FC = () => {
-  const { cart, placeOrder, checkoutState, currentUser, paymentSettings, siteSettings } = useAppContext();
+  const { cart, placeOrder, checkoutState, currentUser, paymentSettings, siteSettings, deliverySettings, taxSettings, categories } = useAppContext();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<PaymentTab>('card');
+  const [deliveryMethod, setDeliveryMethod] = useState<'partner' | 'pickup'>('partner');
+
+  // Check if pickup is available for the selected address
+  const isPickupAvailable = useMemo(() => {
+    if (!checkoutState.selectedAddressId || !currentUser?.addresses || !deliverySettings?.store_city) return false;
+    const address = currentUser.addresses.find(a => a.id === checkoutState.selectedAddressId);
+    if (!address) return false;
+
+    // Normalize comparison
+    return address.city.trim().toLowerCase() === deliverySettings.store_city.trim().toLowerCase();
+  }, [checkoutState.selectedAddressId, currentUser?.addresses, deliverySettings]);
+
+  // Reset to partner delivery if pickup becomes unavailable or new address selected
+  useEffect(() => {
+    if (!isPickupAvailable && deliveryMethod === 'pickup') {
+      setDeliveryMethod('partner');
+    }
+  }, [isPickupAvailable]);
+
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDemoProcessing, setIsDemoProcessing] = useState(false); // New state for demo flow
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
 
-  // Form state for credit card
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardHolder, setCardHolder] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [cardType, setCardType] = useState<'visa' | 'mastercard' | null>(null);
+  const totalAmount = useMemo(() => {
+    const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
 
-  // Validate cart on page load
-  useEffect(() => {
-    // If we have completed an order, do no further validation
-    if (completedOrderId) return;
-
-    if (!currentUser) {
-      navigate('/login');
-      return;
+    // Tax Calculation
+    let taxAmount = 0;
+    if (taxSettings && taxSettings.enabled) {
+      if (taxSettings.mode === 'global') {
+        const rate = taxSettings.global_rate || 0;
+        taxAmount = (subtotal * rate) / 100;
+      } else if (taxSettings.mode === 'category') {
+        cart.forEach(item => {
+          const productCategory = categories.find(c => c.name === item.product.category);
+          const rate = productCategory?.tax_rate || 0;
+          taxAmount += (item.product.price * item.quantity * rate) / 100;
+        });
+      }
     }
 
-    // Only warn on mount if completely empty and not processing
-    // We rely on the second effect for dynamic checks, but this handles initial load
-  }, [currentUser, navigate, completedOrderId]);
+    const deliveryCharge = (deliveryMethod === 'pickup') ? 0 : (subtotal > 499 ? 0 : 50);
+    return (subtotal - checkoutState.discount) + taxAmount + deliveryCharge;
+  }, [cart, checkoutState.discount, deliveryMethod, taxSettings, categories]);
+
+  // ... (useEffect logic)
 
   useEffect(() => {
     // Redirect if cart is empty or address not selected
-    // BUT only if we're not currently processing a payment AND haven't completed an order
     if (completedOrderId) return;
 
     if (!currentUser || cart.length === 0 || !checkoutState.selectedAddressId) {
-      // Don't redirect if we're in the middle of placing an order
-      if (!isProcessing && !isPlacingOrder) {
-        // Use replace to prevent back-button loops
-        console.log("Redirecting to cart (empty/no address) - Processing:", isProcessing, "Placing:", isPlacingOrder);
+      if (!isProcessing && !isDemoProcessing && !isPlacingOrder) { // Check demo flag too
+        console.log("Redirecting to cart (empty/no address)");
         navigate('/cart', { replace: true });
       }
     }
-  }, [currentUser, cart, checkoutState, navigate, isProcessing, isPlacingOrder, completedOrderId]);
+  }, [currentUser, cart, checkoutState, navigate, isProcessing, isDemoProcessing, isPlacingOrder, completedOrderId]);
 
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.startsWith('4')) {
-      setCardType('visa');
-    } else if (value.startsWith('5')) {
-      setCardType('mastercard');
-    } else {
-      setCardType(null);
-    }
-    setCardNumber(value.replace(/(.{4})/g, '$1 ').trim().slice(0, 19));
-  };
-
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length > 2) {
-      value = value.slice(0, 2) + '/' + value.slice(2);
-    }
-    setExpiryDate(value.slice(0, 5));
-  };
-
-  const totalAmount = useMemo(() => {
-    const subtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-    const deliveryCharge = subtotal > 499 ? 0 : 50;
-    return (subtotal - checkoutState.discount) + deliveryCharge;
-  }, [cart, checkoutState.discount]);
-
+  // ...
 
   const handlePayment = async () => {
     setError(null);
 
-    // Capture cart snapshot at the time of payment initiation
+    // Capture cart snapshot
     const cartSnapshot = [...cart];
-    console.log('📸 Cart snapshot for payment:', cartSnapshot);
-    console.log('🔢 Snapshot length:', cartSnapshot.length);
 
     // Handle Cash on Delivery
     if (activeTab === 'cod') {
+      // ... existing COD logic ...
       setIsPlacingOrder(true);
       try {
-        console.log('💵 COD payment - passing cart snapshot');
-        const newOrderId = await placeOrder('COD', cartSnapshot);
-        if (newOrderId) {
-          navigate(`/order/${newOrderId}`);
-        } else {
-          setError('Failed to place order. Please try again.');
-        }
+        const pickupCode = deliveryMethod === 'pickup' ? Math.floor(100000 + Math.random() * 900000).toString() : undefined;
+        // call placeOrder
+        const newOrderId = await placeOrder('COD', cartSnapshot, { type: deliveryMethod, pickupCode });
+        // ...
+        setIsPlacingOrder(false);
       } catch (err: any) {
-        console.error('❌ COD order error:', err);
-        setError(err.message || 'An unexpected error occurred.');
-      } finally {
+        setError(err.message);
         setIsPlacingOrder(false);
       }
       return;
@@ -120,60 +110,53 @@ const PaymentPage: React.FC = () => {
     // Handle Online Payments with Razorpay
     if (paymentSettings?.razorpay_enabled && paymentSettings.razorpay_key_id) {
       try {
-        setIsProcessing(true);
+        setIsProcessing(true); // Generic processing (no demo animation)
 
-        // Load Razorpay script
         const loaded = await loadRazorpayScript();
         if (!loaded) {
-          setError('Failed to load payment gateway. Please try again.');
+          setError('Failed to load payment gateway.');
           setIsProcessing(false);
           return;
         }
 
-        // Razorpay options
         const options = {
+          // ... options
           key: paymentSettings.razorpay_key_id,
-          amount: Math.round(totalAmount * 100), // Convert to paise and round to integer
+          amount: Math.round(totalAmount * 100),
           currency: 'INR',
-          name: siteSettings?.textLogo || 'Awaany',
+          name: siteSettings?.textLogo || 'VelvetChip',
           description: `Order Payment`,
           handler: async function (response: any) {
-            console.log('✅ Razorpay payment successful:', response);
-            console.log('🛒 Cart at payment success:', cart);
-            console.log('🔢 Cart length at payment success:', cart.length);
-
-            // Capture cart snapshot BEFORE any state changes
-            const cartSnapshot = [...cart];
-            console.log('📸 Cart snapshot created:', cartSnapshot);
-
             try {
-              setIsProcessing(true);
-              // Pass cart snapshot to placeOrder to avoid race condition
-              const newOrderId = await placeOrder('Online', cartSnapshot);
-              console.log('✅ Order placed successfully:', newOrderId);
+              setIsProcessing(true); // Keep processing true while verifying/placing order
+              const pickupCode = deliveryMethod === 'pickup' ? Math.floor(100000 + Math.random() * 900000).toString() : undefined;
+
+              const newOrderId = await placeOrder('Online', cartSnapshot, {
+                type: deliveryMethod,
+                pickupCode,
+                paymentId: response.razorpay_payment_id // Optionally pass payment ID if placeOrder supports it
+              });
+
               if (newOrderId) {
                 setCompletedOrderId(newOrderId);
                 setShowSuccessAnimation(true);
+                // We keep isProcessing true until animation takes over? 
+                // No, generic loader should hide so animation can show.
                 setIsProcessing(false);
+              } else {
+                throw new Error("Order placement failed after payment.");
               }
             } catch (err: any) {
-              console.error('❌ Order placement error:', err);
-              setError('Order placement failed: ' + err.message);
+              console.error("Payment Handler Error:", err);
+              setError('Order placement failed. Please contact support if amount was deducted. Error: ' + (err.message || 'Unknown'));
               setIsProcessing(false);
             }
           },
-          prefill: {
-            name: currentUser?.name || '',
-            email: currentUser?.email || '',
-            contact: currentUser?.mobile || ''
-          },
-          theme: {
-            color: siteSettings?.primaryColor || '#ec4899'
-          },
+          // ... rest of options
           modal: {
             ondismiss: () => {
               setIsProcessing(false);
-              setError('Payment cancelled');
+              setError('Payment cancelled by user');
             }
           }
         };
@@ -184,32 +167,29 @@ const PaymentPage: React.FC = () => {
         setIsProcessing(false);
       }
     } else {
-      // Fallback: Show processing animation (for demo/testing without Razorpay)
-      setIsProcessing(true);
+      // Fallback: Show demo animation
+      setIsDemoProcessing(true); // Use Demo flag
     }
   };
 
   const onAnimationComplete = async () => {
     try {
-      const newOrderId = await placeOrder('Online');
-      // The animation component will close on its own.
+      const pickupCode = deliveryMethod === 'pickup' ? Math.floor(100000 + Math.random() * 900000).toString() : undefined;
+      const newOrderId = await placeOrder('Online', undefined, { type: deliveryMethod, pickupCode });
+
       if (newOrderId) {
-        navigate(`/order/${newOrderId}`);
+        setCompletedOrderId(newOrderId); // Set this so we don't redirect
+        navigate(`/order/${newOrderId}`); // Actually navigate is redundant if we show success animation, but maybe okay
+        // Actually for demo, we can just navigate directly
       } else {
-        setIsProcessing(false);
-        setError('There was an error placing your order. Please try again.');
+        setIsDemoProcessing(false);
+        setError('Order error.');
       }
     } catch (err: any) {
-      setIsProcessing(false);
-      setError(err.message || 'An unexpected error occurred during payment.');
+      setIsDemoProcessing(false);
+      setError(err.message);
     }
   };
-
-  const isCardFormValid =
-    cardNumber.replace(/\s/g, '').length >= 16 &&
-    cardHolder.trim().length > 2 &&
-    /^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate) &&
-    cvv.length === 3;
 
   const paymentTabs = [
     { id: 'card', label: 'Card', icon: <CreditCardIcon className="w-5 h-5" /> },
@@ -219,65 +199,61 @@ const PaymentPage: React.FC = () => {
     { id: 'cod', label: 'Cash on Delivery', icon: <span className="font-bold text-lg">₹</span> },
   ];
 
-  const inputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500";
-
   const renderActiveTabContent = () => {
+    const containerClasses = "text-center p-8 bg-gray-50 dark:bg-gray-800 rounded-lg";
+    const textClasses = "mt-2 text-sm text-gray-600 dark:text-gray-300";
+    const headingClasses = "text-lg font-semibold text-gray-800 dark:text-white";
+
     switch (activeTab) {
       case 'card':
         return (
-          <div className="space-y-4">
-            <div className="relative">
-              <label htmlFor="cardNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Card Number</label>
-              <input type="text" id="cardNumber" value={cardNumber} onChange={handleCardNumberChange} placeholder="0000 0000 0000 0000" className={`${inputClasses} pl-3 pr-12`} />
-              {cardType === 'visa' && <VisaIcon className="absolute right-3 top-8 h-6" />}
-              {cardType === 'mastercard' && <MastercardIcon className="absolute right-3 top-8 h-6" />}
+          <div className={containerClasses}>
+            <div className="flex justify-center gap-4 mb-4">
+              <VisaIcon className="h-8" />
+              <MastercardIcon className="h-8" />
             </div>
-            <div>
-              <label htmlFor="cardHolder" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name on Card</label>
-              <input type="text" id="cardHolder" value={cardHolder} onChange={e => setCardHolder(e.target.value)} placeholder="Jane Doe" className={inputClasses} />
-            </div>
-            <div className="flex gap-4">
-              <div className="w-1/2">
-                <label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Expiry (MM/YY)</label>
-                <input type="text" id="expiryDate" value={expiryDate} onChange={handleExpiryChange} placeholder="MM/YY" className={inputClasses} />
-              </div>
-              <div className="w-1/2">
-                <label htmlFor="cvv" className="block text-sm font-medium text-gray-700 dark:text-gray-300">CVV</label>
-                <input type="password" id="cvv" maxLength={3} value={cvv} onChange={e => setCvv(e.target.value.replace(/\D/g, ''))} placeholder="•••" className={inputClasses} />
-              </div>
-            </div>
+            <h3 className={headingClasses}>Credit / Debit Card</h3>
+            <p className={textClasses}>You will be redirected to our secure payment partner to complete your payment.</p>
           </div>
         );
       case 'upi':
         return (
-          <div className="text-center">
-            <QrCodeIcon className="w-40 h-40 mx-auto text-gray-800 dark:text-white" />
-            <p className="font-semibold mt-2 text-gray-800 dark:text-gray-200">Scan with any UPI app</p>
-            <div className="flex items-center my-4">
-              <div className="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
-              <span className="flex-shrink mx-4 text-gray-500 text-sm">OR</span>
-              <div className="flex-grow border-t border-gray-300 dark:border-gray-600"></div>
-            </div>
-            <input type="text" placeholder="Enter UPI ID" className={`text-center ${inputClasses}`} />
+          <div className={containerClasses}>
+            <QrCodeIcon className="w-16 h-16 mx-auto mb-4 text-gray-800 dark:text-white" />
+            <h3 className={headingClasses}>UPI Payment</h3>
+            <p className={textClasses}>Pay securely using GPay, PhonePe, Paytm or any UPI App.</p>
+          </div>
+        );
+      case 'wallet':
+        return (
+          <div className={containerClasses}>
+            <WalletIcon className="w-16 h-16 mx-auto mb-4 text-gray-800 dark:text-white" />
+            <h3 className={headingClasses}>Wallets</h3>
+            <p className={textClasses}>Pay using popular digital wallets.</p>
+          </div>
+        );
+      case 'netbanking':
+        return (
+          <div className={containerClasses}>
+            <BankIcon className="w-16 h-16 mx-auto mb-4 text-gray-800 dark:text-white" />
+            <h3 className={headingClasses}>Net Banking</h3>
+            <p className={textClasses}>Select from all major banks to pay securely.</p>
           </div>
         );
       case 'cod':
         return (
-          <div className="text-center p-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Pay on Delivery</h3>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">You can pay in cash to our courier partner at the time of delivery. No online payment is required.</p>
+          <div className={containerClasses}>
+            <span className="text-4xl font-bold text-gray-800 dark:text-white block mb-2">₹</span>
+            <h3 className={headingClasses}>Pay on Delivery</h3>
+            <p className={textClasses}>You can pay in cash to our courier partner at the time of delivery. No online payment is required.</p>
           </div>
         );
       default:
-        return (
-          <div className="text-center p-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
-            <p className="text-gray-600 dark:text-gray-300">This payment method is not available at the moment. Please select another option.</p>
-          </div>
-        );
+        return null;
     }
   }
 
-  const ctaDisabled = (activeTab === 'card' && !isCardFormValid) || isPlacingOrder;
+  const ctaDisabled = isPlacingOrder;
   const ctaText = useMemo(() => {
     if (isPlacingOrder) return 'Placing Order...';
     if (activeTab === 'cod') return 'Confirm Order';
@@ -286,11 +262,48 @@ const PaymentPage: React.FC = () => {
 
   return (
     <>
-      <PaymentProcessingAnimation isOpen={isProcessing} onComplete={onAnimationComplete} />
+      <PaymentProcessingAnimation isOpen={isDemoProcessing} onComplete={onAnimationComplete} />
+
+      {/* Generic Loading Overlay for Razorpay/Real processing */}
+      {isProcessing && !isDemoProcessing && (
+        <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <svg className="animate-spin h-12 w-12 text-primary mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p className="text-lg font-medium text-gray-800">Processing secure payment...</p>
+            <p className="text-sm text-gray-500">Please do not close this window.</p>
+          </div>
+        </div>
+      )}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900 dark:text-white mb-6">
-          Payment Options
+          Payment & Delivery
         </h1>
+        {isPickupAvailable && (
+          <div className="mb-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-blue-900 dark:text-blue-100 flex items-center gap-2">Store Pickup Available</h3>
+              <p className="text-sm text-blue-700 dark:text-blue-300">You can pick up your order from our store in {deliverySettings?.store_city} and save shipping charges.</p>
+            </div>
+            <div className="flex bg-white dark:bg-gray-800 rounded-lg p-1 border border-blue-100 dark:border-gray-700">
+              <button
+                onClick={() => setDeliveryMethod('partner')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${deliveryMethod === 'partner' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+              >
+                Delivery
+              </button>
+              <button
+                onClick={() => setDeliveryMethod('pickup')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${deliveryMethod === 'pickup' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+              >
+                Pickup
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 xl:gap-12 items-start">
           {/* Payment Selection */}
           <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex">

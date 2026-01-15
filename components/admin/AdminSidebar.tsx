@@ -11,6 +11,7 @@ import MegaphoneIcon from '../icons/MegaphoneIcon.tsx';
 import Cog6ToothIcon from '../icons/Cog6ToothIcon.tsx';
 import ChevronDoubleRightIcon from '../icons/ChevronDoubleRightIcon.tsx';
 import PhotoIcon from '../icons/PhotoIcon.tsx';
+import TruckIcon from '../icons/TruckIcon.tsx';
 import CheckBadgeIcon from '../icons/CheckBadgeIcon.tsx';
 import EnvelopeIcon from '../icons/EnvelopeIcon.tsx';
 import InboxArrowDownIcon from '../icons/InboxArrowDownIcon.tsx';
@@ -44,6 +45,8 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, setOpen }) => {
         { to: '/admin/subscribers', icon: EnvelopeIcon, label: 'Subscribers' },
         { to: '/admin/marketing', icon: MegaphoneIcon, label: 'Marketing' },
         { to: '/admin/broadcasts', icon: MegaphoneIcon, label: 'Broadcasts' },
+        { to: '/admin/delivery', icon: TruckIcon, label: 'Delivery' },
+        { to: '/admin/shipping', icon: TruckIcon, label: 'Shipping' },
         { to: '/admin/settings', icon: Cog6ToothIcon, label: 'Settings' },
     ];
 

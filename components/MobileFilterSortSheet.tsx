@@ -17,14 +17,19 @@ interface MobileFilterSortSheetProps {
   currentSortBy: string;
   onSortChange: (newSort: string) => void;
   // Filter props
+  // Filter props
   availableSizes: string[];
-  availableColors: { name: string; hex: string }[];
   priceRange: { min: number; max: number };
   selectedSizes: string[];
-  selectedColors: string[];
   onPriceChange: (newRange: { min: number; max: number }) => void;
   onSizeToggle: (size: string) => void;
-  onColorToggle: (colorName: string) => void;
+  onClearFilters: () => void;
+  selectedRating: number | null;
+  onRatingChange: (rating: number | null) => void;
+  minDiscount: number | null;
+  onDiscountChange: (discount: number | null) => void;
+  includeOutOfStock: boolean;
+  onToggleOutOfStock: () => void;
   onClearFilters: () => void;
   onApplyFilters: () => void;
   minPrice: number;
@@ -32,6 +37,10 @@ interface MobileFilterSortSheetProps {
   availableTags?: string[];
   selectedTags?: string[];
   onTagToggle?: (tag: string) => void;
+  // Dynamic Attributes
+  availableAttributes?: Record<string, string[]>;
+  selectedAttributes?: Record<string, string[]>;
+  onAttributeToggle?: (key: string, value: string) => void;
 }
 
 const SortOption: React.FC<{

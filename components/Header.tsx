@@ -13,7 +13,132 @@ import XIcon from './icons/XIcon.tsx';
 import BellIcon from './icons/BellIcon.tsx';
 import Squares2X2Icon from './icons/Squares2X2Icon.tsx';
 import ChevronDownIcon from './icons/ChevronDownIcon.tsx';
+import MobileMenu from './MobileMenu.tsx';
 import SearchBar from './SearchBar.tsx';
+// CartIcon imported above
+
+const NotificationDropdown = ({ onClose, navigate }: { onClose: () => void, navigate: any }) => {
+  const { orderUpdates, notifications, promotions, markAllNotificationsAsRead, markNotificationAsRead } = useAppContext();
+  const [activeTab, setActiveTab] = useState<'updates' | 'promotions'>('updates');
+
+  // Show all notifications (updates)
+  const displayUpdates = notifications; // No filter, show all
+
+  const displayPromotions = promotions.slice(0, 5);
+
+  const handleBroadcastClick = (promo: any) => {
+    markNotificationAsRead(promo.id);
+    onClose();
+    if (promo.action_type === 'product' && promo.action_id) {
+      navigate(`/product/${promo.action_id}`);
+    } else if (promo.action_type === 'category' && promo.action_id) {
+      navigate(`/`); // Or correct category route
+    } else if (promo.action_type === 'url' && promo.action_id) {
+      window.location.href = promo.action_id;
+    }
+  };
+
+  return (
+    <div className="fixed top-20 right-4 left-4 md:absolute md:top-full md:right-0 md:left-auto md:w-96 md:mt-3 bg-white border border-gray-100 rounded-xl shadow-2xl z-50 max-h-[80vh] md:max-h-[32rem] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      {/* Header with Tabs */}
+      <div className="flex border-b border-gray-100 bg-gray-50/50 backdrop-blur-sm">
+        <button
+          onClick={() => setActiveTab('updates')}
+          className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${activeTab === 'updates' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          Updates
+        </button>
+        <button
+          onClick={() => setActiveTab('promotions')}
+          className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${activeTab === 'promotions' ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          Notifications
+        </button>
+        <button onClick={onClose} className="px-4 text-gray-400 hover:text-gray-600 md:hidden">
+          <XIcon className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* List Content */}
+      <div className="overflow-y-auto flex-1 p-2">
+        {activeTab === 'updates' && (
+          <div className="space-y-2">
+            {displayUpdates.length === 0 ? (
+              <p className="text-center text-gray-400 text-sm py-8">No order updates.</p>
+            ) : (
+              displayUpdates.map((u, i) => (
+                <div
+                  key={i}
+                  className={`p-3 bg-gray-50 rounded-lg flex gap-3 items-start ${u.order_id ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                  onClick={() => {
+                    markNotificationAsRead(u.id);
+                    if (u.link) {
+                      onClose();
+                      navigate(u.link);
+                    } else if (u.order_id) {
+                      onClose();
+                      navigate(`/account/orders/${u.order_id}`);
+                    }
+                  }}
+                >
+                  <div className="bg-blue-100 text-blue-600 p-1.5 rounded-full shrink-0">
+                    <CartIcon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">{u.title}</p>
+                    <p className="text-xs text-gray-600">{u.message}</p>
+                    <p className="text-[10px] text-gray-400 mt-1">{u.created_at ? new Date(u.created_at).toLocaleDateString() : ''}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === 'promotions' && (
+          <div className="space-y-2">
+            {displayPromotions.length === 0 ? (
+              <p className="text-center text-gray-400 text-sm py-8">No notifications.</p>
+            ) : (
+              displayPromotions.map((p, i) => (
+                <div
+                  key={i}
+                  onClick={() => handleBroadcastClick(p)}
+                  className="p-3 bg-white border border-gray-100 rounded-lg hover:shadow-sm cursor-pointer transition-shadow"
+                >
+                  {p.image_path && (
+                    <img
+                      src={supabase.storage.from(BUCKETS.PRODUCTS).getPublicUrl(p.image_path).data.publicUrl}
+                      alt=""
+                      className="w-full h-24 object-cover rounded-md mb-2"
+                    />
+                  )}
+                  <p className="text-sm font-semibold text-gray-800">{p.title}</p>
+                  <p className="text-xs text-gray-600 line-clamp-2">{p.message}</p>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Footer Button: Mark Read / Clear */}
+      <div className="p-2 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center text-xs">
+        <button onClick={() => markAllNotificationsAsRead()} className="text-gray-500 hover:text-gray-700 font-medium">
+          Mark Read
+        </button>
+        <ReactRouterDOM.Link
+          to="/notifications"
+          onClick={onClose}
+          className="text-primary hover:text-primary-hover font-semibold uppercase"
+        >
+          View All
+        </ReactRouterDOM.Link>
+      </div>
+    </div>
+  );
+}
+
 
 const Header: React.FC = () => {
   const {
@@ -153,9 +278,6 @@ const Header: React.FC = () => {
                     onClick={() => {
                       const newOpen = !notifOpen;
                       setNotifOpen(newOpen);
-                      if (newOpen && unreadNotificationCount > 0) {
-                        markAllNotificationsAsRead();
-                      }
                     }}
                     className="relative text-primary transition-transform active:scale-95"
                   >
@@ -168,79 +290,10 @@ const Header: React.FC = () => {
                   </button>
 
                   {notifOpen && (
-                    <div className="fixed top-20 right-4 left-4 md:absolute md:top-full md:right-0 md:left-auto md:w-96 md:mt-3 bg-white border border-gray-100 rounded-xl shadow-2xl z-50 max-h-[80vh] md:max-h-[32rem] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                      <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center backdrop-blur-sm">
-                        <div>
-                          <h3 className="font-bold text-gray-800">Notifications</h3>
-                          <p className="text-xs text-gray-500 mt-0.5">Recent updates</p>
-                        </div>
-                        <button onClick={() => setNotifOpen(false)} className="md:hidden text-gray-400 hover:text-gray-600">
-                          <XIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-
-                      <div className="overflow-y-auto flex-1">
-                        {userNotifications.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                            <div className="bg-gray-100 p-3 rounded-full mb-3">
-                              <BellIcon className="h-6 w-6 text-gray-400" />
-                            </div>
-                            <p className="text-gray-500 font-medium">No recent notifications</p>
-                            <p className="text-xs text-gray-400 mt-1">We'll notify you when something arrives.</p>
-                          </div>
-                        ) : (
-                          userNotifications.map(n => (
-                            <div
-                              key={n.id}
-                              onClick={() => {
-                                setNotifOpen(false);
-                                if (n.link) navigate(n.link);
-                              }}
-                              className={`p-4 cursor-pointer border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors group relative ${!n.is_read ? 'bg-blue-50/30' : ''
-                                }`}
-                            >
-                              {!n.is_read && (
-                                <span className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r"></span>
-                              )}
-                              <div className="flex justify-between items-start gap-3">
-                                <div className="bg-primary/10 p-2 rounded-full flex-shrink-0 text-primary">
-                                  {n.type === 'order' ? <CartIcon className="w-4 h-4" /> : <BellIcon className="w-4 h-4" />}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className={`text-sm ${!n.is_read ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
-                                    {n.title}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-1 leading-relaxed line-clamp-2">{n.message}</p>
-                                  {(n as any).image_path && (
-                                    <img
-                                      src={supabase.storage.from(BUCKETS.PRODUCTS).getPublicUrl((n as any).image_path).data.publicUrl}
-                                      alt="Broadcast"
-                                      className="w-full h-24 object-cover rounded-md mt-2 border border-gray-200"
-                                    />
-                                  )}
-                                  <p className="text-[10px] text-gray-400 mt-2 font-medium">
-                                    {new Date(n.created_at).toLocaleDateString()} • {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-
-                      {/* Footer if needed, e.g. View All */}
-                      {userNotifications.length > 0 && (
-                        <div className="p-2 border-t border-gray-100 bg-gray-50/50 text-center">
-                          <ReactRouterDOM.Link
-                            to="/notifications"
-                            onClick={() => setNotifOpen(false)}
-                            className="text-xs font-semibold text-primary hover:text-primary-hover uppercase tracking-wider"
-                          >
-                            View Full History
-                          </ReactRouterDOM.Link>
-                        </div>
-                      )}
-                    </div>
+                    <NotificationDropdown
+                      onClose={() => setNotifOpen(false)}
+                      navigate={navigate}
+                    />
                   )}
                 </div>
               )}
@@ -286,74 +339,7 @@ const Header: React.FC = () => {
       </header>
 
       {/* MOBILE MENU */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-50"
-          onClick={() => setMobileMenuOpen(false)}
-        >
-          <div className="bg-white w-80 h-full p-6 shadow-xl flex flex-col overflow-y-auto animate-slideXR">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-xl font-bold text-gray-800">Menu</h2>
-              <button onClick={() => setMobileMenuOpen(false)} className="text-gray-500 hover:text-red-500 transition">
-                <XIcon className="h-6 w-6" />
-              </button>
-            </div>
-
-            <nav className="flex flex-col space-y-4">
-              <ReactRouterDOM.NavLink
-                to="/"
-                className={({ isActive }) => `text-lg font-medium transition ${isActive ? 'text-primary' : 'text-gray-700 hover:text-primary-hover'}`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Home
-              </ReactRouterDOM.NavLink>
-
-              {/* Mobile Collection Dropdown */}
-              <div>
-                <button
-                  onClick={() => setIsCollectionOpen(!isCollectionOpen)}
-                  className="flex items-center justify-between w-full text-lg font-medium text-gray-700 hover:text-primary-hover transition"
-                >
-                  Collection
-                  <ChevronDownIcon className={`w-5 h-5 transition-transform ${isCollectionOpen ? 'rotate-180' : ''}`} />
-                </button>
-
-                {isCollectionOpen && (
-                  <ul className="pl-4 mt-2 space-y-2 border-l-2 border-gray-100 ml-1">
-                    {categories.map(c => (
-                      <li key={c.id}>
-                        <ReactRouterDOM.Link
-                          to={`/category/${c.id}`}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block py-1 text-gray-600 hover:text-primary-hover transition"
-                        >
-                          {c.name}
-                        </ReactRouterDOM.Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <ReactRouterDOM.NavLink
-                to="/about"
-                className={({ isActive }) => `text-lg font-medium transition ${isActive ? 'text-primary' : 'text-gray-700 hover:text-primary-hover'}`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                About
-              </ReactRouterDOM.NavLink>
-
-              <ReactRouterDOM.NavLink
-                to="/contact"
-                className={({ isActive }) => `text-lg font-medium transition ${isActive ? 'text-primary' : 'text-gray-700 hover:text-primary-hover'}`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Contact
-              </ReactRouterDOM.NavLink>
-            </nav>
-          </div>
-        </div>
-      )}
+      <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
     </>
   );
 };

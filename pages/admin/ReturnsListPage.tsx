@@ -17,7 +17,7 @@ const ReturnsListPage: React.FC = () => {
             .filter(r => statusFilter === 'all' || r.status === statusFilter)
             .sort((a, b) => new Date(b.return_requested_at).getTime() - new Date(a.return_requested_at).getTime());
     }, [returns, statusFilter]);
-    
+
     const handleStatusChange = async (returnId: string, newStatus: ReturnRequestStatus) => {
         showConfirmationModal({
             title: 'Confirm Status Change',
@@ -65,7 +65,7 @@ const ReturnsListPage: React.FC = () => {
         Rejected: null,
         Completed: null,
     };
-    
+
     return (
         <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
             <div className="flex justify-between items-center mb-6">
@@ -100,9 +100,9 @@ const ReturnsListPage: React.FC = () => {
                                 <tr key={r.id}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
-                                            <SupabaseImage bucket={BUCKETS.PRODUCTS} imagePath={r.item?.product.images[0]} alt={r.item?.product.name || ''} className="w-12 h-16 object-cover rounded-md" />
+                                            <SupabaseImage bucket={BUCKETS.PRODUCTS} imagePath={r.item?.image} alt={r.item?.name || ''} className="w-12 h-16 object-cover rounded-md" />
                                             <div className="ml-4">
-                                                <div className="text-sm font-medium text-gray-900 line-clamp-2">{r.item?.product.name}</div>
+                                                <div className="text-sm font-medium text-gray-900 line-clamp-2">{r.item?.name}</div>
                                                 <div className="text-xs text-gray-500">Qty: {r.item?.quantity}</div>
                                             </div>
                                         </div>

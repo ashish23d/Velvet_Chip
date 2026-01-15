@@ -28,17 +28,23 @@ const CategoryPage: React.FC = () => {
 
   // Filters State
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState({ min: 0, max: 10000 });
   const [sortBy, setSortBy] = useState('popular');
+  // New Filters
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
+  const [minDiscount, setMinDiscount] = useState<number | null>(null);
+  const [includeOutOfStock, setIncludeOutOfStock] = useState(true);
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string[]>>({});
 
   const loadProducts = async (reset = false) => {
+    // ... (existing loadProducts logic) ...
     if (categoryId) {
       setIsLoading(true);
       const currentPage = reset ? 1 : page;
       try {
         const { data, count } = await fetchProducts({ categoryId, page: currentPage, perPage });
+        console.log("CategoryPage fetchProducts result:", { count, firstItem: data?.[0] });
         setProducts(prev => reset ? data : [...prev, ...data]);
         setHasMore(count ? (currentPage * perPage < count) : false);
         if (reset) setPage(1);
@@ -52,6 +58,7 @@ const CategoryPage: React.FC = () => {
 
   // Initial load and reload on category change or product updates
   useEffect(() => {
+    console.log("CategoryPage mounted/updated. ID:", categoryId);
     loadProducts(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryId, fetchProducts, lastProductUpdate]);
@@ -70,7 +77,7 @@ const CategoryPage: React.FC = () => {
   }, [page]);
 
 
-  const { availableSizes, availableColors, availableTags, minPrice, maxPrice } = useMemo(() => {
+  const { availableSizes, availableTags, minPrice, maxPrice, availableAttributes } = useMemo(() => {
     // USE GLOBAL PRODUCTS for filters to ensure all tags/options are visible regardless of pagination
     const categoryProducts = allGlobalProducts.filter(p => p.category === categoryId);
 
@@ -80,29 +87,46 @@ const CategoryPage: React.FC = () => {
     const targetProducts = categoryProducts.length > 0 ? categoryProducts : products;
 
     const sizes = new Set<string>();
-    const colors = new Map<string, { name: string; hex: string }>();
     const tags = new Set<string>();
     let min = Infinity;
     let max = 0;
 
+    // Dynamic Attributes Extraction
+    const attributesMap: Record<string, Set<string>> = {};
+
     targetProducts.forEach(product => {
       product.sizes.forEach(size => sizes.add(size));
-      product.colors.forEach(color => {
-        if (!colors.has(color.name)) {
-          colors.set(color.name, color);
-        }
-      });
       if (product.tags) product.tags.forEach(tag => tags.add(tag));
       if (product.price < min) min = product.price;
       if (product.price > max) max = product.price;
+
+      // Extract attributes
+      if (product.attributes) {
+        Object.entries(product.attributes).forEach(([key, value]) => {
+          if (!attributesMap[key]) {
+            attributesMap[key] = new Set();
+          }
+          // Assuming value is string, if it's array handle it too?
+          // For now assume simple key-value string
+          if (typeof value === 'string') {
+            attributesMap[key].add(value);
+          }
+        });
+      }
+    });
+
+    // Convert Sets to Arrays for attributes
+    const finalAttributes: Record<string, string[]> = {};
+    Object.keys(attributesMap).sort().forEach(key => {
+      finalAttributes[key] = Array.from(attributesMap[key]).sort();
     });
 
     return {
       availableSizes: Array.from(sizes),
-      availableColors: Array.from(colors.values()),
       availableTags: Array.from(tags),
       minPrice: min === Infinity ? 0 : min,
       maxPrice: max === 0 ? 10000 : max,
+      availableAttributes: finalAttributes
     };
   }, [products, allGlobalProducts, categoryId]);
 
@@ -114,14 +138,23 @@ const CategoryPage: React.FC = () => {
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = [...products];
 
-    // Note: Filtering is client-side. For large datasets, this should be done on the server.
+    // STOCK FILTER (Default: Show All if requested, otherwise Hide OOS)
+    // User requested "initially should not apply any filter", so we will show OOS by default or if stock is missing.
+    if (!includeOutOfStock) {
+      // If the user actively Unchecks "Include Out of Stock" (meaning they WANT to hide OOS),
+      // Then we filter. But wait, usually "Include OOS" being FALSE means "Hide OOS".
+      // If we want "No filter initially", we should probably default includeOutOfStock to TRUE.
+      // However, let's also make the check robust: if stock is undefined, don't hide it.
+      filtered = filtered.filter(p => {
+        const stock = (p as any).stock;
+        // If stock is undefined, assume in-stock/show it. Only hide if explicitly 0.
+        return stock === undefined || stock > 0;
+      });
+    }
+
     // Filter by size
     if (selectedSizes.length > 0) {
       filtered = filtered.filter(p => p.sizes.some(s => selectedSizes.includes(s)));
-    }
-    // Filter by color
-    if (selectedColors.length > 0) {
-      filtered = filtered.filter(p => p.colors.some(c => selectedColors.includes(c.name)));
     }
     // Filter by tags
     if (selectedTags.length > 0) {
@@ -129,6 +162,31 @@ const CategoryPage: React.FC = () => {
     }
     // Filter by price
     filtered = filtered.filter(p => p.price >= priceRange.min && p.price <= priceRange.max);
+
+    // Filter by Rating
+    if (selectedRating) {
+      filtered = filtered.filter(p => (p.rating || 0) >= selectedRating);
+    }
+
+    // Filter by Discount
+    if (minDiscount) {
+      filtered = filtered.filter(p => {
+        const mrp = p.mrp || p.price;
+        if (mrp <= p.price) return false;
+        const discount = ((mrp - p.price) / mrp) * 100;
+        return discount >= minDiscount;
+      });
+    }
+
+    // Filter by Dynamic Attributes
+    Object.entries(selectedAttributes).forEach(([key, values]) => {
+      if (values && values.length > 0) {
+        filtered = filtered.filter(p => {
+          if (!p.attributes || p.attributes[key] === undefined || p.attributes[key] === null) return false;
+          return values.includes(String(p.attributes[key]));
+        });
+      }
+    });
 
     // Sort
     filtered.sort((a, b) => {
@@ -144,13 +202,30 @@ const CategoryPage: React.FC = () => {
     });
 
     return filtered;
-  }, [products, selectedSizes, selectedColors, selectedTags, priceRange, sortBy]);
+  }, [products, selectedSizes, selectedTags, priceRange, sortBy, selectedRating, minDiscount, includeOutOfStock, selectedAttributes]);
 
   const onClearFilters = () => {
     setSelectedSizes([]);
-    setSelectedColors([]);
     setSelectedTags([]);
+    setSelectedRating(null);
+    setMinDiscount(null);
+    setIncludeOutOfStock(false);
     setPriceRange({ min: minPrice, max: maxPrice });
+    setSelectedAttributes({});
+  };
+
+  const handleAttributeToggle = (key: string, value: string) => {
+    setSelectedAttributes(prev => {
+      const currentValues = prev[key] || [];
+      const newValues = currentValues.includes(value)
+        ? currentValues.filter(v => v !== value)
+        : [...currentValues, value];
+
+      return {
+        ...prev,
+        [key]: newValues
+      };
+    });
   };
 
   const ProductGridSkeleton = () => (
@@ -203,14 +278,11 @@ const CategoryPage: React.FC = () => {
           <div className="hidden lg:block w-64 xl:w-72 flex-shrink-0">
             <FilterSidebar
               availableSizes={availableSizes}
-              availableColors={availableColors}
               priceRange={priceRange}
               selectedSizes={selectedSizes}
-              selectedColors={selectedColors}
               selectedTags={selectedTags}
               onPriceChange={setPriceRange}
               onSizeToggle={(size) => setSelectedSizes(p => p.includes(size) ? p.filter(s => s !== size) : [...p, size])}
-              onColorToggle={(color) => setSelectedColors(p => p.includes(color) ? p.filter(c => c !== color) : [...p, color])}
               onTagToggle={(tag) => setSelectedTags(t => t.includes(tag) ? t.filter(x => x !== tag) : [...t, tag])}
               onClearFilters={onClearFilters}
               minPrice={minPrice}
@@ -218,11 +290,43 @@ const CategoryPage: React.FC = () => {
               availableTags={availableTags}
               categories={categories}
               currentCategoryId={category?.id}
+              // New Props
+              selectedRating={selectedRating}
+              onRatingChange={setSelectedRating}
+              minDiscount={minDiscount}
+              onDiscountChange={setMinDiscount}
+              includeOutOfStock={includeOutOfStock}
+              onToggleOutOfStock={() => setIncludeOutOfStock(prev => !prev)}
+              // Dynamic Attributes
+              availableAttributes={availableAttributes}
+              selectedAttributes={selectedAttributes}
+              onAttributeToggle={handleAttributeToggle}
             />
           </div>
 
+
           {/* Products Grid */}
           <main className="flex-1">
+            <div className="flex justify-between items-center mb-6">
+              <p className="text-gray-500 text-sm">{isLoading && products.length === 0 ? 'Loading items...' : `${filteredAndSortedProducts.length} items found`}</p>
+
+              {/* Sort Dropdown */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Sort by:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="pl-3 pr-8 py-1.5 text-sm border-gray-300 rounded-md focus:ring-primary focus:border-primary bg-white cursor-pointer"
+                >
+                  <option value="popular">Popularity</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                  <option value="rating">Average Rating</option>
+                  <option value="latest">Newest First</option>
+                </select>
+              </div>
+            </div>
+
             {isLoading && products.length === 0 ? <ProductGridSkeleton /> : (
               filteredAndSortedProducts.length > 0 ?
                 <>
@@ -289,21 +393,24 @@ const CategoryPage: React.FC = () => {
         onSortChange={(newSort) => { setSortBy(newSort); setIsSheetOpen(false); }}
         onApplyFilters={() => setIsSheetOpen(false)}
         availableSizes={availableSizes}
-        availableColors={availableColors}
         priceRange={priceRange}
         selectedSizes={selectedSizes}
-        selectedColors={selectedColors}
         selectedTags={selectedTags}
         onPriceChange={setPriceRange}
         onSizeToggle={(size) => setSelectedSizes(p => p.includes(size) ? p.filter(s => s !== size) : [...p, size])}
-        onColorToggle={(color) => setSelectedColors(p => p.includes(color) ? p.filter(c => c !== color) : [...p, color])}
         onTagToggle={(tag) => setSelectedTags(t => t.includes(tag) ? t.filter(x => x !== tag) : [...t, tag])}
         onClearFilters={onClearFilters}
         minPrice={minPrice}
         maxPrice={maxPrice}
         availableTags={availableTags}
+        selectedRating={selectedRating}
+        onRatingChange={setSelectedRating}
+        minDiscount={minDiscount}
+        onDiscountChange={setMinDiscount}
+        includeOutOfStock={includeOutOfStock}
+        onToggleOutOfStock={() => setIncludeOutOfStock(prev => !prev)}
       />
-    </div>
+    </div >
   );
 };
 

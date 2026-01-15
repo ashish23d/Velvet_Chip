@@ -13,7 +13,7 @@ import PencilIcon from '../../components/icons/PencilIcon.tsx';
 import EditReviewModal from '../../components/admin/EditReviewModal.tsx';
 
 const ReviewListPage: React.FC = () => {
-    const { adminData, reviews, updateReviewStatus, deleteReview } = useAppContext();
+    const { adminData, reviews, updateReviewStatus, deleteReview, showConfirmationModal } = useAppContext();
     const users = adminData?.users || [];
     const products = adminData?.products || [];
 
@@ -184,7 +184,15 @@ const ReviewListPage: React.FC = () => {
                                                         <XMarkIcon className="h-5 w-5" />
                                                     </button>
                                                 )}
-                                                <button onClick={() => { if (window.confirm('Are you sure you want to delete this review?')) deleteReview(review.id); }} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded-full" aria-label="Delete">
+                                                <button onClick={() => {
+                                                    showConfirmationModal({
+                                                        title: 'Delete Review',
+                                                        message: 'Are you sure you want to delete this review? This action cannot be undone.',
+                                                        confirmText: 'Delete',
+                                                        isDestructive: true,
+                                                        onConfirm: () => deleteReview(review.id)
+                                                    });
+                                                }} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-100 rounded-full" aria-label="Delete">
                                                     <TrashIcon className="h-5 w-5" />
                                                 </button>
                                             </div>

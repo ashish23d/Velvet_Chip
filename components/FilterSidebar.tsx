@@ -5,14 +5,18 @@ import { Category } from '../types';
 
 interface FilterSidebarProps {
   availableSizes: string[];
-  availableColors: { name: string; hex: string }[];
   priceRange: { min: number; max: number };
   selectedSizes: string[];
-  selectedColors: string[];
   onPriceChange: (newRange: { min: number; max: number }) => void;
   onSizeToggle: (size: string) => void;
-  onColorToggle: (colorName: string) => void;
   onClearFilters: () => void;
+  // New props
+  selectedRating: number | null;
+  onRatingChange: (rating: number | null) => void;
+  minDiscount: number | null;
+  onDiscountChange: (discount: number | null) => void;
+  includeOutOfStock: boolean;
+  onToggleOutOfStock: () => void;
 
   minPrice: number;
   maxPrice: number;
@@ -21,33 +25,46 @@ interface FilterSidebarProps {
   onTagToggle?: (tag: string) => void;
   categories?: Category[]; // Add categories prop
   currentCategoryId?: string;
+
+  // Dynamic Attributes
+  availableAttributes?: Record<string, string[]>;
+  selectedAttributes?: Record<string, string[]>;
+  onAttributeToggle?: (key: string, value: string) => void;
 }
 
 
 const FilterSidebar: React.FC<FilterSidebarProps> = ({
   availableSizes,
-  availableColors,
   priceRange,
   selectedSizes,
-  selectedColors,
   onPriceChange,
   onSizeToggle,
-  onColorToggle,
   onClearFilters,
-
   minPrice,
   maxPrice,
   availableTags = [],
   selectedTags = [],
   onTagToggle = (tag) => { },
   categories = [],
-  currentCategoryId
+  currentCategoryId,
+  // New props
+  selectedRating,
+  onRatingChange,
+  minDiscount,
+  onDiscountChange,
+  includeOutOfStock,
+  onToggleOutOfStock,
+
+  availableAttributes = {},
+  selectedAttributes = {},
+  onAttributeToggle = () => { }
 }) => {
   const minRangeRef = useRef<HTMLInputElement>(null);
   const maxRangeRef = useRef<HTMLInputElement>(null);
   const rangeBarRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
+  // ... (keep getPercent and effects) ...
   const getPercent = useCallback((value: number) => {
     if (maxPrice - minPrice === 0) return 0;
     return Math.round(((value - minPrice) / (maxPrice - minPrice)) * 100);
@@ -74,7 +91,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
     onPriceChange({ ...priceRange, max: value });
   };
 
-  const hasActiveFilters = selectedSizes.length > 0 || selectedColors.length > 0 || priceRange.min > minPrice || priceRange.max < maxPrice; // Removed selectedTags check
+  const hasActiveFilters = selectedSizes.length > 0 || priceRange.min > minPrice || priceRange.max < maxPrice || selectedRating !== null || minDiscount !== null || includeOutOfStock || Object.values(selectedAttributes).some(arr => arr.length > 0);
 
   const rangeInputBaseClasses = [
     "absolute w-full h-1 bg-transparent appearance-none pointer-events-none -top-2 focus:outline-none focus:z-10",
@@ -90,31 +107,31 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   }, [availableSizes]);
 
   return (
-    <aside className="w-full lg:w-64 xl:w-72 space-y-8">
-      <div className="flex justify-between items-center border-b pb-2 mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
+    <aside className="w-full lg:w-64 xl:w-72 space-y-8 pr-4">
+      <div className="flex justify-between items-center border-b border-gray-200 pb-4">
+        <h3 className="text-lg font-bold text-gray-900 font-serif">Filters</h3>
         {hasActiveFilters && (
           <button
             onClick={onClearFilters}
-            className="text-sm text-primary hover:underline"
+            className="text-xs font-semibold text-primary hover:text-pink-700 uppercase tracking-wide transition-colors"
           >
             Clear All
           </button>
         )}
       </div>
 
-      {/* Categories as Tags */}
+      {/* Categories List */}
       {categories.length > 0 && (
-        <div className="space-y-4">
-          <h4 className="font-medium text-gray-700 uppercase tracking-wide text-sm">Categories</h4>
-          <div className="flex flex-wrap gap-2">
+        <div className="space-y-4 border-b border-gray-200 pb-8">
+          <h4 className="font-bold text-gray-900 uppercase tracking-wide text-xs">Categories</h4>
+          <div className="flex flex-col space-y-2">
             {categories.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => navigate(`/category/${cat.id}`)}
-                className={`px-3 py-1.5 text-xs font-medium border rounded-full transition-all duration-200 ${currentCategoryId === cat.id
-                    ? 'bg-primary text-white border-primary shadow-sm'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                className={`text-left text-sm transition-colors duration-200 hover:text-primary ${currentCategoryId === cat.id
+                  ? 'font-bold text-primary pl-2 border-l-2 border-primary'
+                  : 'text-gray-600 pl-2 border-l-2 border-transparent hover:border-gray-300'
                   }`}
               >
                 {cat.name}
@@ -124,10 +141,30 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         </div>
       )}
 
+      {/* Dynamic Attribute filters */}
+      {Object.entries(availableAttributes).map(([attrKey, values]) => (
+        <div key={attrKey} className="space-y-4 border-b border-gray-200 pb-8">
+          <h4 className="font-bold text-gray-900 uppercase tracking-wide text-xs">{attrKey}</h4>
+          <div className="flex flex-col space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+            {values.map(val => (
+              <label key={val} className="flex items-center space-x-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={selectedAttributes[attrKey]?.includes(val) || false}
+                  onChange={() => onAttributeToggle(attrKey, val)}
+                  className="form-checkbox h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary transition duration-150 ease-in-out"
+                />
+                <span className={`text-sm group-hover:text-primary transition-colors ${selectedAttributes[attrKey]?.includes(val) ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>{val}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+
       {/* Price Filter */}
-      <div className="space-y-4">
-        <h4 className="font-medium text-gray-700 uppercase tracking-wide text-sm">PRICE</h4>
-        <div className="relative h-5 w-full">
+      <div className="space-y-4 border-b border-gray-200 pb-8">
+        <h4 className="font-bold text-gray-900 uppercase tracking-wide text-xs">Price</h4>
+        <div className="relative h-5 w-full mx-auto">
           <div className="relative w-full h-1 rounded-full bg-gray-200 top-1/2 -translate-y-1/2">
             <div ref={rangeBarRef} className="absolute h-1 rounded-full bg-primary" />
           </div>
@@ -152,17 +189,70 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
             aria-label="Maximum price"
           />
         </div>
-        <div className="flex justify-center items-center text-sm pt-2">
-          <span className="text-gray-800 font-medium">
-            ₹{priceRange.min.toLocaleString()} - ₹{priceRange.max.toLocaleString()}
+        <div className="flex justify-between items-center text-sm pt-2">
+          <span className="text-gray-500 text-xs">Range:</span>
+          <span className="text-gray-900 font-bold">
+            ₹{priceRange.min.toLocaleString()} — ₹{priceRange.max.toLocaleString()}
           </span>
         </div>
+      </div>
+
+      {/* Discount Filter - Chip Style */}
+      <div className="space-y-4 border-b border-gray-200 pb-8">
+        <h4 className="font-bold text-gray-900 uppercase tracking-wide text-xs">Discount</h4>
+        <div className="flex flex-wrap gap-2">
+          {[10, 20, 30, 40, 50].map(disc => (
+            <button
+              key={disc}
+              onClick={() => onDiscountChange(minDiscount === disc ? null : disc)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-all duration-200 ${minDiscount === disc
+                ? 'bg-primary text-white border-primary shadow-sm'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+            >
+              {disc}%+ Off
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Rating Filter - Chip Style */}
+      <div className="space-y-4 border-b border-gray-200 pb-8">
+        <h4 className="font-bold text-gray-900 uppercase tracking-wide text-xs">Customer Ratings</h4>
+        <div className="flex flex-wrap gap-2">
+          {[4, 3].map(star => (
+            <button
+              key={star}
+              onClick={() => onRatingChange(selectedRating === star ? null : star)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-all duration-200 flex items-center gap-1 ${selectedRating === star
+                ? 'bg-primary text-white border-primary shadow-sm'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+            >
+              <span>{star}★ & above</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Availability Filter */}
+      <div className="space-y-4 border-b border-gray-200 pb-8">
+        <h4 className="font-bold text-gray-900 uppercase tracking-wide text-xs">Availability</h4>
+        <label className="flex items-center space-x-3 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={includeOutOfStock}
+            onChange={onToggleOutOfStock}
+            className="form-checkbox h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary transition duration-150 ease-in-out"
+          />
+          <span className={`text-sm group-hover:text-primary transition-colors ${includeOutOfStock ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>Include Out of Stock</span>
+        </label>
       </div>
 
       {/* Size / Weight Filter */}
       {availableSizes.length > 0 && (
         <div className="space-y-4">
-          <h4 className="font-medium text-gray-700 uppercase tracking-wide text-sm">{sizeLabel.toUpperCase()}</h4>
+          <h4 className="font-bold text-gray-900 uppercase tracking-wide text-xs">{sizeLabel}</h4>
           <div className="flex flex-wrap gap-2">
             {availableSizes.map(size => {
               const isSelected = selectedSizes.includes(size);
@@ -170,41 +260,9 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
                 <button
                   key={size}
                   onClick={() => onSizeToggle(size)}
-                  className={`px-4 py-1.5 border rounded-md text-sm font-medium transition-colors ${isSelected ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white border-gray-200 text-gray-700 hover:border-primary hover:text-primary'}`}
+                  className={`px-3 py-1.5 border rounded text-xs font-semibold transition-all duration-200 ${isSelected ? 'bg-gray-900 text-white border-gray-900' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-400'}`}
                 >
                   {size}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Color Filter - Renamed to "Choose as per" */}
-      {availableColors.length > 0 && (
-        <div className="space-y-4">
-          <h4 className="font-medium text-gray-700 uppercase tracking-wide text-sm">Choose as per</h4>
-          <div className="flex flex-wrap gap-3">
-            {availableColors.map(color => {
-              const isSelected = selectedColors.includes(color.name);
-              return (
-                <button
-                  key={color.name}
-                  onClick={() => onColorToggle(color.name)}
-                  className={`w-8 h-8 rounded-full border border-gray-200 shadow-sm transition-transform transform hover:scale-110 flex items-center justify-center ${isSelected ? 'ring-2 ring-offset-2 ring-primary' : ''}`}
-                  style={{ backgroundColor: color.hex }}
-                  title={color.name}
-                >
-                  {(color.hex.toUpperCase() === '#FFFFFF' || color.hex.toUpperCase() === '#FFFFF0') && isSelected && (
-                    <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                  {isSelected && color.hex.toUpperCase() !== '#FFFFFF' && color.hex.toUpperCase() !== '#FFFFF0' && (
-                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
                 </button>
               )
             })}

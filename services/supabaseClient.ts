@@ -13,13 +13,19 @@ import { Database } from '../types.ts';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+console.log('Supabase Debug:', {
+    url: supabaseUrl,
+    keyLength: supabaseAnonKey?.length,
+    keyStart: supabaseAnonKey?.slice(0, 5) + '...'
+});
+
 if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Supabase URL and Anon Key must be defined in .env file');
 }
 
 // --- END OF ACTION REQUIRED ---
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<any>(supabaseUrl, supabaseAnonKey, {
     auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -30,4 +36,4 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
             'apikey': supabaseAnonKey
         }
     }
-});
+}) as any;

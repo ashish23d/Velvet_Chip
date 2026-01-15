@@ -7,7 +7,8 @@ import {
     UserProfile, AdminData, MailTemplate, ContactSubmission,
     ReturnRequest, ReturnRequestStatus, PendingChange,
     Address, ReturnStatusUpdate, SearchHistoryEntry,
-    CardAddon, PaymentSettings, EmailSettings
+    CardAddon, PaymentSettings, EmailSettings,
+    DeliverySettings, ServiceableRule, MasterLocation, TaxSettings
 } from '../types.ts';
 
 import { INITIAL_SLIDES } from '../constants.ts';
@@ -33,6 +34,8 @@ interface AppContextType {
     // Site Data
     siteSettings: SiteSettings | null;
     paymentSettings: PaymentSettings | null;
+    taxSettings: TaxSettings | null;
+    updateTaxSettings: (settings: Partial<TaxSettings>) => Promise<void>;
     contactDetails: ContactDetails;
     siteContent: SiteContent[];
     slides: Slide[];
@@ -67,7 +70,7 @@ interface AppContextType {
     fetchUserOrders: () => Promise<void>;
 
 
-    fetchProducts: (params?: { categoryId?: string; limit?: number; page?: number; perPage?: number }) => Promise<{ data: Product[]; count: number }>;
+    fetchProducts: (params?: { categoryId?: string; limit?: number; page?: number; perPage?: number; sort?: 'latest' | 'popular' | 'price-asc' | 'price-desc' }) => Promise<{ data: Product[]; count: number }>;
     getProductById: (id: number | string | undefined) => Promise<Product | undefined>;
     searchProducts: (query: string) => Promise<Product[]>;
     getSearchSuggestions: (query: string) => Promise<{ suggestedQueries: string[], suggestedCategories: string[] }>;
@@ -89,7 +92,11 @@ interface AppContextType {
 
     // Notifications
     // 🔔 Notifications
+    // Notifications
+    // 🔔 Notifications
     notifications: Notification[];
+    orderUpdates: any[]; // From profiles.updates
+    promotions: any[];   // From broadcast_notifications
     unreadNotificationCount: number;
     markNotificationAsRead: (id: string) => Promise<void>;
     markAllNotificationsAsRead: () => Promise<void>;
@@ -114,6 +121,7 @@ interface AppContextType {
     updateReviewStatus: (id: number, status: string) => Promise<void>;
     deleteReview: (id: number) => Promise<void>;
     adminUpdateReview: (review: Review) => Promise<void>;
+    updateUserReview: (reviewId: number, updates: { rating?: number; comment?: string; productImages?: string[] }) => Promise<void>;
     adminDeleteReviewImage: (reviewId: number, imagePath: string) => Promise<void>;
     getPendingChanges: () => PendingChange[];
     approveChange: (id: string) => Promise<void>;
@@ -145,7 +153,30 @@ interface AppContextType {
     deletePromotion: (promo: Promotion) => Promise<void>;
     updateAnnouncement: (announcement: Announcement) => Promise<void>;
     emailSettings: EmailSettings | null;
+    emailSettings: EmailSettings | null;
     updateEmailSettings: (settings: EmailSettings) => Promise<void>;
+
+    // Delivery & Serviceable API
+    deliverySettings: DeliverySettings | null;
+    serviceableRules: ServiceableRule[];
+    updateDeliverySettings: (settings: Partial<DeliverySettings>) => Promise<void>;
+    addServiceableRule: (rule: Omit<ServiceableRule, 'id'>) => Promise<ServiceableRule>;
+    removeServiceableRule: (id: string, cascade?: boolean) => Promise<void>;
+    // Delivery Management
+    deliverySettings: DeliverySettings | null;
+    serviceableRules: ServiceableRule[];
+    updateDeliverySettings: (newSettings: Partial<DeliverySettings>) => Promise<void>;
+    fetchServiceableRules: () => Promise<void>;
+    addServiceableRule: (rule: Omit<ServiceableRule, 'id'>) => Promise<ServiceableRule>;
+    removeServiceableRule: (ruleId: string, removeChildren?: boolean) => Promise<void>;
+    searchMasterLocations: (term: string, type: 'pincode' | 'city' | 'state', parent?: string) => Promise<MasterLocation[]>;
+    fetchUniqueStates: () => Promise<string[]>;
+    fetchCitiesByState: (state: string) => Promise<string[]>;
+    fetchPincodesByCity: (state: string, city: string) => Promise<string[]>;
+    // Order Actions
+    assignShopDelivery: (orderId: string, details: any) => Promise<void>;
+    verifyOrderPickup: (orderId: string, code: string) => Promise<void>;
+
     submitContactForm: (data: any) => Promise<void>;
     getAllContactSubmissions: () => ContactSubmission[];
     updateContactSubmissionStatus: (id: number, status: string) => Promise<void>;
@@ -195,7 +226,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     // 🔔 Notifications state
     const [notifications, setNotifications] = useState<Notification[]>([]);
-
+    const [orderUpdates, setOrderUpdates] = useState<any[]>([]); // Personal updates
+    const [promotions, setPromotions] = useState<any[]>([]);     // Broadcasts
     const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
     const [categories, setCategories] = useState<Category[]>([]);
@@ -210,6 +242,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
     const [paymentSettings, setPaymentSettings] = useState<PaymentSettings | null>(null);
+    const [taxSettings, setTaxSettings] = useState<TaxSettings | null>(null);
     const [contactDetails, setContactDetailsState] = useState<ContactDetails>({ email: '', phone: '', address: '' });
     const [siteContent, setSiteContent] = useState<SiteContent[]>([]);
     const [slides, setSlides] = useState<Slide[]>(INITIAL_SLIDES);
@@ -217,6 +250,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [cardAddons, setCardAddons] = useState<CardAddon[]>([]);
     const [announcement, setAnnouncement] = useState<Announcement | null>(null);
     const [emailSettings, setEmailSettings] = useState<EmailSettings | null>(null);
+    const [deliverySettings, setDeliverySettings] = useState<DeliverySettings | null>(null);
+    const [serviceableRules, setServiceableRules] = useState<ServiceableRule[]>([]);
 
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingAdminData, setIsLoadingAdminData] = useState(false);
@@ -284,6 +319,128 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 
 
+
+
+    // ----------------------------------------------------
+    // DELIVERY & SERVICEABLE RULES
+    // ----------------------------------------------------
+    const fetchDeliverySettings = async () => {
+        const { data, error } = await supabase.from('delivery_settings').select('*').single();
+        if (data) setDeliverySettings(data);
+    };
+
+    const fetchTaxSettings = async () => {
+        const { data } = await supabase.from('tax_settings').select('*').single();
+        if (data) setTaxSettings(data);
+    };
+
+    const fetchServiceableRules = async () => {
+        const { data } = await supabase.from('serviceable_rules').select('*').order('created_at', { ascending: true });
+        if (data) setServiceableRules(data);
+    };
+
+    const updateDeliverySettings = async (settings: Partial<DeliverySettings>) => {
+        try {
+            const { data, error } = await supabase.from('delivery_settings').update(settings).eq('id', 1).select().single();
+            if (error) throw error;
+            if (data) setDeliverySettings(data);
+            alert("Delivery Settings Updated");
+        } catch (e: any) {
+            console.error("Update Delivery Settings Error", e);
+            alert("Failed to update settings: " + e.message);
+        }
+    };
+
+    const updateTaxSettings = async (settings: Partial<TaxSettings>) => {
+        try {
+            const { data, error } = await supabase.from('tax_settings').update(settings).eq('id', 1).select().single();
+            if (error) throw error;
+            if (data) setTaxSettings(data);
+            alert("Tax Settings Updated");
+        } catch (e: any) {
+            console.error("Update Tax Settings Error", e);
+            alert("Failed to update settings: " + e.message);
+        }
+    };
+
+    const addServiceableRule = async (rule: Omit<ServiceableRule, 'id'>) => {
+        const { data, error } = await supabase.from('serviceable_rules').insert(rule).select().single();
+        if (error) throw error;
+        setServiceableRules(prev => [...prev, data]);
+        return data;
+    };
+
+    const removeServiceableRule = async (id: string, cascade = false) => {
+        if (cascade) {
+            // Logic to delete child rules (e.g. delete city should delete its pincodes)
+            // Implementation depends on how we query parents.
+            // For now, simplify to just delete the rule.
+            const rule = serviceableRules.find(r => r.id === id);
+            if (rule) {
+                // cascading delete logic if needed from DB side or multiple calls
+                await supabase.from('serviceable_rules').delete().eq('parent_value', rule.value);
+            }
+        }
+        await supabase.from('serviceable_rules').delete().eq('id', id);
+        setServiceableRules(prev => prev.filter(r => r.id !== id));
+    };
+
+    const searchMasterLocations = async (term: string, type: 'pincode' | 'city' | 'state', parent?: string) => {
+        let query = supabase.from('master_locations').select('*').ilike(type, `${term}%`).limit(20);
+
+        // If searching cities, constrain by state if parent provided
+        if (type === 'city' && parent) {
+            query = query.eq('state', parent);
+        }
+        // If searching pincodes, constrain by city if parent provided
+        if (type === 'pincode' && parent) {
+            query = query.eq('city', parent);
+        }
+        // Distinct handling (Supabase simple select doesn't support distinct well on client without RPC)
+        // We will filter client side or rely on unique results if master set is clean.
+        // For States:
+        if (type === 'state') {
+            // For strict state list, better to select distinct state from master_locations
+            // But simple ilike is fine for autocomplete.
+        }
+
+        const { data } = await query;
+        return data || [];
+    };
+
+    const assignShopDelivery = async (orderId: string, details: any) => {
+        const { error } = await supabase.from('orders').update({
+            delivery_type: 'shop',
+            shop_delivery_details: details,
+            current_status: 'Out for Delivery',
+            status_history: [...(getOrderById(orderId)?.statusHistory || []), { status: 'Out for Delivery', timestamp: new Date().toISOString(), description: `Out for delivery by shop personnel: ${details.boy_name}` }]
+        }).eq('id', orderId);
+
+        if (error) throw error;
+        await loadAdminData(); // Refresh
+    };
+
+    const verifyOrderPickup = async (orderId: string, code: string) => {
+        // Optimistic verification? No, must be secure.
+        // Best to use a DB Function if we want to confirm code matches on server side securely
+        // OR simply fetch the order secret and compare here if current user is admin.
+        const order = getOrderById(orderId);
+        if (!order) throw new Error("Order not found");
+
+        if (order.pickup_verification_code !== code) {
+            throw new Error("Invalid Verification Code");
+        }
+
+        const { error } = await supabase.from('orders').update({
+            is_pickup_verified: true,
+            current_status: 'Delivered', // Pickup complete
+            status_history: [...(order.statusHistory || []), { status: 'Delivered', timestamp: new Date().toISOString(), description: 'Order picked up by customer (Verified)' }]
+        }).eq('id', orderId);
+
+        if (error) throw error;
+        await loadAdminData();
+    };
+
     // --- Fetching Logic ---
 
     const fetchCategories = async () => {
@@ -323,16 +480,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 .select('*')
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false })
-                .limit(10); // Limit to 10
+                .limit(8); // Limit to 8
 
             if (error) throw error;
 
-            // Filter client-side for the 15-day retention rule
-            const fifteenDaysAgo = new Date();
-            fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+            // Filter client-side for the 30-day retention rule
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-            const filteredHistory = (data || []).filter(item => new Date(item.created_at) > fifteenDaysAgo);
-            setSearchHistory(filteredHistory);
+            // Deduplicate logic
+            const uniqueHistory: SearchHistoryEntry[] = [];
+            const seenQueries = new Set<string>();
+
+            (data || []).forEach(item => {
+                const q = item.query.toLowerCase().trim();
+                // Filter for 30-day retention and uniqueness
+                if (!seenQueries.has(q) && new Date(item.created_at) > thirtyDaysAgo) {
+                    seenQueries.add(q);
+                    uniqueHistory.push(item);
+                }
+            });
+
+            setSearchHistory(uniqueHistory.slice(0, 8));
         } catch (error) {
             console.error("Error fetching search history:", error);
         }
@@ -348,15 +517,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             created_at: new Date().toISOString()
         };
 
-        const updateState = (prev: SearchHistoryEntry[]) => {
-            const filtered = prev.filter(item => item.query.toLowerCase() !== trimmedQuery.toLowerCase());
-            return [newEntry, ...filtered].slice(0, 10);
-        };
-
         const userId = session?.user?.id;
 
+        // Optimistic State Update
         setSearchHistory(prev => {
-            const updated = updateState(prev);
+            const filtered = prev.filter(item => item.query.toLowerCase() !== trimmedQuery.toLowerCase());
+            const updated = [newEntry, ...filtered].slice(0, 8);
+
             if (!userId) {
                 localStorage.setItem('velvetchip_search_history', JSON.stringify(updated));
             }
@@ -366,19 +533,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!userId) return;
 
         try {
+            // 1. Remove existing entry for this query (to move it to top)
+            await supabase.from('search_history').delete()
+                .eq('user_id', userId)
+                .ilike('query', trimmedQuery);
+
+            // 2. Insert new entry
             await supabase.from('search_history').insert({
+                id: newEntry.id,
                 user_id: userId,
                 query: trimmedQuery
             });
 
+            // 3. Cleanup old entries (keep last 8)
             const { data: recentHistory } = await supabase
                 .from('search_history')
                 .select('id')
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
 
-            if (recentHistory && recentHistory.length > 10) {
-                const idsToDelete = recentHistory.slice(10).map(r => r.id);
+            if (recentHistory && recentHistory.length > 8) {
+                const idsToDelete = recentHistory.slice(8).map(r => r.id);
                 if (idsToDelete.length > 0) {
                     await supabase.from('search_history').delete().in('id', idsToDelete);
                 }
@@ -537,7 +712,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         let channel;
 
         if (currentUser.role === 'admin') {
-            // 👨‍💼 ADMIN → listen to ALL admin notifications
+            // 👨‍💼 ADMIN → listen to ALL notifications (filtered by RLS or client)
+            // Note: 'filter' with 'type=eq.system' might fail if type is not exposed or binding mismatch.
+            // Simplified: Listen to all INSERTs on notifications table.
             channel = supabase
                 .channel('admin-notifications')
                 .on(
@@ -545,17 +722,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     {
                         event: 'INSERT',
                         schema: 'public',
-                        table: 'notifications',
-                        filter: `type=eq.system`
+                        table: 'notifications'
                     },
                     payload => {
-                        setNotifications(prev => [payload.new, ...prev]);
-                        setUnreadNotificationCount(prev => prev + 1);
+                        if (payload.new.type === 'system') {
+                            setNotifications(prev => [payload.new as Notification, ...prev]);
+                            setUnreadNotificationCount(prev => prev + 1);
+                        }
                     }
                 )
                 .subscribe();
         } else {
             // 👤 USER → listen to own notifications
+            // Note: user_id=eq... might fail if RLS is on and we are not using the right jwt or if user_id is uuid type discrepancy. 
+            // Better to rely on RLS (if enabled) or just filter client side if the channel receives all (not recommended for scale but fine for now with RLS).
+            // Actually, let's try removing the filter string which causes the 'binding mismatch' error.
             channel = supabase
                 .channel('user-notifications')
                 .on(
@@ -566,12 +747,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         table: 'notifications',
                         filter: `user_id=eq.${currentUser.id}`
                     },
-                    payload => {
-                        setNotifications(prev => [payload.new, ...prev]);
-                        setUnreadNotificationCount(prev => prev + 1);
+                    (payload) => {
+                        // Double check client side
+                        if (payload.new.user_id === currentUser.id) {
+                            setNotifications(prev => [payload.new as Notification, ...prev]);
+                            setUnreadNotificationCount(prev => prev + 1);
+                        }
                     }
                 )
-                .subscribe();
+                .subscribe((status, err) => {
+                    if (status === 'CHANNEL_ERROR') {
+                        console.error("Realtime Error (User):", err);
+                        // Fallback?
+                    }
+                });
         }
 
         return () => {
@@ -614,6 +803,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     // 🔴 FIX: Await this to prevent race condition on refresh where isLoading becomes false before user is loaded
                     await fetchUserProfile(session.user.id);
                     fetchSearchHistory(session.user.id);
+                    fetchNotifications(session.user.id); // <--- Added this
                 }
 
                 // --- 🚀 RELEASE UI: Stop Loading Screen ---
@@ -631,7 +821,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     supabase.from('slides').select('*').order('ordering', { ascending: true }),
                     supabase.from('seasonal_edit_cards').select('*'),
                     supabase.from('card_addons').select('*'),
-                    supabase.from('reviews').select('*').eq('status', 'Approved')
+                    supabase.from('reviews').select('*').eq('status', 'approved'),
+                    supabase.from('delivery_settings').select('*').single(),
+                    supabase.from('serviceable_rules').select('*').order('created_at', { ascending: true })
                 ]);
 
                 // Cast results to any to bypass TS 'never' inference on mixed array
@@ -642,6 +834,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 const seasonalResult = results[4] as PromiseFulfilledResult<any>;
                 const addonsResult = results[5] as PromiseFulfilledResult<any>;
                 const reviewsResult = results[6] as PromiseFulfilledResult<any>;
+                const deliverySettingsResult = results[7] as PromiseFulfilledResult<any>;
+                const rulesResult = results[8] as PromiseFulfilledResult<any>;
 
                 // 1. Products
                 let loadedProducts: Product[] = [];
@@ -692,6 +886,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     })));
                 }
 
+                if (deliverySettingsResult.status === 'fulfilled' && deliverySettingsResult.value.data) {
+                    setDeliverySettings(deliverySettingsResult.value.data);
+                } else if (deliverySettingsResult.status === 'rejected') {
+                    // Maybe create initial row if missing? Handled by migration sql roughly
+                }
+
+                if (rulesResult.status === 'fulfilled' && rulesResult.value.data) {
+                    setServiceableRules(rulesResult.value.data);
+                }
+
                 // Note: User profile operations moved to critical phase above
 
             } catch (e) {
@@ -705,7 +909,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setSession(session);
             if (event === 'SIGNED_IN' && session?.user) {
                 await fetchUserProfile(session.user.id);
-                fetchSearchHistory(session.user.id);
+                fetchSearchHistory(session.user.id); // Optimized for eager load
+                fetchNotifications(session.user.id); // <--- Added this
                 // Fetch user's own reviews (so they see their pending/rejected ones)
                 const { data: userReviews } = await supabase.from('reviews').select('*').eq('user_id', session.user.id);
                 if (userReviews) {
@@ -771,9 +976,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const safetyTimer = setTimeout(() => setIsLoading(false), 7000);
 
+        // 🛡️ Tab Visibility Handler
+        // Browsers throttle timers in background tabs. If initApp hangs while backgrounded,
+        // the safetyTimer might not fire. When user returns, we ensure loading stops.
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // If still loading when tab becomes visible, give it a moment (2s) then force stop
+                // We use a separate check because 'isLoading' in this closure is stale (initial render value).
+                // So we must trust that if this event fires, and we are stuck, we want to clear it.
+                // However, we can't check current `isLoading` easily without a ref or updated closure.
+                // Ideally, we just set a "cleanup" timer on wake.
+                setTimeout(() => {
+                    setIsLoading(prev => {
+                        if (prev) {
+                            console.warn("🛡️ Force stopping loading state on tab wake");
+                            return false;
+                        }
+                        return prev;
+                    });
+                }, 2000);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         initApp();
         return () => {
             clearTimeout(safetyTimer);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
             authListener.subscription.unsubscribe();
             supabase.removeChannel(channel);
         };
@@ -811,6 +1041,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 },
                 (payload) => {
                     console.log("📢 New Broadcast Received:", payload);
+                    fetchNotifications(session.user.id);
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'profiles',
+                    filter: `id=eq.${session.user.id}`
+                },
+                (payload) => {
+                    console.log("👤 Profile Updated (Order Log):", payload);
+                    // Fetch notifications to get the new 'updates' array
                     fetchNotifications(session.user.id);
                 }
             )
@@ -905,27 +1149,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const fetchNotifications = async (userId: string) => {
         try {
+            // 1. Fetch System Notifications (Legacy/Direct)
             let query = supabase
                 .from('notifications')
                 .select('*')
+                .eq('user_id', userId)
                 .order('created_at', { ascending: false });
-
-            // 👤 User sees THEIR OWN notifications (Orders, Returns, etc.)
-            // Removed incorrect 'Admin only sees system' logic. Admins are also users.
-            query = query.eq('user_id', userId);
 
             // 🕒 Filter out notifications older than 30 days
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             query = query.gte('created_at', thirtyDaysAgo.toISOString());
 
-            const { data, error } = await query;
-            if (error) throw error;
+            const { data: notificationsData, error: notifError } = await query;
+            if (notifError) throw notifError;
 
-            setNotifications(data || []);
+            setNotifications(notificationsData || []);
+
+            // 2. Fetch Broadcasts (Promotions)
+            const { data: broadcastData, error: broadcastError } = await supabase
+                .from('broadcast_notifications')
+                .select('*')
+                .eq('is_active', true)
+                .order('created_at', { ascending: false });
+
+            if (broadcastError) {
+                console.error("Error fetching broadcasts:", broadcastError);
+            } else {
+                setPromotions(broadcastData || []);
+            }
+
+            // 3. Fetch Personal Updates (from profiles.updates)
+            const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('updates')
+                .eq('id', userId)
+                .single();
+
+            if (profileError) {
+                console.error("Error fetching profile updates:", profileError);
+            } else {
+                // Ensure it's an array
+                const updates = Array.isArray(profileData?.updates) ? profileData.updates : [];
+                // Sort by timestamp desc if needed (assuming they are appended, so maybe reverse?)
+                // If appended to end, reverse to show newest first.
+                setOrderUpdates([...updates].reverse());
+            }
+
+            // Calculate Unread Count (Sum of unread system + unread broadcasts?)
+            // For now, logic only tracks system notifications 'is_read'.
+            // Broadcasts are 'read' via local storage or marked? 
+            // Current 'markAllNotificationsAsRead' clears the badge.
+            // Let's stick to system notifications for badge count OR use local state for broadcasts.
+            // Simplified: Badge = count(notifications.is_read=false)
             setUnreadNotificationCount(
-                (data || []).filter(n => !n.is_read).length
+                (notificationsData || []).filter(n => !n.is_read).length
             );
+
         } catch (error) {
             console.error('❌ Error fetching notifications:', error);
         }
@@ -954,7 +1234,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             page_hero_media: c.pageHeroMedia,
             page_hero_text: c.pageHeroText,
             show_page_hero_text: c.showPageHeroText,
-            app_image_path: c.appImagePath || null
+            app_image_path: c.appImagePath || null,
+            tax_rate: c.tax_rate || 0
         };
 
         const { error } = await supabase.from('categories').insert(dbPayload);
@@ -971,7 +1252,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             page_hero_media: c.pageHeroMedia,
             page_hero_text: c.pageHeroText,
             show_page_hero_text: c.showPageHeroText,
-            app_image_path: c.appImagePath || null
+            app_image_path: c.appImagePath || null,
+            tax_rate: c.tax_rate || 0
         };
         console.log("📤 DB Payload:", dbPayload);
         console.log("🆔 Updating category ID:", c.id);
@@ -1385,8 +1667,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                         body: {
                             returnId: returnId,
                             templateName: 'return_status_update',
-                            returnId: returnId,
-                            templateName: 'return_status_update',
                             email: userEmail,
                             status: data.status,
                             orderId: updatedReturnData.order_id // Pass Order ID for details
@@ -1753,7 +2033,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 
 
-    const placeOrder = async (method: 'COD' | 'Online', cartItems?: CartItem[]) => {
+    const placeOrder = async (
+        method: string,
+        cartItems?: CartItem[],
+        deliveryOptions?: { type: 'partner' | 'pickup' | 'shop', pickupCode?: string }
+    ) => {
         // Use provided cart items or fall back to current cart
         const itemsToOrder = cartItems || cart;
 
@@ -1813,21 +2097,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             // Perform Update
             const { error: updateError } = await supabase.from('products').update({ colors: newColors }).eq('id', product.id);
             if (updateError) throw new Error(`Failed to update stock for ${product.name}`);
+            if (updateError) throw new Error(`Failed to update stock for ${product.name}`);
         }
         // End Stock Deduction
 
-        console.log('🔢 Cart length:', itemsToOrder.length);
-        console.log('👤 Current user:', currentUser);
+        // 🛡️ SECURE PRICE & TAX CALCULATION
+        // Re-fetch everything needed for accurate calculation to prevent client-side tampering
+        let secureSubtotal = 0;
+        let totalTaxAmount = 0;
+        const taxDetailsStr: Record<string, number> = {};
 
-        if (!currentUser) throw new Error("User not logged in");
-        if (itemsToOrder.length === 0) {
-            console.error('❌ Cart is empty when trying to place order!');
-            throw new Error("Cart is empty");
+        // Fetch Tax Settings
+        const { data: taxSettingsDb } = await supabase.from('tax_settings').select('*').single();
+        const taxMode = taxSettingsDb?.enabled ? (taxSettingsDb.mode || 'global') : 'none';
+        const globalRate = taxSettingsDb?.global_rate || 0;
+
+        // Fetch Category Rates if needed
+        const categoryRates = new Map<string, number>();
+        if (taxMode === 'category') {
+            const { data: cats } = await supabase.from('categories').select('name, tax_rate');
+            if (cats) cats.forEach((c: any) => categoryRates.set(c.name, Number(c.tax_rate) || 0));
         }
 
-        const subtotal = itemsToOrder.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-        const deliveryCharge = subtotal > 499 ? 0 : 50;
-        const totalAmount = (subtotal - checkoutState.discount) + deliveryCharge;
+        // Iterate again to calculate totals using FRESH DB data (we can optimize by doing this in the loop above but separating for clarity is fine)
+        // actually we can't easily reuse the loop above as it updates stock one by one. 
+        // We will just do a fresh pass or trust the values we *could* have captured above.
+        // For strict security, we should have captured the price in the loop above.
+        // Let's do a quick fresh read or relies on the fact that we just verified stock. 
+        // We really should capture price in the loop above to avoid N+1 reads again.
+        // But for now, to avoid rewriting the stock loop significantly, we will iterate `itemsToOrder` and fetch price again (or better, optimize later).
+        // Actually, let's just loop again, it's safer.
+
+        for (const item of itemsToOrder) {
+            const { data: product } = await supabase.from('products').select('*').eq('id', item.product.id).single();
+            if (!product) continue;
+
+            // Find correct variant price
+            let itemPrice = product.price;
+            if (item.selectedColor) {
+                const variant = product.colors?.find((c: any) => c.name?.toLowerCase() === item.selectedColor?.name?.toLowerCase());
+                if (variant) {
+                    const sizeVariant = variant.sizes?.find((s: any) => s.size === item.selectedSize);
+                    if (sizeVariant && sizeVariant.price) {
+                        itemPrice = Number(sizeVariant.price);
+                    }
+                }
+            }
+
+            const lineItemTotal = itemPrice * item.quantity;
+            secureSubtotal += lineItemTotal;
+
+            // Calculate Tax
+            let rate = 0;
+            if (taxMode === 'global') rate = globalRate;
+            else if (taxMode === 'category') rate = categoryRates.get(product.category) || 0;
+
+            if (rate > 0) {
+                const tax = (lineItemTotal * rate) / 100;
+                totalTaxAmount += tax;
+                const label = taxSettingsDb?.label || 'Tax';
+                taxDetailsStr[`${label} (${rate}%)`] = (taxDetailsStr[`${label} (${rate}%)`] || 0) + tax;
+            }
+        }
+
+        // Final Totals
+        const deliveryType = deliveryOptions?.type || 'partner';
+        const deliveryCharge = (deliveryType === 'pickup') ? 0 : (secureSubtotal > 499 ? 0 : 50);
+
+        // Apply discount (on subtotal + tax? Or just subtotal? Usually discount reduces payable)
+        // We will apply discount on (Subtotal + Tax) or just subtract from final.
+        // User said: "priceing with tax and if coupon added then that price add tha section"
+        // Let's assume standard: Total = (Subtotal + Tax + Delivery) - Discount.
+        // Ensure discount doesn't exceed total.
+        const grossTotal = secureSubtotal + totalTaxAmount + deliveryCharge;
+        const finalDiscount = Math.min(checkoutState.discount, grossTotal);
+        const totalAmount = grossTotal - finalDiscount;
+
+        console.log("🛡️ Secure Calc:", { secureSubtotal, totalTaxAmount, deliveryCharge, finalDiscount, totalAmount });
+
 
         const orderPayload = {
             // Database auto-generates: id, created_at
@@ -1842,8 +2189,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 color: item.selectedColor,
                 image: item.product.images[0]
             })),
-            total_amount: totalAmount, // For new schema
-            total: totalAmount,        // For old schema (just in case)
+            total_amount: totalAmount,
+            total: totalAmount,
+            tax_amount: totalTaxAmount,
+            tax_details: taxDetailsStr,
             payment: {
                 method: method,
                 status: method === 'Online' ? 'Paid' : 'Pending',
@@ -1852,7 +2201,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             current_status: 'Processing',
             shipping_address: currentUser.addresses?.find(a => a.id === checkoutState.selectedAddressId) || null,
             order_date: new Date().toISOString(),
-            status_history: [{ status: 'Processing', timestamp: new Date().toISOString(), description: 'Order placed successfully' }]
+            status_history: [{ status: 'Processing', timestamp: new Date().toISOString(), description: 'Order placed successfully' }],
+            delivery_type: deliveryType,
+            pickup_verification_code: deliveryOptions?.pickupCode || null,
+            is_pickup_verified: false
         };
 
         const { data, error } = await supabase.from('orders').insert(orderPayload).select().single();
@@ -1866,7 +2218,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // 🔔 STEP 3 — USER NOTIFICATION (In-App)
         await supabase.from('notifications').insert({
             user_id: currentUser.id,
-            // order_id column likely doesn't exist, using link instead
             link: `/order/${data.id}`,
             type: 'order',
             title: 'Order Placed',
@@ -1875,12 +2226,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         // 📧 STEP 3.1 — USER EMAIL (Order Confirmation)
         try {
-            await supabase.functions.invoke('send-order-update', {
+            // Fire and forget email with short timeout to prevent hanging the UI
+            const emailPromise = supabase.functions.invoke('send-order-update', {
                 body: { orderId: data.id, templateName: 'order_confirmation' }
             });
+
+            // Allow 2 seconds max for email trigger, otherwise proceed
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Email trigger timeout")), 2000));
+
+            await Promise.race([emailPromise, timeoutPromise]);
             console.log("Order confirmation email triggered.");
         } catch (emailError) {
-            console.error("Error triggering order confirmation email:", emailError);
+            console.error("Error triggering order confirmation email (non-blocking):", emailError);
         }
 
         // 🔔 STEP 3 — ADMIN NOTIFICATION
@@ -1893,7 +2250,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             for (const admin of admins) {
                 await supabase.from('notifications').insert({
                     user_id: admin.id,
-                    // order_id column likely doesn't exist, using link instead
                     link: `/admin/orders/${data.id}`,
                     type: 'system',
                     title: 'New Order',
@@ -1958,7 +2314,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
 
+    const fetchUniqueStates = async () => {
+        const { data, error } = await supabase.rpc('get_unique_states');
+        if (error) {
+            console.error('Error fetching unique states:', error);
+            return [];
+        }
+        return data?.map((d: any) => d.state_name) || [];
+    };
+
+    const fetchCitiesByState = async (stateVal: string) => {
+        const { data, error } = await supabase.rpc('get_cities_by_state', { p_state: stateVal });
+        if (error) {
+            console.error('Error fetching cities:', error);
+            return [];
+        }
+        return data?.map((d: any) => d.city_name) || [];
+    };
+
+    const fetchPincodesByCity = async (stateVal: string, cityVal: string) => {
+        const { data, error } = await supabase.rpc('get_pincodes_by_city', { p_state: stateVal, p_city: cityVal });
+        if (error) {
+            console.error('Error fetching pincodes:', error);
+            return [];
+        }
+        // Data is now a JSON object: { state, city, total_pincodes, pincodes: [] }
+        if (data && data.pincodes) {
+            // Supabase might return strings inside the JSON array
+            return data.pincodes.map((p: any) => String(p));
+        }
+        return [];
+    };
+
     const contextValue: AppContextType = {
+        fetchUniqueStates,
+        fetchCitiesByState,
+        fetchPincodesByCity,
         categories,
         products,
         cart: currentUser?.cart || [],
@@ -1983,7 +2374,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // 🔔 Notifications
 
         // 🔔 Notifications
+        // 🔔 Notifications
         notifications,
+        orderUpdates,
+        promotions,
         unreadNotificationCount,
         markNotificationAsRead,
         markAllNotificationsAsRead,
@@ -2049,7 +2443,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetchUserOrders,
         fetchProducts: async (params) => {
             let filtered = products;
-            if (params?.categoryId) filtered = filtered.filter(p => p.category === params.categoryId);
+            if (params?.categoryId) {
+                const searchParam = params.categoryId.toLowerCase();
+
+                // Helper to clean strings for comparison
+                const clean = (str: string) => str.toLowerCase().trim().replace(/-+$/, '');
+
+                const searchClean = clean(searchParam);
+
+                let matchedCategory = categories.find(c =>
+                    clean(c.id) === searchClean ||
+                    clean(c.name.replace(/\s+/g, '-')) === searchClean ||
+                    clean(c.name) === searchClean
+                );
+
+                if (!matchedCategory) {
+                    matchedCategory = categories.find(c => clean(c.name) === searchClean);
+                }
+
+                if (matchedCategory) {
+                    // 2. Filter products using the Matched Category's ID OR Name
+                    const targetId = clean(matchedCategory.id);
+                    const targetName = clean(matchedCategory.name);
+
+                    filtered = filtered.filter(p => {
+                        const pCat = p.category ? clean(p.category) : '';
+                        return pCat === targetId || pCat === targetName;
+                    });
+                } else {
+                    // Fallback
+                    filtered = filtered.filter(p => {
+                        if (!p.category) return false;
+                        const pCatClean = clean(p.category);
+                        const pCatSlug = clean(p.category.replace(/\s+/g, '-'));
+
+                        return p.category === params.categoryId ||
+                            pCatClean === searchClean ||
+                            pCatSlug === searchClean;
+                    });
+                }
+            }
+
             if (params?.limit) filtered = filtered.slice(0, params.limit);
             return { data: filtered, count: filtered.length };
         },
@@ -2061,7 +2495,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 p.tags?.some(tag => tag.toLowerCase().includes(lowerQ))
             );
         },
-        getSearchSuggestions: async (q) => ({ suggestedQueries: [], suggestedCategories: [] }),
+        getSearchSuggestions: async (q) => {
+            if (!q.trim()) return { suggestedQueries: [], suggestedCategories: [] };
+            const lowerQ = q.toLowerCase();
+
+            // 1. Suggest Categories
+            const suggestedCategories = categories
+                .filter(c => c.name.toLowerCase().includes(lowerQ))
+                .slice(0, 3)
+                .map(c => c.name);
+
+            // 2. Suggest Products (as queries)
+            // We can also extract tags or brand names if available.
+            // For now, let's just suggest product names that match, but de-duped or simplified.
+            const suggestedQueries = products
+                .filter(p => p.name.toLowerCase().includes(lowerQ))
+                .slice(0, 5)
+                .map(p => p.name);
+
+            return { suggestedQueries, suggestedCategories };
+        },
         lastProductUpdate,
         searchHistory,
         addToSearchHistory,
@@ -2244,6 +2697,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showConfirmationModal: (opts: any) => setConfirmationState({ ...confirmationState, ...opts, isOpen: true }),
         closeConfirmationModal: () => setConfirmationState(p => ({ ...p, isOpen: false })),
         logout: async () => { await supabase.auth.signOut(); setSession(null); setCurrentUser(null); },
+        deliverySettings,
+        serviceableRules,
+        updateDeliverySettings,
+        fetchTaxSettings,
+        taxSettings,
+        updateTaxSettings,
+        fetchServiceableRules,
+        removeServiceableRule,
+        searchMasterLocations,
+        assignShopDelivery,
+        verifyOrderPickup,
         userCancelOrder,
 
         // Card Addons

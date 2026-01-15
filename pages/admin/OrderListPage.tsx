@@ -19,7 +19,7 @@ const possibleNextStatuses: Record<OrderStatus, OrderStatus[]> = {
 };
 
 const OrderListPage: React.FC = () => {
-    const { adminData, adminBulkUpdateOrderStatus, generateInvoice } = useAppContext();
+    const { adminData, adminBulkUpdateOrderStatus, generateInvoice, deliverySettings } = useAppContext();
     const orders = adminData?.orders || [];
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -28,6 +28,9 @@ const OrderListPage: React.FC = () => {
     const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'custom'>('all');
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
+
+    // View Mode for Tabs
+    const [viewMode, setViewMode] = useState<'all' | 'local' | 'pickup'>('all');
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -51,8 +54,21 @@ const OrderListPage: React.FC = () => {
 
         // TRIM applied here to fix copy-paste issues
         const lowerSearchTerm = searchTerm.trim().toLowerCase();
+        const storeCity = deliverySettings?.store_city?.toLowerCase() || '';
 
         let filtered = orders.filter(order => {
+            // 1. Tab/View Mode Filter
+            if (viewMode === 'pickup') {
+                if (order.delivery_type !== 'pickup') return false;
+            } else if (viewMode === 'local') {
+                // Local = Shipping City is Same as Store City AND not pickup (usually) OR include pickup? 
+                // User said: "if user from that city... see that strore pickup available... if order is from home town then see in orders tab under Local Order section"
+                // So Local Order = City Match.
+                const orderCity = order.shippingAddress?.city?.toLowerCase() || '';
+                // Flexible check: exact match or partial if data is messy
+                if (!orderCity || orderCity !== storeCity) return false;
+            }
+
             const searchMatch =
                 (order.id && order.id.toLowerCase().includes(lowerSearchTerm)) ||
                 (order.customerName && order.customerName.toLowerCase().includes(lowerSearchTerm)) ||
@@ -117,7 +133,7 @@ const OrderListPage: React.FC = () => {
 
         return sorted;
 
-    }, [orders, searchTerm, statusFilter, sortBy, dateFilter, customStartDate, customEndDate]);
+    }, [orders, searchTerm, statusFilter, sortBy, dateFilter, customStartDate, customEndDate, viewMode, deliverySettings]);
 
     // Pagination Logic
     const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
@@ -128,7 +144,7 @@ const OrderListPage: React.FC = () => {
     // Reset pagination when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, statusFilter, sortBy, dateFilter, customStartDate, customEndDate]);
+    }, [searchTerm, statusFilter, sortBy, dateFilter, customStartDate, customEndDate, viewMode]);
 
     const availableBulkStatuses = useMemo(() => {
         if (selectedOrders.length === 0) {
@@ -219,9 +235,36 @@ const OrderListPage: React.FC = () => {
     return (
         <>
             <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+
+                {/* View Mode Tabs */}
+                <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+                    <button
+                        onClick={() => setViewMode('all')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'all' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        All Orders
+                    </button>
+                    <button
+                        onClick={() => setViewMode('local')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'local' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        📍 Local Orders ({deliverySettings?.store_city || 'City Not Set'})
+                    </button>
+                    <button
+                        onClick={() => setViewMode('pickup')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'pickup' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        🏪 Store Pickups
+                    </button>
+                </div>
+
                 <div className="flex flex-col mb-6 gap-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <h1 className="text-2xl font-bold text-gray-800">Order Management</h1>
+                        <h1 className="text-2xl font-bold text-gray-800">
+                            {viewMode === 'all' && 'Order Management'}
+                            {viewMode === 'local' && 'Local City Orders'}
+                            {viewMode === 'pickup' && 'Store Pickup Orders'}
+                        </h1>
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
                             <input
                                 type="text"

@@ -147,7 +147,8 @@ serve(async (req) => {
       '{{shipping_address_html}}': addressHtml || 'Address not available',
       '{{order_date}}': orderDateFormatted || '',
       '{{amount_paid}}': amountPaidFormatted || '',
-      '{{item_title_summary}}': itemTitleSummary || 'Order'
+      '{{item_title_summary}}': itemTitleSummary || 'Order',
+      '{{otp}}': rest.otp || '' // Admin OTP placeholder
     };
 
     // 3. Perform Replacement on Subject and Body

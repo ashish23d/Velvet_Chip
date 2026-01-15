@@ -6,11 +6,16 @@ import { BUCKETS } from '../../constants.ts';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
 
 const BroadcastsPage: React.FC = () => {
-    const { currentUser } = useAppContext();
+    const { currentUser, showConfirmationModal, products, categories } = useAppContext();
     const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
     const [image, setImage] = useState<File | null>(null);
     const [targetPlatform, setTargetPlatform] = useState('all');
+
+    // Deep Linking State
+    const [actionType, setActionType] = useState<string>('none');
+    const [actionId, setActionId] = useState<string>('');
+    const [actionLabel, setActionLabel] = useState<string>(''); // For products/categories, we can auto-fill this based on selection
     const [isSending, setIsSending] = useState(false);
     const [history, setHistory] = useState<any[]>([]);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -55,6 +60,10 @@ const BroadcastsPage: React.FC = () => {
                 message,
                 image_path: imagePath,
                 target_platform: targetPlatform,
+
+                action_type: actionType,
+                action_id: actionId,
+                action_label: actionLabel,
                 is_active: true
             };
 
@@ -68,7 +77,11 @@ const BroadcastsPage: React.FC = () => {
             setTitle('');
             setMessage('');
             setImage(null);
+            setImage(null);
             setImagePreview(null);
+            setActionType('none');
+            setActionId('');
+            setActionLabel('');
             fetchHistory();
             alert('Broadcast sent successfully! 🚀');
 
@@ -81,10 +94,16 @@ const BroadcastsPage: React.FC = () => {
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm('Are you sure? This will remove it from history.')) {
-            await supabase.from('broadcast_notifications').delete().eq('id', id);
-            fetchHistory();
-        }
+        showConfirmationModal({
+            title: 'Delete Broadcast',
+            message: 'Are you sure? This will remove it from history.',
+            confirmText: 'Delete',
+            isDestructive: true,
+            onConfirm: async () => {
+                await supabase.from('broadcast_notifications').delete().eq('id', id);
+                fetchHistory();
+            }
+        });
     }
 
     return (
@@ -146,6 +165,98 @@ const BroadcastsPage: React.FC = () => {
                             </select>
                         </div>
 
+                        {/* Action Type / Deep Linking */}
+                        <div className="border-t pt-4 mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Deep Link Action (Where should this go?)</label>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                                <button
+                                    type="button"
+                                    onClick={() => { setActionType('none'); setActionId(''); }}
+                                    className={`py-2 text-sm border rounded ${actionType === 'none' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'}`}
+                                >
+                                    None
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setActionType('product'); setActionId(''); }}
+                                    className={`py-2 text-sm border rounded ${actionType === 'product' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'}`}
+                                >
+                                    Product
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setActionType('category'); setActionId(''); }}
+                                    className={`py-2 text-sm border rounded ${actionType === 'category' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'}`}
+                                >
+                                    Category
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setActionType('url'); setActionId(''); }}
+                                    className={`py-2 text-sm border rounded ${actionType === 'url' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'}`}
+                                >
+                                    External URL
+                                </button>
+                            </div>
+
+                            {/* Inputs based on Action Type */}
+                            {actionType === 'product' && (
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Select Product</label>
+                                    <select
+                                        value={actionId}
+                                        onChange={e => {
+                                            setActionId(e.target.value);
+                                            const p = products.find((p: any) => p.id === e.target.value);
+                                            setActionLabel(p ? p.name : '');
+                                        }}
+                                        className="w-full px-3 py-2 border rounded-md text-sm"
+                                        required
+                                    >
+                                        <option value="">-- Choose Product --</option>
+                                        {products.map((p: any) => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {actionType === 'category' && (
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Select Category</label>
+                                    <select
+                                        value={actionId}
+                                        onChange={e => {
+                                            setActionId(e.target.value);
+                                            const c = categories.find((c: any) => c.id === e.target.value);
+                                            setActionLabel(c ? c.name : '');
+                                        }}
+                                        className="w-full px-3 py-2 border rounded-md text-sm"
+                                        required
+                                    >
+                                        <option value="">-- Choose Category --</option>
+                                        {categories.map((c: any) => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {actionType === 'url' && (
+                                <div>
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">External URL (https://...)</label>
+                                    <input
+                                        type="url"
+                                        value={actionId}
+                                        onChange={e => { setActionId(e.target.value); setActionLabel('External Link'); }}
+                                        className="w-full px-3 py-2 border rounded-md text-sm"
+                                        placeholder="https://google.com"
+                                        required
+                                    />
+                                </div>
+                            )}
+                        </div>
+
                         <button
                             type="submit"
                             disabled={isSending}
@@ -173,7 +284,7 @@ const BroadcastsPage: React.FC = () => {
                                 )}
                                 <div className="mt-2 flex gap-2">
                                     <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${item.target_platform === 'all' ? 'bg-purple-100 text-purple-700' :
-                                            item.target_platform === 'android' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                        item.target_platform === 'android' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                                         }`}>
                                         {item.target_platform}
                                     </span>

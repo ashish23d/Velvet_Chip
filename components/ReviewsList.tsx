@@ -75,9 +75,29 @@ const ReviewsList: React.FC<ReviewsListProps> = ({ reviews, productRating, total
 
       {/* Individual Reviews */}
       <div className="space-y-8">
-        {reviews.map(review => (
+        {reviews.slice(0, 10).map(review => (
           <ReviewCard key={review.id} review={review} />
         ))}
+        {reviews.length > 10 && (
+          <details className="group">
+            <summary className="flex items-center justify-center gap-2 w-full py-3 text-sm font-semibold text-primary cursor-pointer hover:bg-gray-50 rounded-lg transition-colors list-none select-none">
+              <span>View All {reviews.length} Reviews</span>
+              <svg
+                className="w-4 h-4 transition-transform group-open:rotate-180"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <div className="space-y-8 mt-8 pt-8 border-t border-gray-100 animate-fade-in">
+              {reviews.slice(10).map(review => (
+                <ReviewCard key={review.id} review={review} />
+              ))}
+            </div>
+          </details>
+        )}
       </div>
     </div>
   );

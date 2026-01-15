@@ -6,7 +6,169 @@ import ImageUploader from '../../components/admin/ImageUploader.tsx';
 import { BUCKETS } from '../../constants.ts';
 import SupabaseMedia from '../../components/SupabaseMedia.tsx';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
+import TruckIcon from '../../components/icons/TruckIcon.tsx';
 import { CommandLineIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
+import AdminGuide from '../../components/admin/AdminGuide.tsx';
+import { GooglePlayBadge, AppStoreBadge } from '../../components/icons/StoreBadges.tsx';
+
+
+const MobileAppSettings: React.FC = () => {
+    const { siteSettings, updateSiteSettings } = useAppContext();
+    const [settings, setSettings] = useState<SiteSettings>({
+        primaryColor: '', activeLogoPath: null, previousLogoPaths: []
+    });
+    const [isSaving, setIsSaving] = useState(false);
+    const [success, setSuccess] = useState(false);
+
+    useEffect(() => {
+        if (siteSettings) setSettings(siteSettings);
+    }, [siteSettings]);
+
+    const handleChange = (key: keyof SiteSettings, value: any) => {
+        setSettings(prev => ({ ...prev, [key]: value }));
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        setSuccess(false);
+        try {
+            await updateSiteSettings(settings);
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 3000);
+        } catch (error) {
+            console.error("Failed to save mobile settings:", error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const labelClass = "block text-sm font-medium text-gray-700 dark:text-gray-300";
+    const inputClass = "mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500";
+    const toggleClass = "relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary";
+
+    return (
+        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow mb-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">Mobile App Download Section</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Configure the "Download Our App" section in the footer.</p>
+                </div>
+                <div className="flex items-center">
+                    <button
+                        type="button"
+                        className={`${settings.showAppSection ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'} ${toggleClass}`}
+                        onClick={() => handleChange('showAppSection', !settings.showAppSection)}
+                    >
+                        <span className={`${settings.showAppSection ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`} />
+                    </button>
+                    <span className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {settings.showAppSection ? 'Enabled' : 'Disabled'}
+                    </span>
+                </div>
+            </div>
+
+            {settings.showAppSection && (
+                <div className="space-y-6 border-t dark:border-gray-700 pt-6">
+                    <div>
+                        <label className={labelClass}>App Name</label>
+                        <input
+                            type="text"
+                            value={settings.appName || ''}
+                            onChange={(e) => handleChange('appName', e.target.value)}
+                            className={inputClass}
+                            placeholder="e.g. Velvet Chip App"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Android Settings */}
+                        <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <GooglePlayBadge className="w-24 h-auto" />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Android</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    className={`${settings.showAndroidBadge ? 'bg-green-500' : 'bg-gray-300'} relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75`}
+                                    onClick={() => handleChange('showAndroidBadge', !settings.showAndroidBadge)}
+                                >
+                                    <span className={`${settings.showAndroidBadge ? 'translate-x-4' : 'translate-x-0'} pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out`} />
+                                </button>
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Play Store URL</label>
+                                <input
+                                    type="url"
+                                    value={settings.androidAppLink || ''}
+                                    onChange={(e) => handleChange('androidAppLink', e.target.value)}
+                                    className={inputClass}
+                                    placeholder="https://play.google.com/store/apps/details?id=..."
+                                />
+                            </div>
+                            {/* Upload Play Store Badge Image */}
+                            <ImageUploader
+                                bucket={BUCKETS.SITE_ASSETS}
+                                pathPrefix="badge"
+                                images={settings.androidBadgeImg ? [settings.androidBadgeImg] : []}
+                                onImageUpload={(path) => handleChange('androidBadgeImg', path)}
+                                onImageRemove={() => handleChange('androidBadgeImg', '')}
+                                accept="image/*"
+                            />
+                        </div>
+
+                        {/* iOS Settings */}
+                        <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <AppStoreBadge className="w-24 h-auto" />
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">iOS</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    className={`${settings.showIosBadge ? 'bg-green-500' : 'bg-gray-300'} relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75`}
+                                    onClick={() => handleChange('showIosBadge', !settings.showIosBadge)}
+                                >
+                                    <span className={`${settings.showIosBadge ? 'translate-x-4' : 'translate-x-0'} pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out`} />
+                                </button>
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">App Store URL</label>
+                                <input
+                                    type="url"
+                                    value={settings.iosAppLink || ''}
+                                    onChange={(e) => handleChange('iosAppLink', e.target.value)}
+                                    className={inputClass}
+                                    placeholder="https://apps.apple.com/app/..."
+                                />
+                                {/* Upload iOS Badge Image */}
+                                <ImageUploader
+                                    bucket={BUCKETS.SITE_ASSETS}
+                                    pathPrefix="badge"
+                                    images={settings.iosBadgeImg ? [settings.iosBadgeImg] : []}
+                                    onImageUpload={(path) => handleChange('iosBadgeImg', path)}
+                                    onImageRemove={() => handleChange('iosBadgeImg', '')}
+                                    accept="image/*"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end items-center gap-4 pt-4">
+                        {success && <p className="text-xs text-green-600 font-medium">Saved!</p>}
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="bg-primary text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium hover:bg-pink-700 disabled:opacity-50"
+                        >
+                            {isSaving ? 'Saving...' : 'Save App Settings'}
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const ContactSettings: React.FC = () => {
     const { contactDetails, updateContactDetails } = useAppContext();
@@ -226,6 +388,156 @@ const EmailSettingsConfig: React.FC = () => {
         </div>
     );
 };
+
+const DeliverySettingsLink: React.FC = () => {
+    return (
+        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow mb-8 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-2">Delivery & Shipping</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                Manage your delivery zones, shipping partners, and pincode rules.
+            </p>
+            <div className="flex gap-4">
+                <a href="#/admin/delivery" className="flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary hover:text-white transition-colors">
+                    <TruckIcon className="w-5 h-5" />
+                    Manage Delivery Rules
+                </a>
+                <a href="#/admin/shipping" className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <TruckIcon className="w-5 h-5" />
+                    Shipping Integration
+                </a>
+            </div>
+        </div>
+    );
+};
+
+
+
+const TaxSettingsConfig: React.FC = () => {
+    const { taxSettings, updateTaxSettings } = useAppContext();
+    const [settings, setSettings] = useState<Partial<SiteSettings & { enabled: boolean; mode: 'global' | 'category'; global_rate: number; label: string }>>({
+        enabled: false, mode: 'global', global_rate: 0, label: 'GST'
+    });
+    const [isSaving, setIsSaving] = useState(false);
+    const [success, setSuccess] = useState(false);
+
+    useEffect(() => {
+        if (taxSettings) {
+            setSettings({
+                enabled: taxSettings.enabled,
+                mode: taxSettings.mode,
+                global_rate: taxSettings.global_rate,
+                label: taxSettings.label
+            });
+        }
+    }, [taxSettings]);
+
+    const handleChange = (key: string, value: any) => {
+        setSettings(prev => ({ ...prev, [key]: value }));
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        setSuccess(false);
+        try {
+            // @ts-ignore
+            await updateTaxSettings(settings);
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 3000);
+        } catch (error) {
+            console.error("Failed to save tax settings:", error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow mb-8 border border-gray-200 dark:border-gray-700">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">Tax Configuration</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Manage taxes (GST/VAT) for your store.</p>
+                </div>
+                <div className="flex items-center">
+                    <button
+                        type="button"
+                        className={`${settings.enabled ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'} relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none`}
+                        onClick={() => handleChange('enabled', !settings.enabled)}
+                    >
+                        <span className={`${settings.enabled ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`} />
+                    </button>
+                    <span className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {settings.enabled ? 'Enabled' : 'Disabled'}
+                    </span>
+                </div>
+            </div>
+
+            {settings.enabled && (
+                <div className="space-y-6 border-t dark:border-gray-700 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tax Label</label>
+                            <input
+                                type="text"
+                                value={settings.label || ''}
+                                onChange={(e) => handleChange('label', e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-gray-900 dark:text-white"
+                                placeholder="e.g. GST"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Calculation Mode</label>
+                            <select
+                                value={settings.mode || 'global'}
+                                onChange={(e) => handleChange('mode', e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-gray-900 dark:text-white"
+                            >
+                                <option value="global">Global (Flat Rate)</option>
+                                <option value="category">Category Wise</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {settings.mode === 'global' && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Global Tax Rate (%)</label>
+                            <input
+                                type="number"
+                                value={settings.global_rate || 0}
+                                onChange={(e) => handleChange('global_rate', Number(e.target.value))}
+                                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-gray-900 dark:text-white"
+                                min="0" step="0.01"
+                            />
+                        </div>
+                    )}
+
+                    {settings.mode === 'category' && (
+                        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                            <div className="flex">
+                                <div className="ml-3">
+                                    <p className="text-sm text-yellow-700">
+                                        You have selected <strong>Category Wise</strong> mode. Please go to the <strong>Categories</strong> page to set tax rates for each category individually.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex justify-end items-center gap-4 pt-4">
+                        {success && <p className="text-xs text-green-600 font-medium">Saved!</p>}
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="bg-primary text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium hover:bg-pink-700 disabled:opacity-50"
+                        >
+                            {isSaving ? 'Saving...' : 'Save Tax Settings'}
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 const SettingsPage: React.FC = () => {
     const { siteSettings, updateSiteSettings, adminDeleteSiteAsset } = useAppContext();
@@ -602,9 +914,19 @@ const SettingsPage: React.FC = () => {
                 )}
             </div>
 
+
+
+            <MobileAppSettings />
+            <TaxSettingsConfig />
+            <DeliverySettingsLink />
             <EmailSettingsConfig />
 
             <ContactSettings />
+
+            {/* Admin Guide */}
+            <div className="mt-8">
+                <AdminGuide />
+            </div>
 
             <DeploymentHelper />
 

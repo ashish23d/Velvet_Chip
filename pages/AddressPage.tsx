@@ -6,6 +6,7 @@ import { Address } from '../types.ts';
 import AddressForm from '../components/AddressForm.tsx';
 import OrderSummary from '../components/OrderSummary.tsx';
 import PlusIcon from '../components/icons/PlusIcon.tsx';
+import PencilIcon from '../components/icons/PencilIcon.tsx';
 
 const AddressPage: React.FC = () => {
   const { currentUser, cart, addAddress, updateAddress, setSelectedAddressForCheckout, setDefaultAddress } = useAppContext();

@@ -31,6 +31,16 @@ export interface SiteSettings {
   fontFamily?: string;
   fontSize?: string; // e.g. "24px"
   imageWidth?: string; // e.g. "150px"
+
+  // Mobile App Settings
+  showAppSection?: boolean;
+  appName?: string;
+  androidAppLink?: string;
+  showAndroidBadge?: boolean;
+  iosAppLink?: string;
+  showIosBadge?: boolean;
+  androidBadgeImg?: string;
+  iosBadgeImg?: string;
 }
 
 export interface PaymentSettings {
@@ -46,6 +56,14 @@ export interface EmailSettings {
   sender_email: string;
   sender_name: string;
   last_updated_at: string;
+}
+
+export interface TaxSettings {
+  id: number;
+  enabled: boolean;
+  mode: 'global' | 'category';
+  global_rate: number;
+  label: string;
 }
 
 export interface ContactDetails {
@@ -154,31 +172,49 @@ export interface StatusUpdate {
   location?: string; // e.g., "Mumbai Hub"
 }
 
+export interface ShippingSettings {
+  id: string;
+  provider_name: 'Shiprocket' | 'eKart' | 'Manual';
+  api_key: string;
+  api_secret?: string;
+  is_active: boolean;
+  webhook_secret?: string;
+  updated_at?: string;
+}
+
+export interface MasterLocation {
+  id: number;
+  pincode: string;
+  city: string;
+  state: string;
+  country: string;
+}
+
+export interface ServiceableRule {
+  id: string;
+  rule_type: 'state' | 'city' | 'pincode';
+  value: string;
+  parent_value?: string;
+  is_allowed: boolean;
+  delivery_mode?: 'all' | 'shop_only' | 'partner_only';
+}
+
+export interface DeliverySettings {
+  id: number;
+  store_city?: string;
+  store_state?: string;
+  store_pincode?: string;
+  store_address?: string;
+  is_all_india_serviceable: boolean;
+}
+
 export interface Order {
-  id: string; // UUID
-  readable_id?: string; // Friendly ID like ORD-2412-1001
-  userId: string;
-  orderDate: string;
-  currentStatus: OrderStatus;
-  statusHistory: StatusUpdate[];
-  totalAmount: number;
-  shippingAddress: Address;
-  items: CartItem[];
-  payment: {
-    method: 'COD' | 'Online';
-    status: 'Paid' | 'Pending';
-    transactionId: string;
-  };
-  customerName?: string;
-  customerEmail?: string;
-  promotionCode?: string | null;
-  // New modular invoice fields
-  invoice_number?: string | null;
-  downloadable_invoice_url?: string | null;
-  // Logistics Fields
-  courierName?: string | null; // e.g. FedEx
-  trackingId?: string | null; // e.g. AWB123456
-  trackingUrl?: string | null; // Link to courier site
+  trackingUrl?: string | null;
+  delivery_type?: 'partner' | 'shop' | 'pickup';
+  delivery_partner_details?: { provider: string; tracking_id: string; url: string };
+  shop_delivery_details?: { boy_name: string; boy_phone: string; vehicle_no?: string };
+  pickup_verification_code?: string;
+  is_pickup_verified?: boolean;
 }
 
 export interface Address {
@@ -233,6 +269,7 @@ export interface Product {
   variant_label?: string;
   allow_customization?: boolean;
   customization_options?: CustomizationOption[];
+  attributes?: Record<string, any>; // Dynamic attributes for filtering (e.g., {"Brand": "Nike", "Material": "Cotton"})
 }
 
 export interface CustomizationOption {
@@ -291,6 +328,7 @@ export interface Category {
   pageHeroText?: string | null;
   showPageHeroText?: boolean;
   appImagePath?: string | null; // New field for app-specific category image
+  tax_rate?: number; // Added for Category-wise tax
 }
 
 export interface Review {
@@ -810,6 +848,11 @@ export type Database = {
           shipping_address: Json
           status_history: Json | null
           total_amount: number
+          delivery_type: string | null
+          delivery_partner_details: Json | null
+          shop_delivery_details: Json | null
+          pickup_verification_code: string | null
+          is_pickup_verified: boolean | null
           user_id: string
           promotion_code: string | null
           invoice_number: string | null

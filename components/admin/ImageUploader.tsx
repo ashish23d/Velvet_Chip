@@ -21,22 +21,66 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ bucket, pathPrefix, image
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
-      // User cancelled the picker
       return;
     }
 
     setIsUploading(true);
     setError(null);
 
-    // Create a timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Upload timed out. Please try again.')), 30000); // 30s timeout
-    });
+    // Compression Helper
+    const compressImage = async (imageFile: File): Promise<File> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(imageFile);
+        reader.onload = (e) => {
+          const img = new Image();
+          img.src = e.target?.result as string;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1200;
+            const MAX_HEIGHT = 1200;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { reject(new Error('Canvas context not available')); return; }
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob((blob) => {
+              if (!blob) { reject(new Error('Compression failed')); return; }
+              resolve(new File([blob], imageFile.name, { type: 'image/jpeg', lastModified: Date.now() }));
+            }, 'image/jpeg', 0.85); // 85% quality
+          };
+          img.onerror = reject;
+        };
+        reader.onerror = reject;
+      });
+    };
 
     try {
+      const compressedFile = await compressImage(file);
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Upload timed out. Please try again.')), 90000);
+      });
+
       // Race between upload and timeout
       const path = await Promise.race([
-        uploadImage({ file, bucket, pathPrefix }),
+        uploadImage({ file: compressedFile, bucket, pathPrefix }),
         timeoutPromise
       ]) as string;
 

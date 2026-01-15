@@ -50,7 +50,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ addressToEdit, onSave, onCanc
   const inputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500";
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-primary/20 my-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-primary/20">
       <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">{addressToEdit ? 'Edit Address' : 'Add a New Address'}</h3>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

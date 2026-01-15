@@ -8,7 +8,7 @@ import SupabaseImage from './SupabaseImage.tsx';
 import { BUCKETS } from '../constants.ts';
 import FolderIcon from './icons/FolderIcon.tsx';
 import LightBulbIcon from './icons/LightBulbIcon.tsx';
-import { ClockIcon } from '@heroicons/react/24/outline';
+import ClockIcon from './icons/ClockIcon.tsx';
 import XIcon from './icons/XIcon.tsx';
 
 interface SearchBarProps {
@@ -125,6 +125,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
     const executeSearch = (searchQuery: string) => {
         const trimmed = searchQuery.trim();
         if (trimmed) {
+            addToSearchHistory(trimmed);
             navigate(`/search?q=${encodeURIComponent(trimmed)}`);
             closeExpanded();
             if (isMobileOverlay && onResultClick) onResultClick();
@@ -170,24 +171,27 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
                         <div className="mb-6">
                             <div className="flex justify-between items-center mb-3 px-2">
                                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Searches</h3>
-                                <button onClick={clearSearchHistory} className="text-xs text-primary hover:underline">Clear</button>
+                                <button onClick={clearSearchHistory} className="text-xs text-red-500 font-medium hover:underline">Clear History</button>
                             </div>
                             <div className="space-y-1">
-                                {searchHistory.map((entry) => (
+                                {searchHistory.slice(0, 8).map((entry) => (
                                     <div key={entry.id} className="flex items-center gap-2 w-full hover:bg-gray-50 p-2 rounded-md transition-colors group">
                                         <button
                                             onClick={() => handleHistoryClick(entry.query)}
-                                            className="flex items-center gap-3 flex-grow text-left text-sm text-gray-700"
+                                            className="flex items-center gap-3 flex-grow text-left text-sm text-gray-700 font-medium"
                                         >
-                                            <ClockIcon className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors" />
+                                            <div className="bg-gray-100 p-1.5 rounded-full text-gray-500">
+                                                <ClockIcon className="w-3.5 h-3.5" />
+                                            </div>
                                             <span>{entry.query}</span>
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); deleteSearchHistoryItem(entry.id); }}
-                                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                            className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100"
                                             title="Remove from history"
+                                            aria-label="Remove search item"
                                         >
-                                            <XIcon className="w-3 h-3" />
+                                            <XIcon className="w-4 h-4" />
                                         </button>
                                     </div>
                                 ))}
@@ -230,7 +234,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
                                 <ReactRouterDOM.Link
                                     key={product.id}
                                     to={`/product/${product.id}`}
-                                    onClick={() => { closeExpanded(); if (isMobileOverlay && onResultClick) onResultClick(); }}
+                                    onClick={() => {
+                                        addToSearchHistory(query);
+                                        closeExpanded();
+                                        if (isMobileOverlay && onResultClick) onResultClick();
+                                    }}
                                     className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-lg transition-colors group"
                                 >
                                     <SupabaseImage bucket={BUCKETS.PRODUCTS} imagePath={product.images[0]} alt={product.name} className="w-10 h-14 object-cover rounded bg-gray-100" />

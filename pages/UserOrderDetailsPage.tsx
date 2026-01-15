@@ -28,7 +28,8 @@ const UserOrderDetailsPage: React.FC = () => {
         showConfirmationModal,
         getOrderById,
         isLoading,
-        contactDetails
+        contactDetails,
+        deliverySettings
     } = useAppContext();
 
     const order = getOrderById(id);
@@ -400,27 +401,69 @@ const UserOrderDetailsPage: React.FC = () => {
                                         <span className="font-bold text-gray-900 text-xl">₹{liveOrder.totalAmount.toLocaleString()}</span>
                                     </div>
                                     <p className="text-xs text-gray-400 text-right mt-1">Inclusive of all taxes</p>
+
+                                    {liveOrder.tax_amount > 0 && (
+                                        <div className="border-t border-gray-100 pt-2 mt-2">
+                                            <div className="flex justify-between text-gray-600">
+                                                <span>Tax</span>
+                                                <span>₹{liveOrder.tax_amount.toLocaleString()}</span>
+                                            </div>
+                                            {liveOrder.tax_details && Object.entries(liveOrder.tax_details).map(([label, amount]: [string, any]) => (
+                                                <div key={label} className="flex justify-between text-xs text-gray-500 pl-2">
+                                                    <span>{label}</span>
+                                                    <span>₹{Number(amount).toLocaleString()}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Shipping Address */}
+                        {/* Shipping Address or Pickup Details */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
-                                <MapPinIcon className="w-4 h-4 text-gray-400" />
-                                Shipping Address
-                            </h3>
-                            <div className="text-sm text-gray-600">
-                                <p className="font-bold text-gray-900 mb-1">{liveOrder.shippingAddress?.name || currentUser?.name}</p>
-                                <p className="leading-relaxed">
-                                    {liveOrder.shippingAddress?.address}
-                                    <br />
-                                    {liveOrder.shippingAddress?.city}, {liveOrder.shippingAddress?.state} {liveOrder.shippingAddress?.pincode}
-                                </p>
-                                <p className="mt-3 pt-3 border-t border-gray-50 text-gray-500">
-                                    Phone: <span className="font-medium text-gray-700">{liveOrder.shippingAddress?.mobile || currentUser?.mobile}</span>
-                                </p>
-                            </div>
+                            {liveOrder.delivery_type === 'pickup' ? (
+                                <>
+                                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
+                                        <ShoppingBagIcon className="w-4 h-4 text-gray-400" />
+                                        Pickup Details
+                                    </h3>
+                                    <div className="text-sm text-gray-600">
+                                        <p className="font-bold text-gray-900 mb-1">Store Location</p>
+                                        <p className="leading-relaxed mb-4">
+                                            {deliverySettings?.store_address || 'Main Store'}
+                                            <br />
+                                            {deliverySettings?.store_city}, {deliverySettings?.store_pincode}
+                                        </p>
+
+                                        <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg">
+                                            <p className="text-xs text-blue-600 uppercase font-bold tracking-wide mb-1">Pickup Verification Code</p>
+                                            <p className="text-2xl font-mono font-bold text-blue-900 tracking-wider">
+                                                {liveOrder.pickup_verification_code || 'PENDING'}
+                                            </p>
+                                            <p className="text-xs text-blue-500 mt-1">Show this code at the store to collect your order.</p>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100 flex items-center gap-2">
+                                        <MapPinIcon className="w-4 h-4 text-gray-400" />
+                                        Shipping Address
+                                    </h3>
+                                    <div className="text-sm text-gray-600">
+                                        <p className="font-bold text-gray-900 mb-1">{liveOrder.shippingAddress?.name || currentUser?.name}</p>
+                                        <p className="leading-relaxed">
+                                            {liveOrder.shippingAddress?.address}
+                                            <br />
+                                            {liveOrder.shippingAddress?.city}, {liveOrder.shippingAddress?.state} {liveOrder.shippingAddress?.pincode}
+                                        </p>
+                                        <p className="mt-3 pt-3 border-t border-gray-50 text-gray-500">
+                                            Phone: <span className="font-medium text-gray-700">{liveOrder.shippingAddress?.mobile || currentUser?.mobile}</span>
+                                        </p>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         {/* Payment Method */}
@@ -476,7 +519,7 @@ const UserOrderDetailsPage: React.FC = () => {
                 onClose={() => setIsHelpOpen(false)}
                 contactDetails={contactDetails}
             />
-        </div>
+        </div >
     );
 };
 
