@@ -341,7 +341,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updateDeliverySettings = async (settings: Partial<DeliverySettings>) => {
         try {
-            const { data, error } = await supabase.from('delivery_settings').update(settings).eq('id', 1).select().single();
+            // Use upsert to create if not exists, forcing ID 1
+            const { data, error } = await supabase.from('delivery_settings')
+                .upsert({ id: 1, ...settings })
+                .select()
+                .single();
+
             if (error) throw error;
             if (data) setDeliverySettings(data);
             alert("Delivery Settings Updated");
@@ -353,7 +358,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const updateTaxSettings = async (settings: Partial<TaxSettings>) => {
         try {
-            const { data, error } = await supabase.from('tax_settings').update(settings).eq('id', 1).select().single();
+            // Use upsert to create if not exists, forcing ID 1
+            const { data, error } = await supabase.from('tax_settings')
+                .upsert({ id: 1, ...settings })
+                .select()
+                .single();
+
             if (error) throw error;
             if (data) setTaxSettings(data);
             alert("Tax Settings Updated");
@@ -1018,7 +1028,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         console.log("🔌 Subscribing to Realtime Notifications:", session.user.id);
 
-        const channel = supabase.channel('realtime-notifications')
+        // Channel 1: Notifications & Broadcasts
+        const notificationChannel = supabase.channel(`notifications-${session.user.id}`)
             .on(
                 'postgres_changes',
                 {
@@ -1044,6 +1055,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     fetchNotifications(session.user.id);
                 }
             )
+            .subscribe((status, err) => {
+                if (status === 'CHANNEL_ERROR') {
+                    console.error('❌ Notification Channel Error:', err);
+                }
+            });
+
+        // Channel 2: Profile Updates
+        const profileChannel = supabase.channel(`profile-${session.user.id}`)
             .on(
                 'postgres_changes',
                 {
@@ -1053,24 +1072,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     filter: `id=eq.${session.user.id}`
                 },
                 (payload) => {
-                    console.log("👤 Profile Updated (Order Log):", payload);
-                    // Fetch notifications to get the new 'updates' array
+                    console.log("👤 Profile Updated:", payload);
                     fetchNotifications(session.user.id);
                 }
             )
             .subscribe((status, err) => {
-                console.log("🔌 Notification Subscription Status:", status);
-                if (status === 'SUBSCRIBED') {
-                    console.log('✅ Listening for new notifications...');
-                }
                 if (status === 'CHANNEL_ERROR') {
-                    console.error('❌ Notification Subscription Error:', err);
+                    console.error('❌ Profile Channel Error:', err);
                 }
             });
 
         return () => {
-            console.log("🔌 Unsubscribing from Realtime Notifications");
-            supabase.removeChannel(channel);
+            console.log("🔌 Unsubscribing from Realtime");
+            supabase.removeChannel(notificationChannel);
+            supabase.removeChannel(profileChannel);
         };
     }, [session]);
 

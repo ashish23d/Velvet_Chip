@@ -1,17 +1,22 @@
-
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext.tsx';
+import { useAdminProductsList } from '../../services/api/admin.api'; // New Hook
 import PencilIcon from '../../components/icons/PencilIcon.tsx';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
 import PlusIcon from '../../components/icons/PlusIcon.tsx';
 import SupabaseImage from '../../components/SupabaseImage.tsx';
 import Pagination from '../../components/Pagination.tsx';
 import { BUCKETS } from '../../constants.ts';
+import { Product } from '../../types.ts';
 
 const ProductListPage: React.FC = () => {
-  const { adminData, categories, deleteProduct, showConfirmationModal } = useAppContext();
-  const products = adminData?.products || [];
+  const { categories, deleteProduct, showConfirmationModal } = useAppContext();
+
+  // Use Real-Time Hook
+  const { data: productsData } = useAdminProductsList();
+  const products = (productsData || []) as Product[];
+
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date-desc');

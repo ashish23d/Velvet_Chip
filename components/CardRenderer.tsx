@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { CardAddon } from '../types.ts';
-import { useAppContext } from '../context/AppContext.tsx';
+// import { useAppContext } from '../context/AppContext.tsx'; // Removed to use direct React Query hooks
+import { useProducts, useCategories } from '../services/api/products.api';
 import SupabaseImage from './SupabaseImage.tsx';
 import { BUCKETS } from '../constants.ts';
 import ProductCard from './ProductCard.tsx';
@@ -13,7 +14,13 @@ interface CardRendererProps {
 
 const CardRenderer: React.FC<CardRendererProps> = ({ addon }) => {
     const { config } = addon;
-    const { categories, products } = useAppContext();
+    // Use React Query hooks - data flows from cache instantly
+    const { data: productsData } = useProducts();
+    const { data: categoriesData } = useCategories();
+
+    // Fallback to empty arrays if loading/undefined
+    const products = productsData || [];
+    const categories = categoriesData || [];
 
     const containerStyle: React.CSSProperties = {
         backgroundColor: config.backgroundColor || '#ffffff',

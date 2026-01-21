@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
+import { useProduct, useProductsByCategory } from '../services/api/products.api'; // Added hooks
 import { supabase } from '../services/supabaseClient';
 import { Product, Address } from '../types.ts';
 import SupabaseImage from '../components/SupabaseImage.tsx';
@@ -51,21 +52,57 @@ const ProductDetailPage: React.FC = () => {
   const location = useLocation();
   const {
     reviews,
-    getProductById,
     addToCart,
     toggleWishlist,
     isProductInWishlist,
     triggerFlyToCartAnimation,
     currentUser,
-    fetchedProducts,
-    fetchProducts,
     cardAddons,
     deliverySettings,
     serviceableRules
   } = useAppContext();
 
+  // 1. Fetch Main Product
+  const { data: productData, isLoading: isProductLoading } = useProduct(Number(id) || 0);
+
+  // 2. Fetch Similar Products (dependent on product category)
+  // We can't fetch similar until we have the product, so we pass an empty string if no category yet
+  // Ideally we'd use 'enabled' option, but useProductsByCategory handles empty input gracefully (returns empty/loading)
+  // Note: The hook doesn't support limit yet, so we fetch all and slice locally or rely on the hook to return what's available.
+  const { data: similarDataRaw } = useProductsByCategory(productData?.category || '');
+
   const [product, setProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
+
+  // Sync Query Data to Local State
+  useEffect(() => {
+    if (productData) {
+      setProduct(productData);
+
+      // Initialize selection states only if they aren't set (to avoid resetting on background refetch)
+      // Actually, if we get fresh data that changes variants, we might want to reset.
+      // For now, let's simplistic approach: set default only if selectedColor is null
+
+      const initialColor = productData.colors?.[0] || null;
+      if (!selectedColor) { // Only set defaults on first load
+        setSelectedColor(initialColor);
+        const availableSizes = (initialColor?.sizes && initialColor.sizes.length > 0)
+          ? initialColor.sizes.map(s => s.size)
+          : productData.sizes;
+        setSelectedSize(availableSizes?.[0] || null);
+        setMainImage(initialColor?.images?.[0] || productData.images?.[0] || '');
+      }
+    }
+  }, [productData]); // Removed selectedColor dependency to prevent loop, only run when data arrives
+
+  useEffect(() => {
+    if (similarDataRaw && productData) {
+      setSimilarProducts(similarDataRaw.filter(p => p.id !== productData.id));
+    }
+  }, [similarDataRaw, productData]);
+
+
+  const isLoading = isProductLoading;
 
   const [selectedColor, setSelectedColor] = useState<Product['colors'][0] | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
@@ -82,40 +119,6 @@ const ProductDetailPage: React.FC = () => {
   const [deliveryPincode, setDeliveryPincode] = useState('');
   const [deliveryInfo, setDeliveryInfo] = useState<{ date: string; cod: boolean } | null>(null);
   const [selectedDeliveryAddress, setSelectedDeliveryAddress] = useState<Address | null>(null);
-  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
-
-  useEffect(() => {
-    const loadProduct = async () => {
-      if (id) {
-        setIsLoading(true);
-        const fetchedProduct = await getProductById(Number(id));
-        if (fetchedProduct) {
-          setProduct(fetchedProduct);
-          const initialColor = fetchedProduct.colors?.[0] || null;
-          setSelectedColor(initialColor);
-
-          // Smart size selection: use color-specific size if available, else global
-          const availableSizes = (initialColor?.sizes && initialColor.sizes.length > 0)
-            ? initialColor.sizes.map(s => s.size)
-            : fetchedProduct.sizes;
-
-          setSelectedSize(availableSizes?.[0] || null);
-
-          setMainImage(initialColor?.images?.[0] || fetchedProduct.images?.[0] || '');
-          setQuantity(1);
-
-          // Fetch similar products
-          const { data: similarData } = await fetchProducts({ categoryId: fetchedProduct.category, limit: 5 });
-          setSimilarProducts(similarData.filter(p => p.id !== fetchedProduct.id));
-
-        } else {
-          // Handle product not found
-        }
-        setIsLoading(false);
-      }
-    };
-    loadProduct();
-  }, [id, getProductById, fetchProducts]);
 
   // Effect to set the initial delivery address for a logged-in user
   useEffect(() => {

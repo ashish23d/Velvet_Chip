@@ -1,7 +1,7 @@
-
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext.tsx';
+import { useAdminUsersList } from '../../services/api/admin.api'; // New Hook
 import PlusIcon from '../../components/icons/PlusIcon.tsx';
 import UserCard from '../../components/admin/UserCard.tsx';
 import { UserProfile } from '../../types.ts';
@@ -13,8 +13,11 @@ import ArrowUpTrayIcon from '../../components/icons/ArrowUpTrayIcon.tsx';
 import ArrowDownTrayIcon from '../../components/icons/ArrowDownTrayIcon.tsx';
 
 const UserListPage: React.FC = () => {
-    const { currentUser, adminData, updateUserStatus, adminChangeUserRole } = useAppContext();
-    const users = adminData?.users || [];
+    const { currentUser, updateUserStatus, adminChangeUserRole } = useAppContext();
+
+    // Use Real-Time Hook
+    const { data: usersData, isLoading } = useAdminUsersList();
+    const users = (usersData || []) as UserProfile[]; // Cast to expected type
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'blocked'>('all');
@@ -29,7 +32,7 @@ const UserListPage: React.FC = () => {
                 (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
             );
-        
+
         const sorted = [...filtered].sort((a, b) => {
             switch (sortBy) {
                 case 'name-desc':
@@ -45,7 +48,7 @@ const UserListPage: React.FC = () => {
         const currentAdmin = sorted.find(u => u.id === currentUser?.id);
         const otherAdmins = sorted.filter(u => u.role === 'admin' && u.id !== currentUser?.id);
         const customers = sorted.filter(u => u.role !== 'admin');
-        
+
         return { currentAdmin, otherAdmins, customers };
     }, [users, searchTerm, statusFilter, sortBy, currentUser]);
 
@@ -80,7 +83,7 @@ const UserListPage: React.FC = () => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                     />
-                     <select
+                    <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value as any)}
                         className="px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
@@ -89,7 +92,7 @@ const UserListPage: React.FC = () => {
                         <option value="active">Active</option>
                         <option value="blocked">Blocked</option>
                     </select>
-                     <select
+                    <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
                         className="px-4 py-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
@@ -98,12 +101,12 @@ const UserListPage: React.FC = () => {
                         <option value="name-desc">Name: Z-A</option>
                         <option value="date-desc">Newest Users</option>
                     </select>
-                     {currentUser?.role?.includes('admin') && (
+                    {currentUser?.role?.includes('admin') && (
                         <Link
                             to="/admin/users/new"
                             className="flex items-center justify-center gap-2 bg-primary text-white py-2 px-4 rounded-md font-medium hover:bg-pink-700 transition-colors flex-shrink-0"
                         >
-                            <PlusIcon className="w-5 h-5"/>
+                            <PlusIcon className="w-5 h-5" />
                             Create User
                         </Link>
                     )}

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
+import { useProductsByCategory } from '../services/api/products.api';
 import ProductCard from '../components/ProductCard.tsx';
 import FilterSidebar from '../components/FilterSidebar.tsx';
 import MobileFilterSortSheet from '../components/MobileFilterSortSheet.tsx';
@@ -13,15 +14,38 @@ import CardRenderer from '../components/CardRenderer.tsx';
 
 const CategoryPage: React.FC = () => {
   const { id: categoryId } = useParams<{ id: string }>();
-  const { categories, fetchProducts, lastProductUpdate, cardAddons, products: allGlobalProducts } = useAppContext();
+  const { categories, cardAddons, products: allGlobalProducts } = useAppContext();
+
+  // Optimized Fetching with React Query
+  // Note: We are fetching all products for category. Pagination can be handled client-side or we can update API later for true cursor-pagination.
+  // For now, mirroring previous behavior but with caching.
+  const { data: categoryProducts, isLoading: isQueryLoading } = useProductsByCategory(categoryId || '');
 
   const category = useMemo(() => categories.find(c => c.id === categoryId), [categoryId, categories]);
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const perPage = 12;
+
+  // Sync Query Data to Local State for Client-Side Pagination/Filtering
+  // In a full migration, we might remove local 'products' state and derive everything from 'categoryProducts',
+  // but keeping structure similar to minimize regression risk during this step.
+  useEffect(() => {
+    if (categoryProducts) {
+      setProducts(categoryProducts);
+    }
+  }, [categoryProducts]);
+
+  const isLoading = isQueryLoading;
+
+  // Derived Pagination
+  const hasMore = page * perPage < products.length;
+
+  const handleLoadMore = () => {
+    if (hasMore) {
+      setPage(prev => prev + 1);
+    }
+  };
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [sheetView, setSheetView] = useState<'sort' | 'filter' | null>(null);
@@ -37,44 +61,8 @@ const CategoryPage: React.FC = () => {
   const [includeOutOfStock, setIncludeOutOfStock] = useState(true);
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string[]>>({});
 
-  const loadProducts = async (reset = false) => {
-    // ... (existing loadProducts logic) ...
-    if (categoryId) {
-      setIsLoading(true);
-      const currentPage = reset ? 1 : page;
-      try {
-        const { data, count } = await fetchProducts({ categoryId, page: currentPage, perPage });
-        console.log("CategoryPage fetchProducts result:", { count, firstItem: data?.[0] });
-        setProducts(prev => reset ? data : [...prev, ...data]);
-        setHasMore(count ? (currentPage * perPage < count) : false);
-        if (reset) setPage(1);
-      } catch (error) {
-        console.error("Failed to fetch category products:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  // Initial load and reload on category change or product updates
-  useEffect(() => {
-    console.log("CategoryPage mounted/updated. ID:", categoryId);
-    loadProducts(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryId, fetchProducts, lastProductUpdate]);
-
-  const handleLoadMore = () => {
-    if (!isLoading && hasMore) {
-      setPage(prev => prev + 1);
-    }
-  };
-
-  useEffect(() => {
-    if (page > 1) {
-      loadProducts();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  // Note: Previous manual 'loadProducts' and 'fetchProducts' Effects are removed.
+  // Data is now auto-fetched and cached by 'useProductsByCategory'.
 
 
   const { availableSizes, availableTags, minPrice, maxPrice, availableAttributes } = useMemo(() => {

@@ -2,19 +2,32 @@ import React from 'react';
 import MetricCard from '../../components/admin/MetricCard.tsx';
 import SalesChart from '../../components/admin/SalesChart.tsx';
 import RecentActivity from '../../components/admin/RecentActivity.tsx';
-import { useAppContext } from '../../context/AppContext.tsx';
+// import { useAppContext } from '../../context/AppContext.tsx'; // Replaced
+import { useAdminDashboardData } from '../../services/api/admin.api';
 import { CurrencyDollarIcon, ShoppingCartIcon, UsersIcon } from '@heroicons/react/24/outline';
-import { Order, UserProfile } from '../../types.ts';
+import { Order, UserProfile, ReturnRequest } from '../../types.ts';
 
 const DashboardPage: React.FC = () => {
-    const { adminData } = useAppContext();
+    // Use real-time hook
+    const { data, isLoading } = useAdminDashboardData();
     const [timeRange, setTimeRange] = React.useState<'7d' | '30d' | '1y' | 'all'>('all');
 
-    if (!adminData) {
-        return <div>Loading dashboard data...</div>;
+    if (isLoading || !data) {
+        return <div className="p-8 text-center text-gray-500">Loading dashboard data...</div>;
     }
 
-    const { orders, users, returns } = adminData;
+    // Map raw DB data to expected types
+    const orders = data.orders.map((o: any) => ({
+        ...o,
+        orderDate: o.order_date, // Map snake_case to camelCase
+        totalAmount: o.total_amount,
+        shippingAddress: o.shipping_address, // Map shipping address
+        customerName: o.customer_name,
+        customerEmail: o.customer_email
+    })) as Order[];
+
+    const users = data.users as UserProfile[]; // Assuming profiles match mostly or adequate for usage
+    const returns = data.returns as ReturnRequest[];
 
     // Helper to get date range
     const getDateRange = (range: '7d' | '30d' | '1y' | 'all', offset = 0) => {
@@ -105,8 +118,8 @@ const DashboardPage: React.FC = () => {
                             key={range}
                             onClick={() => setTimeRange(range)}
                             className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${timeRange === range
-                                    ? 'bg-pink-50 text-pink-600'
-                                    : 'text-gray-600 hover:bg-gray-50'
+                                ? 'bg-pink-50 text-pink-600'
+                                : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                         >
                             {range === '7d' ? 'Last 7 Days' : range === '30d' ? 'Last 30 Days' : range === '1y' ? 'Last Year' : 'Total'}
