@@ -1,22 +1,33 @@
-
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext.tsx';
+import { useAdminPaginatedProducts } from '../../services/api/admin.api'; // New Hook
 import PencilIcon from '../../components/icons/PencilIcon.tsx';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
 import PlusIcon from '../../components/icons/PlusIcon.tsx';
-import SupabaseImage from '../../components/SupabaseImage.tsx';
-import Pagination from '../../components/Pagination.tsx';
+import SupabaseImage from '../../components/shared/SupabaseImage';
+import Pagination from '../../components/shared/Pagination';
 import { BUCKETS } from '../../constants.ts';
 
 const ProductListPage: React.FC = () => {
-  const { adminData, categories, deleteProduct, showConfirmationModal } = useAppContext();
-  const products = adminData?.products || [];
+  const { categories, deleteProduct, showConfirmationModal } = useAppContext();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date-desc');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Use Real-Time Paginated Hook
+  const { data: productsResponse, isLoading } = useAdminPaginatedProducts({
+    page: currentPage,
+    limit: itemsPerPage,
+    search: searchTerm,
+  });
+
+  const products = productsResponse?.data || [];
+  const totalProducts = productsResponse?.count || 0;
+  const totalPages = Math.ceil(totalProducts / itemsPerPage);
 
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = products
@@ -65,7 +76,6 @@ const ProductListPage: React.FC = () => {
   }, [products, searchTerm, categoryFilter, sortBy]);
 
   // Pagination Logic
-  const totalPages = Math.ceil(filteredAndSortedProducts.length / itemsPerPage);
   const indexOfLastProduct = currentPage * itemsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - itemsPerPage;
   const currentProducts = filteredAndSortedProducts.slice(indexOfFirstProduct, indexOfLastProduct);
@@ -130,7 +140,9 @@ const ProductListPage: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {currentProducts.map((product) => (
+            {isLoading ? (
+              <tr><td colSpan={5} className="text-center py-8">Loading products...</td></tr>
+            ) : filteredAndSortedProducts.map((product) => (
               <tr key={product.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">

@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Product, User, Review } from '../types.ts';
 import { useAppContext } from '../context/AppContext.tsx';
 import XIcon from '../components/icons/XIcon.tsx';
-import SupabaseImage from '../components/SupabaseImage.tsx';
+import SupabaseImage from '../components/shared/SupabaseImage';
 import ImageUploader from '../components/admin/ImageUploader.tsx';
 import { BUCKETS } from '../constants.ts';
-import StarRatingInput from '../components/StarRatingInput.tsx';
-import ThankYouModal from '../components/ThankYouModal.tsx';
+import StarRatingInput from '../components/product/StarRatingInput';
+import ThankYouModal from '../components/shared/ThankYouModal';
 
 interface ReviewProductPageProps {
   isOpen: boolean;

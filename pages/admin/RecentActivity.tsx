@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { User, Order } from '../../types.ts';
-import SupabaseImage from '../../components/SupabaseImage.tsx';
-import Avatar from '../../components/Avatar.tsx';
+import SupabaseImage from '../../components/shared/SupabaseImage';
+import Avatar from '../../components/profile/Avatar';
 import { BUCKETS } from '../../constants.ts';
 
 interface RecentActivityProps {

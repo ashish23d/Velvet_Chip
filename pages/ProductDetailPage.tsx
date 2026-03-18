@@ -2,22 +2,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
+import { useProduct, useProductsByCategory } from '../services/api/products.api'; // Added hooks
 import { supabase } from '../services/supabaseClient';
 import { Product, Address } from '../types.ts';
-import SupabaseImage from '../components/SupabaseImage.tsx';
+import SupabaseImage from '../components/shared/SupabaseImage';
 import { BUCKETS } from '../constants.ts';
-import Rating from '../components/Rating.tsx';
+import Rating from '../components/product/Rating';
 import WishlistIcon from '../components/icons/WishlistIcon.tsx';
 import PlusIcon from '../components/icons/PlusIcon.tsx';
 import MinusIcon from '../components/icons/MinusIcon.tsx';
-import ReviewsList from '../components/ReviewsList.tsx';
-import CustomerPhotos from '../components/CustomerPhotos.tsx';
-import ProductCard from '../components/ProductCard.tsx';
-import EditableWrapper from '../components/EditableWrapper.tsx';
-import SimilarProductsModal from '../components/SimilarProductsModal.tsx';
+import ReviewsList from '../components/product/ReviewsList';
+import CustomerPhotos from '../components/media/CustomerPhotos';
+import ProductCard from '../components/product/ProductCard';
+import EditableWrapper from '../components/shared/EditableWrapper';
+import SimilarProductsModal from '../components/product/SimilarProductsModal';
 import MapPinIcon from '../components/icons/MapPinIcon.tsx';
-import AddressSelectionModal from '../components/AddressSelectionModal.tsx';
-import CardRenderer from '../components/CardRenderer.tsx';
+import AddressSelectionModal from '../components/checkout/AddressSelectionModal';
+import CardRenderer from '../components/home/CardRenderer';
 
 const ProductDetailSkeleton = () => (
   <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-pulse">
@@ -51,21 +52,57 @@ const ProductDetailPage: React.FC = () => {
   const location = useLocation();
   const {
     reviews,
-    getProductById,
     addToCart,
     toggleWishlist,
     isProductInWishlist,
     triggerFlyToCartAnimation,
     currentUser,
-    fetchedProducts,
-    fetchProducts,
     cardAddons,
     deliverySettings,
     serviceableRules
   } = useAppContext();
 
+  // 1. Fetch Main Product
+  const { data: productData, isLoading: isProductLoading } = useProduct(Number(id) || 0);
+
+  // 2. Fetch Similar Products (dependent on product category)
+  // We can't fetch similar until we have the product, so we pass an empty string if no category yet
+  // Ideally we'd use 'enabled' option, but useProductsByCategory handles empty input gracefully (returns empty/loading)
+  // Note: The hook doesn't support limit yet, so we fetch all and slice locally or rely on the hook to return what's available.
+  const { data: similarDataRaw } = useProductsByCategory(productData?.category || '');
+
   const [product, setProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
+
+  // Sync Query Data to Local State
+  useEffect(() => {
+    if (productData) {
+      setProduct(productData);
+
+      // Initialize selection states only if they aren't set (to avoid resetting on background refetch)
+      // Actually, if we get fresh data that changes variants, we might want to reset.
+      // For now, let's simplistic approach: set default only if selectedColor is null
+
+      const initialColor = productData.colors?.[0] || null;
+      if (!selectedColor) { // Only set defaults on first load
+        setSelectedColor(initialColor);
+        const availableSizes = (initialColor?.sizes && initialColor.sizes.length > 0)
+          ? initialColor.sizes.map(s => s.size)
+          : productData.sizes;
+        setSelectedSize(availableSizes?.[0] || null);
+        setMainImage(initialColor?.images?.[0] || productData.images?.[0] || '');
+      }
+    }
+  }, [productData]); // Removed selectedColor dependency to prevent loop, only run when data arrives
+
+  useEffect(() => {
+    if (similarDataRaw && productData) {
+      setSimilarProducts(similarDataRaw.filter(p => p.id !== productData.id));
+    }
+  }, [similarDataRaw, productData]);
+
+
+  const isLoading = isProductLoading;
 
   const [selectedColor, setSelectedColor] = useState<Product['colors'][0] | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
@@ -82,40 +119,6 @@ const ProductDetailPage: React.FC = () => {
   const [deliveryPincode, setDeliveryPincode] = useState('');
   const [deliveryInfo, setDeliveryInfo] = useState<{ date: string; cod: boolean } | null>(null);
   const [selectedDeliveryAddress, setSelectedDeliveryAddress] = useState<Address | null>(null);
-  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
-
-  useEffect(() => {
-    const loadProduct = async () => {
-      if (id) {
-        setIsLoading(true);
-        const fetchedProduct = await getProductById(Number(id));
-        if (fetchedProduct) {
-          setProduct(fetchedProduct);
-          const initialColor = fetchedProduct.colors?.[0] || null;
-          setSelectedColor(initialColor);
-
-          // Smart size selection: use color-specific size if available, else global
-          const availableSizes = (initialColor?.sizes && initialColor.sizes.length > 0)
-            ? initialColor.sizes.map(s => s.size)
-            : fetchedProduct.sizes;
-
-          setSelectedSize(availableSizes?.[0] || null);
-
-          setMainImage(initialColor?.images?.[0] || fetchedProduct.images?.[0] || '');
-          setQuantity(1);
-
-          // Fetch similar products
-          const { data: similarData } = await fetchProducts({ categoryId: fetchedProduct.category, limit: 5 });
-          setSimilarProducts(similarData.filter(p => p.id !== fetchedProduct.id));
-
-        } else {
-          // Handle product not found
-        }
-        setIsLoading(false);
-      }
-    };
-    loadProduct();
-  }, [id, getProductById, fetchProducts]);
 
   // Effect to set the initial delivery address for a logged-in user
   useEffect(() => {
@@ -385,16 +388,18 @@ const ProductDetailPage: React.FC = () => {
                 const discountPercentage = Math.round(((displayMrp - displayPrice) / displayMrp) * 100);
 
                 return (
-                  <div className="flex items-end gap-3 mt-2">
-                    <p className="text-4xl font-bold text-gray-900">₹{displayPrice}</p>
-                    {discountPercentage > 0 && (
-                      <>
-                        <p className="text-xl text-gray-400 line-through mb-1">₹{displayMrp}</p>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 mb-2">
-                          SAVE {discountPercentage}%
-                        </span>
-                      </>
-                    )}
+                  <div className="flex flex-col mt-2">
+                    <div className="flex items-end gap-3">
+                      <p className="text-4xl font-bold text-gray-900">₹{displayPrice}</p>
+                      {discountPercentage > 0 && (
+                        <>
+                          <p className="text-xl text-gray-400 line-through mb-1">₹{displayMrp}</p>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 mb-2">
+                            SAVE {discountPercentage}%
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 );
               })()}
@@ -420,24 +425,83 @@ const ProductDetailPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Size Selector */}
+              {/* Enhanced Variant Selector (Cards) */}
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-sm font-medium text-gray-900 uppercase tracking-wide">{product.variant_label || 'Size'}</h3>
-                  <button className="text-xs font-medium text-primary hover:underline">Size Guide</button>
+
                 </div>
 
-                <div className="flex flex-wrap gap-3">
-                  {currentAvailableSizes.length > 0 ? currentAvailableSizes.map(size => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`min-w-[3rem] h-12 px-4 rounded-lg text-sm font-semibold border transition-all duration-200 ${selectedSize === size ? 'bg-gray-900 text-white border-gray-900 shadow-md' : 'text-gray-700 border-gray-200 hover:border-gray-900'}`}
-                    >
-                      {size}
-                    </button>
-                  )) : (
-                    <p className="text-sm text-gray-500 italic">No sizes available for this color.</p>
+                <div className="flex overflow-x-auto pb-4 gap-3 no-scrollbar snap-x">
+                  {currentAvailableSizes.length > 0 ? (
+                    (() => {
+                      // Resolve full variant objects if possible
+                      const variantsToDisplay = selectedColor?.sizes || product.sizes.map(s => ({ size: s, price: undefined, mrp: undefined, image: undefined }));
+
+                      return variantsToDisplay.map((variantObj: any, idx) => {
+                        const sizeName = typeof variantObj === 'string' ? variantObj : variantObj.size;
+                        const isSelected = selectedSize === sizeName;
+                        const variantPrice = typeof variantObj !== 'string' ? variantObj.price : undefined;
+                        const variantImage = typeof variantObj !== 'string' ? variantObj.image : undefined;
+
+                        // Check availability if needed (though we show all usually)
+
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              setSelectedSize(sizeName);
+                              if (variantImage) {
+                                setMainImage(variantImage);
+                              } else {
+                                if (selectedColor?.images?.[0]) {
+                                  setMainImage(selectedColor.images[0]);
+                                } else if (product.images?.[0]) {
+                                  setMainImage(product.images[0]);
+                                }
+                              }
+                            }}
+                            className={`
+                              flex-shrink-0 snap-start
+                              relative flex flex-col items-center justify-between
+                              min-w-[5rem] md:min-w-[6rem] p-2 rounded-xl border-2 transition-all duration-200
+                              ${isSelected
+                                ? 'border-gray-900 bg-gray-50 ring-1 ring-gray-900 shadow-sm'
+                                : 'border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm'}
+                            `}
+                          >
+                            {/* Variant Image (Small) */}
+                            {variantImage ? (
+                              <div className="w-10 h-10 mb-2 rounded-md overflow-hidden bg-gray-100 border border-gray-100">
+                                <SupabaseImage
+                                  bucket={BUCKETS.PRODUCTS}
+                                  imagePath={variantImage}
+                                  alt={sizeName}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              // Fallback icon or spacer if no image specific to variant, 
+                              // maybe show nothing to keep it compact? Or show main image?
+                              // User asked for "small img". If missing, maybe just name/price.
+                              null
+                            )}
+
+                            <span className={`text-sm font-bold ${isSelected ? 'text-gray-900' : 'text-gray-700'}`}>
+                              {sizeName}
+                            </span>
+
+                            {/* Optional Variant Price */}
+                            {/* Only show if different/specific? Or always if available? User logic implies override. */}
+                            {variantPrice && (
+                              <span className="text-xs text-gray-500 font-medium mt-1">₹{variantPrice}</span>
+                            )}
+                          </button>
+                        );
+                      });
+                    })()
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No variants available.</p>
                   )}
                 </div>
               </div>

@@ -2,16 +2,16 @@
 import React, { useEffect, useState } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
-import ProfileSidebar from '../components/ProfileSidebar.tsx';
-import ProfileInformation from '../components/ProfileInformation.tsx';
-import ProfileCompletion from '../components/ProfileCompletion.tsx';
-import MyAddresses from '../components/MyAddresses.tsx';
-import MyOrders from '../components/MyOrders.tsx';
-import MyReturns from '../components/MyReturns.tsx';
-import MySavedItems from '../components/MySavedItems.tsx';
-import MyWishlist from '../components/MyWishlist.tsx';
-import HelpCenter from '../components/HelpCenter.tsx';
-import MyCoupons from '../components/MyCoupons.tsx';
+import ProfileSidebar from '../components/profile/ProfileSidebar';
+import ProfileInformation from '../components/profile/ProfileInformation';
+import ProfileCompletion from '../components/profile/ProfileCompletion';
+import MyAddresses from '../components/profile/MyAddresses';
+import MyOrders from '../components/profile/MyOrders';
+import MyReturns from '../components/profile/MyReturns';
+import MySavedItems from '../components/profile/MySavedItems';
+import MyWishlist from '../components/profile/MyWishlist';
+import HelpCenter from '../components/shared/HelpCenter';
+import MyCoupons from '../components/profile/MyCoupons';
 
 const ProfilePage: React.FC = () => {
   const { currentUser, isLoading } = useAppContext();

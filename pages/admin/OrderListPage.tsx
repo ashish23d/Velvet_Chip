@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext.tsx';
 import { Order, OrderStatus } from '../../types.ts';
 import EyeIcon from '../../components/icons/EyeIcon.tsx';
-import Pagination from '../../components/Pagination.tsx';
+import Pagination from '../../components/shared/Pagination';
+import { useAdminPaginatedOrders } from '../../services/api/admin.api.ts';
+import { supabase } from '../../services/supabaseClient.ts';
 
 const possibleNextStatuses: Record<OrderStatus, OrderStatus[]> = {
     'Processing': ['Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'],
@@ -19,8 +21,7 @@ const possibleNextStatuses: Record<OrderStatus, OrderStatus[]> = {
 };
 
 const OrderListPage: React.FC = () => {
-    const { adminData, adminBulkUpdateOrderStatus, generateInvoice, deliverySettings } = useAppContext();
-    const orders = adminData?.orders || [];
+    const { adminBulkUpdateOrderStatus, generateInvoice, deliverySettings } = useAppContext();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
@@ -45,6 +46,21 @@ const OrderListPage: React.FC = () => {
     const [isGenerating, setIsGenerating] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    // --- API Hook ---
+    const { data: ordersResponse, isLoading } = useAdminPaginatedOrders({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchTerm,
+        viewMode: viewMode,
+        storeCity: deliverySettings?.store_city || '',
+        statusFilter: statusFilter,
+    });
+
+    const orders = ordersResponse?.data || [];
+    const totalOrders = ordersResponse?.count || 0;
+    const totalPages = Math.ceil(totalOrders / itemsPerPage);
+
+    // --- Filter logic for Date (client-side) ---
     const filteredAndSortedOrders = useMemo(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -52,34 +68,7 @@ const OrderListPage: React.FC = () => {
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
 
-        // TRIM applied here to fix copy-paste issues
-        const lowerSearchTerm = searchTerm.trim().toLowerCase();
-        const storeCity = deliverySettings?.store_city?.toLowerCase() || '';
-
         let filtered = orders.filter(order => {
-            // 1. Tab/View Mode Filter
-            if (viewMode === 'pickup') {
-                if (order.delivery_type !== 'pickup') return false;
-            } else if (viewMode === 'local') {
-                // Local = Shipping City is Same as Store City AND not pickup (usually) OR include pickup? 
-                // User said: "if user from that city... see that strore pickup available... if order is from home town then see in orders tab under Local Order section"
-                // So Local Order = City Match.
-                const orderCity = order.shippingAddress?.city?.toLowerCase() || '';
-                // Flexible check: exact match or partial if data is messy
-                if (!orderCity || orderCity !== storeCity) return false;
-            }
-
-            const searchMatch =
-                (order.id && order.id.toLowerCase().includes(lowerSearchTerm)) ||
-                (order.customerName && order.customerName.toLowerCase().includes(lowerSearchTerm)) ||
-                (order.customerEmail && order.customerEmail.toLowerCase().includes(lowerSearchTerm)) ||
-                order.items.some(item => {
-                    const name = item.product?.name || (item as any).name;
-                    return name && name.toLowerCase().includes(lowerSearchTerm);
-                });
-
-            const statusMatch = statusFilter === 'all' || order.currentStatus.toLowerCase().replace(/\s+/g, '') === statusFilter;
-
             const orderDate = new Date(order.orderDate);
             orderDate.setHours(0, 0, 0, 0);
 
@@ -114,7 +103,7 @@ const OrderListPage: React.FC = () => {
                     break;
             }
 
-            return searchMatch && statusMatch && dateMatch;
+            return dateMatch;
         });
 
         const sorted = [...filtered].sort((a, b) => {
@@ -133,13 +122,7 @@ const OrderListPage: React.FC = () => {
 
         return sorted;
 
-    }, [orders, searchTerm, statusFilter, sortBy, dateFilter, customStartDate, customEndDate, viewMode, deliverySettings]);
-
-    // Pagination Logic
-    const totalPages = Math.ceil(filteredAndSortedOrders.length / itemsPerPage);
-    const indexOfLastOrder = currentPage * itemsPerPage;
-    const indexOfFirstOrder = indexOfLastOrder - itemsPerPage;
-    const currentOrders = filteredAndSortedOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+    }, [orders, sortBy, dateFilter, customStartDate, customEndDate]);
 
     // Reset pagination when filters change
     useEffect(() => {
@@ -355,7 +338,11 @@ const OrderListPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                            {currentOrders.map((order) => (
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={7} className="text-center py-8">Loading orders...</td>
+                                </tr>
+                            ) : filteredAndSortedOrders.map((order) => (
                                 <tr key={order.id} className={selectedOrders.includes(order.id) ? 'bg-primary/5' : ''}>
                                     <td className="p-4">
                                         <input
@@ -377,17 +364,29 @@ const OrderListPage: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                                         {order.invoice_number ? (
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-green-600 font-semibold">Generated</span>
-                                                <Link to={`/print/label/${order.id}`} target="_blank" className="text-xs text-gray-500 hover:underline">(Label)</Link>
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-green-600 font-semibold text-xs uppercase tracking-wider">Generated</span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <a 
+                                                        href={supabase.storage.from('site-assets').getPublicUrl(order.downloadable_invoice_url).data.publicUrl} 
+                                                        target="_blank" 
+                                                        rel="noreferrer"
+                                                        className="text-[10px] text-primary hover:underline font-medium"
+                                                    >
+                                                        View Invoice
+                                                    </a>
+                                                    <Link to={`/print/label/${order.id}`} target="_blank" className="text-[10px] text-gray-500 hover:underline">(Label)</Link>
+                                                </div>
                                             </div>
                                         ) : (
                                             <button
                                                 onClick={() => handleGenerateInvoice(order.id)}
                                                 disabled={isGenerating === order.id}
-                                                className="bg-gray-100 text-gray-700 text-xs py-1 px-2 rounded-md font-medium hover:bg-gray-200 disabled:bg-gray-300"
+                                                className="bg-primary/10 text-primary text-xs py-1.5 px-3 rounded-md font-bold hover:bg-primary/20 disabled:bg-gray-100 disabled:text-gray-400 border border-primary/20 transition-all uppercase tracking-tighter"
                                             >
-                                                {isGenerating === order.id ? '...' : 'Generate'}
+                                                {isGenerating === order.id ? 'Generating...' : 'Generate'}
                                             </button>
                                         )}
                                     </td>

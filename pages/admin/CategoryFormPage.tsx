@@ -111,7 +111,7 @@ const CategoryFormPage: React.FC = () => {
                             <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} className={inputClass} required />
                         </div>
                         <div>
-                            <label htmlFor="taxRate" className={labelClass}>Tax Rate (%)</label>
+                            <label htmlFor="taxRate" className={labelClass}>Applicable Tax Rate (%)</label>
                             <input
                                 type="number"
                                 id="taxRate"
@@ -121,14 +121,14 @@ const CategoryFormPage: React.FC = () => {
                                 min="0" max="100" step="0.01"
                                 placeholder="e.g. 18"
                             />
-                            <p className="text-xs text-gray-500 mt-1">Used if Global Tax Mode is set to 'Category'.</p>
+                            <p className="text-xs text-gray-500 mt-1">Default tax rate for products in this category. Can be overridden on individual products.</p>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className={labelClass}>Web Showcase Card Image</label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">This image appears on the website homepage.</p>
+                            <label className={labelClass}>Desktop Website Image</label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">Representative image for the website homepage and lists.</p>
                             <ImageUploader
                                 bucket={BUCKETS.CATEGORIES}
                                 pathPrefix={name || 'new-category'}
@@ -139,8 +139,8 @@ const CategoryFormPage: React.FC = () => {
                             />
                         </div>
                         <div>
-                            <label className={labelClass}>Category img for mobile</label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">Image displayed for this category in the mobile app (saved to <code>app_image_path</code>).</p>
+                            <label className={labelClass}>Mobile App Icon/Image</label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">Optimized image for mobile app navigation (saved to <code>app_image_path</code>).</p>
                             <ImageUploader
                                 bucket={BUCKETS.APP_ASSETS}
                                 pathPrefix={name ? `${name}/app-icon` : 'new-category/app-icon'}
@@ -155,11 +155,11 @@ const CategoryFormPage: React.FC = () => {
             </div>
 
             <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
-                <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">Category Page Hero</h3>
+                <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">Category Page Banner (Top Header)</h3>
                 <div className="space-y-6">
                     <div>
-                        <label className={labelClass}>Hero Media (Image/Video)</label>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">Media for the banner at the top of the category page. Videos under 5MB are recommended.</p>
+                        <label className={labelClass}>Banner Media (Image/Video)</label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-2">Large banner displayed at the top of the specific category page. Videos &lt; 5MB recommended.</p>
                         <ImageUploader
                             bucket={BUCKETS.CATEGORIES}
                             pathPrefix={`${name || 'new-category'}/page-hero`}
@@ -170,7 +170,7 @@ const CategoryFormPage: React.FC = () => {
                         />
                     </div>
                     <div>
-                        <label htmlFor="pageHeroText" className={labelClass}>Hero Text</label>
+                        <label htmlFor="pageHeroText" className={labelClass}>Banner Overlay Text</label>
                         <input type="text" id="pageHeroText" value={pageHeroText} onChange={e => setPageHeroText(e.target.value)} className={inputClass} placeholder="e.g. Explore our new Saree collection" />
                     </div>
                     <div className="flex items-center">

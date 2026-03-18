@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Review } from '../../types.ts';
 import { useAppContext } from '../../context/AppContext.tsx';
 import XIcon from '../icons/XIcon.tsx';
-import SupabaseImage from '../SupabaseImage.tsx';
+import SupabaseImage from '../shared/SupabaseImage';
 import TrashIcon from '../icons/TrashIcon.tsx';
 import { BUCKETS } from '../../constants.ts';
 

@@ -1,26 +1,27 @@
 import React, { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useAppContext } from '../../context/AppContext.tsx';
-import Avatar from '../../components/Avatar.tsx';
+import Avatar from '../../components/profile/Avatar';
+import { useAdminUserById, useAdminOrdersByUserId } from '../../services/api/admin.api';
 
 const UserDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const { adminData } = useAppContext();
-    
-    const user = useMemo(() => {
-        if (!adminData || !id) return undefined;
-        const foundUser = adminData.users.find(u => u.id === id);
-        if (!foundUser) return undefined;
-        // Attach orders to the user object
-        const userOrders = adminData.orders.filter(o => o.userId === id);
-        return { ...foundUser, orders: userOrders };
-    }, [id, adminData]);
+
+    const { data: user, isLoading: isUserLoading } = useAdminUserById(id);
+    const { data: userOrdersData, isLoading: isOrdersLoading } = useAdminOrdersByUserId(id);
+
+    if (isUserLoading || isOrdersLoading) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <p className="text-gray-500">Loading user details...</p>
+            </div>
+        );
+    }
 
     if (!user) {
         return <div className="text-center p-10">User not found.</div>;
     }
 
-    const userOrders = user.orders || [];
+    const userOrders = userOrdersData || [];
 
     return (
         <div className="space-y-8">
@@ -33,32 +34,32 @@ const UserDetailsPage: React.FC = () => {
                 {/* Left Column */}
                 <div className="lg:col-span-1 space-y-6">
                     <div className="bg-white p-6 rounded-lg shadow">
-                         <div className="flex flex-col items-center text-center">
+                        <div className="flex flex-col items-center text-center">
                             <Avatar user={user} className="h-24 w-24 rounded-full object-cover mb-4" />
                             <h2 className="text-xl font-bold text-gray-800">{user.name}</h2>
                             <p className="text-sm text-gray-500">{user.email || user.mobile}</p>
                             <span className={`mt-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.status === 'blocked' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                                 {user.status || 'Active'}
                             </span>
-                         </div>
+                        </div>
                     </div>
                     <div className="bg-white p-6 rounded-lg shadow">
-                         <h3 className="text-lg font-semibold text-gray-900 mb-4">Saved Addresses</h3>
-                         <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Saved Addresses</h3>
+                        <div className="space-y-4">
                             {(user.addresses && user.addresses.length > 0) ? user.addresses.map(addr => (
                                 <div key={addr.id} className="p-3 border rounded-md text-xs">
                                     <p className="font-bold">{addr.name} {addr.isDefault && <span className="text-green-600">(Default)</span>}</p>
                                     <p>{addr.address}, {addr.city}</p>
                                 </div>
                             )) : <p className="text-sm text-gray-500">No saved addresses.</p>}
-                         </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* Right Column */}
                 <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow">
-                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Order History</h3>
-                     <div className="overflow-x-auto">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Order History</h3>
+                    <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
@@ -76,16 +77,15 @@ const UserDetailsPage: React.FC = () => {
                                         <td className="px-4 py-3 text-sm text-gray-500">{new Date(order.orderDate).toLocaleDateString()}</td>
                                         <td className="px-4 py-3 text-sm font-semibold">₹{order.totalAmount}</td>
                                         <td className="px-4 py-3 text-sm">
-                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                 {
-                                                     Delivered: 'bg-green-100 text-green-800',
-                                                     Shipped: 'bg-blue-100 text-blue-800',
-                                                     'Out for Delivery': 'bg-blue-100 text-blue-800',
-                                                     Processing: 'bg-yellow-100 text-yellow-800',
-                                                     Cancelled: 'bg-red-100 text-red-800',
-                                                     'Cancelled by User': 'bg-red-100 text-red-800'
-                                                 }[order.currentStatus] || 'bg-gray-100 text-gray-800'
-                                             }`}>
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${{
+                                                    Delivered: 'bg-green-100 text-green-800',
+                                                    Shipped: 'bg-blue-100 text-blue-800',
+                                                    'Out for Delivery': 'bg-blue-100 text-blue-800',
+                                                    Processing: 'bg-yellow-100 text-yellow-800',
+                                                    Cancelled: 'bg-red-100 text-red-800',
+                                                    'Cancelled by User': 'bg-red-100 text-red-800'
+                                                }[order.currentStatus] || 'bg-gray-100 text-gray-800'
+                                                }`}>
                                                 {order.currentStatus}
                                             </span>
                                         </td>
@@ -100,7 +100,7 @@ const UserDetailsPage: React.FC = () => {
                                 )}
                             </tbody>
                         </table>
-                     </div>
+                    </div>
                 </div>
             </div>
         </div>

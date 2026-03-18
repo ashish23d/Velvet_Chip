@@ -1,7 +1,7 @@
 import React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext.tsx';
-import SupabaseMedia from '../SupabaseMedia.tsx';
+import SupabaseMedia from '../shared/SupabaseMedia';
 import { BUCKETS } from '../../constants.ts';
 
 const Logo: React.FC<{ className?: string }> = ({ className = "h-14 w-auto" }) => {

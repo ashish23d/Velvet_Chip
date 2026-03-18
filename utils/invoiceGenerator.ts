@@ -3,7 +3,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
-import { Order, SiteSettings, ContactDetails } from '../types.ts';
+import { Order, SiteSettings, ContactDetails, DeliverySettings } from '../types.ts';
 import { supabase } from '../services/supabaseClient.ts';
 import { BUCKETS } from '../constants.ts';
 
@@ -56,30 +56,34 @@ function generateBarcodeDataUrl(text: string): string {
 export const generateInvoicePDF = async (
     order: Order,
     siteSettings: SiteSettings | null,
-    contactDetails: ContactDetails
+    contactDetails: ContactDetails,
+    deliverySettings: DeliverySettings | null
 ): Promise<GenerateInvoiceResult> => {
     const doc = new jsPDF();
 
     const invoiceNumber = order.invoice_number || `INV-${new Date().getFullYear()}-${order.id.slice(-6).toUpperCase()}`;
     const packetId = `PKT-${Date.now()}`;
 
-    const subtotal = order.items.reduce((acc, item: any) => {
+    const items = Array.isArray(order.items) ? order.items : [];
+    const subtotal = items.reduce((acc, item: any) => {
         const price = item.product?.price || item.price || 0;
         return acc + (price * item.quantity);
     }, 0);
+    const isPickup = order.delivery_type === 'pickup';
+    const baseCharge = deliverySettings?.base_charge ?? 50;
+    const freeThreshold = deliverySettings?.free_delivery_threshold ?? 499;
+    const shippingCharge = (isPickup || subtotal >= freeThreshold) ? 0 : baseCharge;
+
     const taxRate = 0.18;
     const taxableValue = subtotal / (1 + taxRate);
     const totalTax = subtotal - taxableValue;
 
-    // --- Header ---
     // Load Logo
     try {
         if (siteSettings?.activeLogoPath) {
-            const { data: logoData } = supabase.storage.from(BUCKETS.SITE_ASSETS).getPublicUrl(siteSettings.activeLogoPath);
-            // Using a simple fetch to get the blob, assuming CORS allows it or it is same-origin enough for Supabase
-            const imgResp = await fetch(logoData.publicUrl).catch(() => null);
-            if (imgResp && imgResp.ok) {
-                const imgBuffer = await imgResp.arrayBuffer();
+            const { data, error } = await supabase.storage.from(BUCKETS.SITE_ASSETS).download(siteSettings.activeLogoPath);
+            if (data && !error) {
+                const imgBuffer = await data.arrayBuffer();
                 const imgUint8 = new Uint8Array(imgBuffer);
                 let binary = '';
                 for (let i = 0; i < imgUint8.length; i++) binary += String.fromCharCode(imgUint8[i]);
@@ -87,10 +91,12 @@ export const generateInvoicePDF = async (
                 const ext = siteSettings.activeLogoPath.split('.').pop()?.toLowerCase();
                 const format = ext === 'png' ? 'PNG' : 'JPEG';
                 doc.addImage(logoBase64, format, 15, 15, 50, 15, undefined, 'FAST');
+            } else if (error) {
+                console.warn("Storage download error for logo:", error);
             }
         }
     } catch (e) {
-        console.warn("Warning: Could not load logo for invoice.", e);
+        console.warn("Warning: Could not load logo for invoice via storage download.", e);
     }
 
     // Invoice Title
@@ -122,11 +128,11 @@ export const generateInvoicePDF = async (
     doc.setFontSize(10);
     doc.text("Awaany Fashions", 15, startY + 5);
 
-    const sellerAddrLines = doc.splitTextToSize(contactDetails.address, 80);
+    const sellerAddrLines = doc.splitTextToSize(contactDetails?.address || 'N/A', 80);
     doc.text(sellerAddrLines, 15, startY + 10);
     let currentY = startY + 10 + (sellerAddrLines.length * 4);
     doc.text(`GSTIN: 27AABCU9603R1ZM`, 15, currentY + 5);
-    doc.text(`Email: ${contactDetails.email}`, 15, currentY + 10);
+    doc.text(`Email: ${contactDetails?.email || 'N/A'}`, 15, currentY + 10);
 
     // Bill To
     doc.setFont("helvetica", "bold");
@@ -134,22 +140,30 @@ export const generateInvoicePDF = async (
     doc.text("Bill To:", 110, startY);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    const customerName = order.customerName || order.shippingAddress.name || 'Customer';
+
+    // Safely extract shipping details
+    const shipping = order.shippingAddress || {} as any;
+    const customerName = order.customerName || shipping.name || 'Customer';
     doc.text(customerName, 110, startY + 5);
 
-    const buyerAddr = `${order.shippingAddress.address}, ${order.shippingAddress.locality}, ${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.pincode}`;
+    const addressParts = [shipping.address, shipping.locality, shipping.city, shipping.state].filter(Boolean);
+    const buyerAddr = addressParts.length > 0
+        ? `${addressParts.join(', ')} - ${shipping.pincode || ''}`
+        : 'Address not provided';
+
     const buyerAddrLines = doc.splitTextToSize(buyerAddr, 80);
     doc.text(buyerAddrLines, 110, startY + 10);
     const buyerY = startY + 10 + (buyerAddrLines.length * 4);
-    doc.text(`Phone: ${order.shippingAddress.mobile}`, 110, buyerY + 5);
+    doc.text(`Phone: ${shipping.mobile || 'N/A'}`, 110, buyerY + 5);
 
     // --- Items Table ---
     const tableStartY = Math.max(currentY + 15, buyerY + 15);
 
-    const tableData = order.items.map((item: any, index: number) => {
+    const tableData = items.map((item: any, index: number) => {
         const name = item.product?.name || item.name || 'Unknown Product';
         const hsn = item.product?.hsnCode || 'N/A';
-        const price = item.product?.price || item.price || 0;
+        const price = Number(item.product?.price || item.price || 0);
+        const qty = Number(item.quantity || 1);
         const colorName = item.selectedColor?.name || item.selectedColor || '';
         const size = item.selectedSize || '';
 
@@ -157,16 +171,16 @@ export const generateInvoicePDF = async (
             index + 1,
             `${name}\nSize: ${size} | Color: ${colorName}`,
             hsn,
-            item.quantity,
+            qty,
             formatCurrency(price / 1.18).replace('INR ', ''),
-            formatCurrency(price * item.quantity).replace('INR ', '')
+            formatCurrency(price * qty).replace('INR ', '')
         ];
     });
 
     autoTable(doc, {
         startY: tableStartY,
         head: [['#', 'Item Description', 'HSN', 'Qty', 'Taxable Rate', 'Total']],
-        body: tableData,
+        body: tableData.length > 0 ? tableData : [['', 'No items found', '', '', '', '']],
         theme: 'grid',
         headStyles: { fillColor: siteSettings?.primaryColor || '#C22255' },
         styles: { fontSize: 9, cellPadding: 3, valign: 'middle' },
@@ -181,8 +195,10 @@ export const generateInvoicePDF = async (
     });
 
     // --- Totals ---
-    // @ts-ignore
-    let finalY = doc.lastAutoTable.finalY + 10;
+    // Safely get the final Y position after the table
+    const lastAutoTable = (doc as any).lastAutoTable;
+    let finalY = lastAutoTable && lastAutoTable.finalY ? lastAutoTable.finalY + 10 : tableStartY + 30;
+
     if (finalY > 250) {
         doc.addPage();
         finalY = 20;
@@ -202,7 +218,7 @@ export const generateInvoicePDF = async (
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.text("Grand Total:", totalsX, finalY);
-    doc.text(formatCurrency(order.totalAmount), valuesX, finalY, { align: "right" });
+    doc.text(formatCurrency(Number(order.totalAmount || 0)), valuesX, finalY, { align: "right" });
 
     // --- QR Code ---
     try {

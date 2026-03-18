@@ -5,7 +5,7 @@ import { useAppContext } from '../context/AppContext.tsx';
 import { supabase } from '../services/supabaseClient.ts';
 import Logo from '../components/icons/Logo.tsx';
 import GoogleIcon from '../components/icons/GoogleIcon.tsx';
-import SupabaseImage from '../components/SupabaseImage.tsx';
+import SupabaseImage from '../components/shared/SupabaseImage';
 import { BUCKETS, SITE_ASSETS } from '../constants.ts';
 
 const LoginPage: React.FC = () => {

@@ -28,14 +28,14 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY');
 
     if (!projectUrl || !serviceRoleKey) {
-        console.error("[send-order-confirmation] Error: Missing PROJECT_URL or SERVICE_ROLE_KEY secrets.");
-        throw new Error("Supabase credentials are not configured correctly in function secrets.");
+      console.error("[send-order-confirmation] Error: Missing PROJECT_URL or SERVICE_ROLE_KEY secrets.");
+      throw new Error("Supabase credentials are not configured correctly in function secrets.");
     }
     console.log("[send-order-confirmation] Supabase credentials found.");
 
     const supabaseAdmin = createClient(projectUrl, serviceRoleKey);
     console.log("[send-order-confirmation] Supabase admin client created.");
-    
+
     // 1. Fetch Order and User data
     console.log(`[send-order-confirmation] Fetching order data for orderId: ${orderId}`);
     const { data: orderResult, error: orderError } = await supabaseAdmin
@@ -46,7 +46,7 @@ serve(async (req) => {
 
     if (orderError) throw orderError;
     console.log('[send-order-confirmation] Order data fetched successfully.');
-    
+
     // FIX: Map snake_case from DB to camelCase for application logic
     const order: Order = {
       id: orderResult.id,
@@ -64,20 +64,22 @@ serve(async (req) => {
     };
 
     if (!order.customerEmail) {
-        console.error(`[send-order-confirmation] No customer email found for order ${orderId}.`);
-        throw new Error(`Customer email not found for order ${orderId}`);
+      console.error(`[send-order-confirmation] No customer email found for order ${orderId}.`);
+      throw new Error(`Customer email not found for order ${orderId}`);
     }
 
-    // 2. Fetch the Email Template
-    console.log('[send-order-confirmation] Fetching "Order Successful" email template.');
-    const { data: templateData, error: templateError } = await supabaseAdmin
-      .from('mail_templates')
-      .select('subject, html_content')
-      .eq('name', 'Order Successful')
-      .single();
+    // 2. Fetch the Email Template and Delivery Settings
+    console.log('[send-order-confirmation] Fetching email template and delivery settings.');
+    const [templateResult, deliveryResult] = await Promise.all([
+      supabaseAdmin.from('mail_templates').select('subject, html_content').eq('name', 'Order Successful').single(),
+      supabaseAdmin.from('delivery_settings').select('base_charge, free_delivery_threshold').single()
+    ]);
 
-    if (templateError || !templateData) throw new Error('Could not find "Order Successful" email template.');
-    console.log('[send-order-confirmation] Email template fetched.');
+    if (templateResult.error || !templateResult.data) throw new Error('Could not find "Order Successful" email template.');
+    const templateData = templateResult.data;
+    const deliverySettings = deliveryResult.data;
+
+    console.log('[send-order-confirmation] Email template and delivery settings fetched.');
 
     // 3. Dynamically generate the item list HTML
     console.log('[send-order-confirmation] Generating item list HTML.');
@@ -103,13 +105,18 @@ serve(async (req) => {
       </tr>
     `).join('')}</tbody>`;
     console.log('[send-order-confirmation] Item list HTML generated.');
-    
+
     // 4. Replace all placeholders
     console.log('[send-order-confirmation] Replacing placeholders in template.');
     const subtotal = order.items.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-    const shipping = subtotal > 499 ? 0 : 50;
+
+    const isPickup = orderResult.delivery_type === 'pickup';
+    const baseCharge = deliverySettings?.base_charge ?? 50;
+    const freeThreshold = deliverySettings?.free_delivery_threshold ?? 499;
+    const shipping = (isPickup || subtotal >= freeThreshold) ? 0 : baseCharge;
+
     const promoDiscount = order.promotionCode ? (subtotal + shipping - order.totalAmount) : 0;
-    
+
     let finalHtml = templateData.html_content
       .replaceAll('{{customer_name}}', order.shippingAddress.name)
       .replaceAll('{{order_id}}', order.id)
@@ -131,7 +138,7 @@ serve(async (req) => {
     const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY');
     if (!SENDGRID_API_KEY) throw new Error("SENDGRID_API_KEY is not set in function secrets.");
     console.log('[send-order-confirmation] SendGrid API Key found.');
-    
+
     const emailPayload = {
       personalizations: [{
         to: [{ email: order.customerEmail }],
@@ -155,9 +162,9 @@ serve(async (req) => {
     });
 
     if (!res.ok) {
-        const errorBody = await res.text();
-        console.error(`[send-order-confirmation] SendGrid API Error: ${res.statusText} - ${errorBody}`);
-        throw new Error(`SendGrid API error: ${res.statusText} - ${errorBody}`);
+      const errorBody = await res.text();
+      console.error(`[send-order-confirmation] SendGrid API Error: ${res.statusText} - ${errorBody}`);
+      throw new Error(`SendGrid API error: ${res.statusText} - ${errorBody}`);
     }
     console.log('[send-order-confirmation] Email sent successfully via SendGrid.');
 

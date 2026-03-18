@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { UserProfile } from '../../types.ts';
 import { useAppContext } from '../../context/AppContext.tsx';
-import Avatar from '../Avatar.tsx';
+import Avatar from '../profile/Avatar';
 import PencilIcon from '../icons/PencilIcon.tsx';
 import LockClosedIcon from '../icons/LockClosedIcon.tsx';
 import LockOpenIcon from '../icons/LockOpenIcon.tsx';

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import Breadcrumb from '../../components/Breadcrumb';
+import Breadcrumb from '../../components/layout/Breadcrumb';
 import { MasterLocation, ServiceableRule } from '../../types';
 
 const DeliverySettingsPage: React.FC = () => {
@@ -14,6 +14,8 @@ const DeliverySettingsPage: React.FC = () => {
     const [storeCity, setStoreCity] = useState('');
     const [storeState, setStoreState] = useState('');
     const [storeAddress, setStoreAddress] = useState('');
+    const [baseCharge, setBaseCharge] = useState(50);
+    const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(499);
 
     // --- Browser State ---
     const [allStates, setAllStates] = useState<string[]>([]);
@@ -58,6 +60,8 @@ const DeliverySettingsPage: React.FC = () => {
             setStoreCity(deliverySettings.store_city || '');
             setStoreState(deliverySettings.store_state || '');
             setStoreAddress(deliverySettings.store_address || '');
+            setBaseCharge(deliverySettings.base_charge ?? 50);
+            setFreeDeliveryThreshold(deliverySettings.free_delivery_threshold ?? 499);
         }
     }, [deliverySettings]);
 
@@ -83,7 +87,9 @@ const DeliverySettingsPage: React.FC = () => {
             is_all_india_serviceable: isAllIndia,
             store_city: storeCity,
             store_state: storeState,
-            store_address: storeAddress
+            store_address: storeAddress,
+            base_charge: baseCharge,
+            free_delivery_threshold: freeDeliveryThreshold
         });
         alert("Settings Saved!");
     };
@@ -108,15 +114,21 @@ const DeliverySettingsPage: React.FC = () => {
 
     const toggleState = async (stateVal: string, currentStatus: boolean, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (currentStatus) {
-            const rule = serviceableRules.find(r => r.rule_type === 'state' && r.value === stateVal);
-            if (rule) await removeServiceableRule(rule.id, true);
-        } else {
-            await addServiceableRule({
-                rule_type: 'state',
-                value: stateVal,
-                is_allowed: true
-            });
+        try {
+            if (currentStatus) {
+                const rule = serviceableRules.find(r => r.rule_type === 'state' && r.value === stateVal);
+                if (rule) await removeServiceableRule(rule.id, true);
+            } else {
+                await addServiceableRule({
+                    rule_type: 'state',
+                    value: stateVal,
+                    is_allowed: true,
+                    parent_value: null // Ensuring parent_value is passed as null if required
+                });
+            }
+        } catch (error: any) {
+            console.error("State Toggle Error:", error);
+            alert("Failed to toggle state: " + error.message);
         }
     };
 
@@ -126,16 +138,21 @@ const DeliverySettingsPage: React.FC = () => {
             alert(`This city is enabled because the entire state of ${parentState} is enabled. Uncheck the State to manage individual cities.`);
             return;
         }
-        if (currentStatus) {
-            const rule = serviceableRules.find(r => r.rule_type === 'city' && r.value === cityVal && r.parent_value === parentState);
-            if (rule) await removeServiceableRule(rule.id, true);
-        } else {
-            await addServiceableRule({
-                rule_type: 'city',
-                value: cityVal,
-                parent_value: parentState,
-                is_allowed: true
-            });
+        try {
+            if (currentStatus) {
+                const rule = serviceableRules.find(r => r.rule_type === 'city' && r.value === cityVal && r.parent_value === parentState);
+                if (rule) await removeServiceableRule(rule.id, true);
+            } else {
+                await addServiceableRule({
+                    rule_type: 'city',
+                    value: cityVal,
+                    parent_value: parentState,
+                    is_allowed: true
+                });
+            }
+        } catch (error: any) {
+            console.error("City Toggle Error:", error);
+            alert("Failed to toggle city: " + error.message);
         }
     };
 
@@ -214,7 +231,31 @@ const DeliverySettingsPage: React.FC = () => {
                         />
                         <p className="text-xs text-gray-500 mt-1">Used for "Local Order" detection.</p>
                     </div>
-                    <div className="flex items-center gap-4 mt-6 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                    <div>
+                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Base Shipping Charge (₹)</label>
+                        <input
+                            type="number"
+                            placeholder="e.g. 50"
+                            className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-primary focus:border-primary"
+                            value={baseCharge}
+                            onChange={e => setBaseCharge(Number(e.target.value))}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Default delivery fee.</p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Free Delivery Threshold (₹)</label>
+                        <input
+                            type="number"
+                            placeholder="e.g. 499"
+                            className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-primary focus:border-primary"
+                            value={freeDeliveryThreshold}
+                            onChange={e => setFreeDeliveryThreshold(Number(e.target.value))}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Set to 0 for Free Shipping on everything.</p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="flex items-center gap-4 mt-2 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                         <input
                             type="checkbox"
                             id="allIndia"

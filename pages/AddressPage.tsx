@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { Address } from '../types.ts';
-import AddressForm from '../components/AddressForm.tsx';
-import OrderSummary from '../components/OrderSummary.tsx';
+import AddressForm from '../components/checkout/AddressForm';
+import OrderSummary from '../components/checkout/OrderSummary';
 import PlusIcon from '../components/icons/PlusIcon.tsx';
 import PencilIcon from '../components/icons/PencilIcon.tsx';
 

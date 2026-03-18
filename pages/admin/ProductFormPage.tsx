@@ -8,7 +8,7 @@ import { Product } from '../../types.ts';
 const ProductFormPage: React.FC = () => {
   const { id } = ReactRouterDOM.useParams<{ id: string }>();
   const navigate = ReactRouterDOM.useNavigate();
-  const { getProductById, addProduct, updateProduct, categories } = useAppContext();
+  const { getProductById, addProduct, updateProduct, categories, taxSettings } = useAppContext();
 
   const isEditing = Boolean(id);
   const [productToEdit, setProductToEdit] = useState<Product | undefined>();
@@ -105,6 +105,7 @@ const ProductFormPage: React.FC = () => {
           onSave={handleSave}
           onCancel={handleCancel}
           isSaving={isSaving}
+          taxSettings={taxSettings}
         />
       ) : (
         !isLoading && <div>Product not found.</div>

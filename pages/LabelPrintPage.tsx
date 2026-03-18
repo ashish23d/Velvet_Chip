@@ -2,7 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { ArrowLeftIcon, PrinterIcon } from '@heroicons/react/24/outline';
-import ShippingLabel from '../components/ShippingLabel.tsx';
+import ShippingLabel from '../components/checkout/ShippingLabel';
 
 const LabelPrintPage: React.FC = () => {
     const { orderId } = useParams<{ orderId: string }>();

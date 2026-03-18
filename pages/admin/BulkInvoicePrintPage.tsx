@@ -2,14 +2,19 @@
 import React, { useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext.tsx';
-import InvoiceTemplate from '../../components/InvoiceTemplate.tsx';
-import ShippingLabel from '../../components/ShippingLabel.tsx';
+import InvoiceTemplate from '../../components/checkout/InvoiceTemplate';
+import ShippingLabel from '../../components/checkout/ShippingLabel';
 import { ArrowLeftIcon, PrinterIcon } from '@heroicons/react/24/outline';
+import { useAdminAllOrders, useAdminAllInvoices } from '../../services/api/admin.api';
+import { usePromotions } from '../../services/api/promotions.api';
 
 const BulkInvoicePrintPage: React.FC = () => {
     const [searchParams] = useSearchParams();
-    const { adminData, siteSettings, contactDetails } = useAppContext();
-    
+    const { siteSettings, contactDetails } = useAppContext();
+    const { data: allOrdersData } = useAdminAllOrders();
+    const { data: allInvoicesData } = useAdminAllInvoices();
+    const { data: promotionsData } = usePromotions();
+
     const orderIds = useMemo(() => {
         const ids = searchParams.get('ids');
         return ids ? ids.split(',') : [];
@@ -18,17 +23,16 @@ const BulkInvoicePrintPage: React.FC = () => {
     const mode = searchParams.get('mode') === 'label' ? 'label' : 'invoice';
 
     const itemsToPrint = useMemo(() => {
-        if (!adminData) return [];
-        const orders = adminData.orders.filter(o => orderIds.includes(o.id));
-        const invoices = adminData.invoices;
-        const promotions = adminData.promotions;
+        if (!allOrdersData || !allInvoicesData) return [];
+        const orders = allOrdersData.filter(o => orderIds.includes(o.id));
+        const promotions = promotionsData || [];
 
         return orders.map(order => ({
             order,
-            invoiceData: invoices.find(inv => inv.order_id === order.id),
+            invoiceData: allInvoicesData.find(inv => inv.order_id === order.id),
             promotions
         }));
-    }, [adminData, orderIds]);
+    }, [allOrdersData, allInvoicesData, orderIds, promotionsData]);
 
     useEffect(() => {
         // Auto-print after a short delay to ensure rendering of images/barcodes
@@ -46,7 +50,7 @@ const BulkInvoicePrintPage: React.FC = () => {
 
     return (
         <div className="bg-gray-100 min-h-screen">
-             <style>{`
+            <style>{`
                 @media print {
                   .no-print { display: none !important; }
                   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; margin: 0; }
@@ -74,15 +78,15 @@ const BulkInvoicePrintPage: React.FC = () => {
                   .last-item { break-after: auto; page-break-after: auto; }
                 }
             `}</style>
-            
+
             <div className="no-print p-4 bg-white shadow-sm sticky top-0 z-10 flex justify-between items-center">
                 <Link to="/admin/invoices" className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-primary">
                     <ArrowLeftIcon className="w-4 h-4" /> Back to Invoices
                 </Link>
                 <div className="flex items-center gap-4">
-                     <span className="text-sm text-gray-500">{itemsToPrint.length} {mode === 'label' ? 'Labels' : 'Invoices'} selected</span>
-                     <button onClick={() => window.print()} className="flex items-center gap-2 bg-primary text-white py-2 px-4 rounded-md font-medium hover:bg-pink-700">
-                        <PrinterIcon className="w-5 h-5"/> Print All
+                    <span className="text-sm text-gray-500">{itemsToPrint.length} {mode === 'label' ? 'Labels' : 'Invoices'} selected</span>
+                    <button onClick={() => window.print()} className="flex items-center gap-2 bg-primary text-white py-2 px-4 rounded-md font-medium hover:bg-pink-700">
+                        <PrinterIcon className="w-5 h-5" /> Print All
                     </button>
                 </div>
             </div>
@@ -90,7 +94,7 @@ const BulkInvoicePrintPage: React.FC = () => {
             <div className={`mx-auto ${mode === 'label' ? 'max-w-md p-4' : 'max-w-4xl p-8'}`}>
                 {itemsToPrint.map(({ order, invoiceData, promotions }, index) => {
                     const isLast = index === itemsToPrint.length - 1;
-                    
+
                     if (mode === 'label') {
                         return (
                             <div key={order.id} className={`label-page-container mb-8 border border-gray-300 bg-white shadow-sm mx-auto ${isLast ? 'last-item' : ''}`}>
@@ -101,7 +105,7 @@ const BulkInvoicePrintPage: React.FC = () => {
 
                     return (
                         <div key={order.id} className={`invoice-container mb-8 ${isLast ? 'last-item' : ''}`}>
-                            <InvoiceTemplate 
+                            <InvoiceTemplate
                                 order={order}
                                 promotions={promotions}
                                 siteSettings={siteSettings}

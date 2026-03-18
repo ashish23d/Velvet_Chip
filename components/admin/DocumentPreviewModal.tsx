@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Order, Promotion, SiteSettings, ContactDetails, Invoice } from '../../types.ts';
-import InvoiceTemplate from '../InvoiceTemplate.tsx';
-import ShippingLabel from '../ShippingLabel.tsx';
+import InvoiceTemplate from '../checkout/InvoiceTemplate';
+import ShippingLabel from '../checkout/ShippingLabel';
 import XIcon from '../icons/XIcon.tsx';
 import { PrinterIcon, DocumentTextIcon, TagIcon } from '@heroicons/react/24/outline';
 

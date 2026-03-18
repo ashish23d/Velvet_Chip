@@ -108,7 +108,97 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
     }
   }, [productToEdit]);
 
-  // ... (keeping other handlers) ...
+  const removeTag = (tag: string) => setTags(prev => prev.filter(t => t !== tag));
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const tag = tagInput.trim().replace(/^,|,$/g, '');
+      if (tag && !tags.includes(tag)) {
+        setTags(prev => [...prev, tag]);
+      }
+      setTagInput('');
+    }
+  };
+
+  const addColorVariant = () => {
+    setColorVariants(prev => [
+      ...prev,
+      {
+        id: `new-${Date.now()}`,
+        name: '',
+        hex: '#FFFFFF',
+        uuid: generateUUID(),
+        images: [],
+        sizes: [{ size: 'S', stock: 10 }]
+      }
+    ]);
+  };
+
+  const handleColorChange = (id: string, field: keyof ColorVariant, value: any) => {
+    setColorVariants(prev => prev.map(cv => cv.id === id ? { ...cv, [field]: value } : cv));
+  };
+
+  const removeColorVariant = (id: string) => {
+    setColorVariants(prev => prev.filter(cv => cv.id !== id));
+  };
+
+  const handleSizeChange = (colorId: string, sizeIndex: number, field: keyof Variant, value: any) => {
+    setColorVariants(prev => prev.map(cv => {
+      if (cv.id !== colorId) return cv;
+      const newSizes = [...cv.sizes];
+      newSizes[sizeIndex] = { ...newSizes[sizeIndex], [field]: value };
+      return { ...cv, sizes: newSizes };
+    }));
+  };
+
+  const removeSizeFromColor = (colorId: string, sizeIndex: number) => {
+    setColorVariants(prev => prev.map(cv => {
+      if (cv.id !== colorId) return cv;
+      return { ...cv, sizes: cv.sizes.filter((_, idx) => idx !== sizeIndex) };
+    }));
+  };
+
+  const addSizeToColor = (colorId: string) => {
+    setColorVariants(prev => prev.map(cv => {
+      if (cv.id !== colorId) return cv;
+      return { ...cv, sizes: [...cv.sizes, { size: '', stock: 0 }] };
+    }));
+  };
+
+  const handleImageUploadSuccess = (colorId: string, publicId: string) => {
+    setColorVariants(prev => prev.map(cv => {
+      if (cv.id !== colorId) return cv;
+      return { ...cv, images: [...cv.images, publicId] };
+    }));
+  };
+
+  const handleImageRemove = (colorId: string, publicId: string) => {
+    setColorVariants(prev => prev.map(cv => {
+      if (cv.id !== colorId) return cv;
+      return { ...cv, images: cv.images.filter(img => img !== publicId) };
+    }));
+  };
+
+  const addCustomizationOption = () => {
+    setCustomizationOptions(prev => [
+      ...prev,
+      { id: generateUUID(), label: '', type: 'text', options: [], required: false }
+    ]);
+  };
+
+  const updateCustomizationOption = (id: string, field: keyof CustomizationOption, value: any) => {
+    setCustomizationOptions(prev => prev.map(opt => opt.id === id ? { ...opt, [field]: value } : opt));
+  };
+
+  const removeCustomizationOption = (id: string) => {
+    setCustomizationOptions(prev => prev.filter(opt => opt.id !== id));
+  };
+
+  const handleOptionValuesChange = (id: string, value: string) => {
+    const options = value.split(',').map(opt => opt.trim()).filter(Boolean);
+    updateCustomizationOption(id, 'options', options);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

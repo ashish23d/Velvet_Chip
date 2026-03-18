@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { Order, UserProfile } from '../../types.ts';
-import SupabaseImage from '../SupabaseImage.tsx';
-import Avatar from '../Avatar.tsx';
+import SupabaseImage from '../shared/SupabaseImage';
+import Avatar from '../profile/Avatar';
 import { BUCKETS } from '../../constants.ts';
 
 interface RecentActivityProps {
@@ -47,7 +47,7 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ item }) => {
                 </div>
                 <div className="flex-1">
                     <p className="text-sm text-gray-800">
-                        New order <span className="font-semibold text-primary">#{item.id.slice(-6)}</span> from {item.shippingAddress.name}.
+                        New order <span className="font-semibold text-primary">#{item.id?.slice(-6) || '...'}</span> from {item.shippingAddress?.name || 'Unknown'}.
                     </p>
                     <p className="text-xs text-gray-500">{formatTimeAgo(item.timestamp)}</p>
                 </div>

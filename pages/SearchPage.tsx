@@ -2,10 +2,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
-import ProductCard from '../components/ProductCard.tsx';
+import ProductCard from '../components/product/ProductCard';
 import { Product } from '../types.ts';
-import FilterSidebar from '../components/FilterSidebar.tsx';
-import MobileFilterSortSheet from '../components/MobileFilterSortSheet.tsx';
+import FilterSidebar from '../components/search/FilterSidebar';
+import MobileFilterSortSheet from '../components/search/MobileFilterSortSheet';
 import AdjustmentsHorizontalIcon from '../components/icons/AdjustmentsHorizontalIcon.tsx';
 import ArrowsUpDownIcon from '../components/icons/ArrowsUpDownIcon.tsx';
 

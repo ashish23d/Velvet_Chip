@@ -19,9 +19,9 @@ export interface ContactDetails {
 export type OrderStatus = 'Processing' | 'Shipped' | 'Out for Delivery' | 'Delivered' | 'Cancelled' | 'Cancelled by User' | 'Return Requested' | 'Return Approved';
 
 export interface StatusUpdate {
-    status: OrderStatus;
-    timestamp: string;
-    description: string;
+  status: OrderStatus;
+  timestamp: string;
+  description: string;
 }
 
 export interface Address {
@@ -99,4 +99,10 @@ export interface UserProfile {
   id: string;
   name: string;
   email?: string;
+}
+
+export interface DeliverySettings {
+  id: number;
+  base_charge?: number;
+  free_delivery_threshold?: number;
 }

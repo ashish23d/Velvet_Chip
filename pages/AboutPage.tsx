@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import SupabaseImage from '../components/SupabaseImage.tsx';
+import SupabaseImage from '../components/shared/SupabaseImage';
 import { SparklesIcon, TruckIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 import { BUCKETS } from '../constants.ts';
 import { useAppContext } from '../context/AppContext.tsx';

@@ -2,8 +2,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
-import OrderTracker from '../components/OrderTracker.tsx';
-import SupabaseImage from '../components/SupabaseImage.tsx';
+import OrderTracker from '../components/order/OrderTracker';
+import SupabaseImage from '../components/shared/SupabaseImage';
 import { BUCKETS } from '../constants.ts';
 import {
     ArrowDownTrayIcon,
@@ -13,15 +13,17 @@ import {
     ChevronLeftIcon,
     ShoppingBagIcon
 } from '@heroicons/react/24/outline';
-import HelpModal from '../components/HelpModal.tsx';
+import HelpModal from '../components/shared/HelpModal';
 import { supabase } from '../services/supabaseClient.ts';
 import { CartItem } from '../types.ts';
+import { useUserOrders, useUserReturns } from '../services/api/user.api.ts';
+import { usePromotions } from '../services/api/promotions.api';
+import CancellationReasonModal from '../components/order/CancellationReasonModal';
 
 const UserOrderDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const {
         currentUser,
-        getAllPromotions,
         openReviewModal,
         products,
         userCancelOrder,
@@ -33,9 +35,15 @@ const UserOrderDetailsPage: React.FC = () => {
     } = useAppContext();
 
     const order = getOrderById(id);
+    const { data: promotionsData } = usePromotions();
     const [liveOrder, setLiveOrder] = useState(order);
     const [isDownloading, setIsDownloading] = useState(false);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [isCancellationModalOpen, setIsCancellationModalOpen] = useState(false);
+    const [isCancelling, setIsCancelling] = useState(false);
+
+    const { data: userOrders = [] } = useUserOrders(currentUser?.id);
+    const { data: userReturns = [] } = useUserReturns(currentUser?.id);
 
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
@@ -48,16 +56,35 @@ const UserOrderDetailsPage: React.FC = () => {
 
         // Fallback: If order is not found in context (e.g. direct link or refresh), fetch it directly
         const fetchOrderDirectly = async () => {
+            // Check local userOrders first for faster load
+            const existingOrder = userOrders.find(o => o.id === id);
+            if (existingOrder) {
+                setLiveOrder(existingOrder);
+                return;
+            }
+
             if (!order && !isLoading) {
                 setIsLoadingDetails(true);
                 const { data, error } = await supabase
                     .from('orders')
-                    .select('*, items(*, product:products(*))') // Fetch nested items and products
+                    .select('*') // Items are JSONB, already included in '*'
                     .eq('id', id)
                     .single();
 
                 if (data) {
-                    setLiveOrder(data);
+                    // Map snake_case to camelCase for robustness
+                    setLiveOrder({
+                        ...data,
+                        items: data.items || [],
+                        currentStatus: data.current_status || 'Pending',
+                        statusHistory: data.status_history || [],
+                        orderDate: data.order_date || data.created_at,
+                        totalAmount: data.total_amount || 0,
+                        shippingAddress: data.shipping_address,
+                        promotionCode: data.promotion_code,
+                        taxAmount: data.tax_amount || 0,
+                        taxDetails: data.tax_details || {}
+                    } as any);
                 }
                 setIsLoadingDetails(false);
             }
@@ -93,23 +120,37 @@ const UserOrderDetailsPage: React.FC = () => {
         return products.filter(p => !orderProductIds.has(p.id)).slice(0, 4);
     }, [products, liveOrder]);
 
-    const handleCancel = async () => {
+    const handleCancel = () => {
+        setIsCancellationModalOpen(true);
+    };
+
+    const handleConfirmCancellation = async (reason: string, comments?: string) => {
         if (!liveOrder) return;
-        showConfirmationModal({
-            title: 'Cancel Order',
-            message: 'Are you sure you want to cancel this order? This cannot be undone.',
-            onConfirm: async () => {
-                try {
-                    await userCancelOrder(liveOrder.id);
-                } catch (error) {
-                    console.error("Failed to cancel order:", error);
-                    alert("Failed to cancel the order. Please try again.");
-                    throw error;
-                }
-            },
-            confirmText: 'Yes, Cancel Order',
-            isDestructive: true,
-        });
+        setIsCancelling(true);
+        try {
+            const finalReason = comments ? `${reason} (${comments})` : reason;
+            await userCancelOrder(liveOrder.id, finalReason);
+            setIsCancellationModalOpen(false);
+
+            // Show Success Popup
+            const firstItemName = liveOrder.items[0]?.name || 'Item';
+            const itemsCount = liveOrder.items.length;
+            const productText = itemsCount > 1 ? `${firstItemName} and ${itemsCount - 1} other items` : firstItemName;
+
+            showConfirmationModal({
+                title: 'Cancellation Successful',
+                message: `Your order #${liveOrder.id.slice(0, 8)} containing ${productText} has been successfully cancelled. If you have already paid, a refund of ₹${(liveOrder.totalAmount || 0).toLocaleString()} will be automatically processed to your original payment method within 3-5 business days.`,
+                confirmText: 'Got it',
+                cancelText: '', // This will hide the cancel button thanks to our modal update
+                isDestructive: false,
+                onConfirm: () => { } // Just close
+            });
+        } catch (error) {
+            console.error("Failed to cancel order:", error);
+            alert("Failed to cancel the order. Please try again.");
+        } finally {
+            setIsCancelling(false);
+        }
     };
 
     const handleDownloadInvoice = async (e: React.MouseEvent) => {
@@ -156,10 +197,31 @@ const UserOrderDetailsPage: React.FC = () => {
         const sevenDaysAfterDelivery = new Date(deliveryDate);
         sevenDaysAfterDelivery.setDate(deliveryDate.getDate() + 7);
 
-        const hasReturnRequest = currentUser?.returns?.some(r => r.order_id === liveOrder.id && r.item_id === item.id);
+        const hasReturnRequest = userReturns.some(r => r.order_id === liveOrder.id && r.item_id === item.id);
 
         return new Date() < sevenDaysAfterDelivery && !hasReturnRequest;
     };
+
+    const subtotal = useMemo(() => {
+        if (!liveOrder) return 0;
+        return liveOrder.items.reduce((acc: any, item: any) => {
+            const price = item.product?.price || (item as any).price || 0;
+            return acc + price * item.quantity;
+        }, 0);
+    }, [liveOrder]);
+
+    const appliedPromotion = useMemo(() => {
+        if (!liveOrder) return null;
+        return (promotionsData || []).find(p => p.code === liveOrder.promotionCode);
+    }, [promotionsData, liveOrder]);
+
+    const promoDiscount = useMemo(() => {
+        if (!appliedPromotion) return 0;
+        if (appliedPromotion.type === 'percentage') {
+            return subtotal * (appliedPromotion.value / 100);
+        }
+        return appliedPromotion.value;
+    }, [appliedPromotion, subtotal]);
 
     if (isLoading || isLoadingDetails) {
         return (
@@ -196,20 +258,10 @@ const UserOrderDetailsPage: React.FC = () => {
         );
     }
 
-    const appliedPromotion = getAllPromotions().find(p => p.code === liveOrder.promotionCode);
-
-    const subtotal = liveOrder.items.reduce((acc: any, item: any) => {
-        const price = item.product?.price || (item as any).price || 0;
-        return acc + price * item.quantity;
-    }, 0);
-    const shipping = subtotal > 499 ? 0 : 50;
-    const promoDiscount = useMemo(() => {
-        if (!appliedPromotion) return 0;
-        if (appliedPromotion.type === 'percentage') {
-            return subtotal * (appliedPromotion.value / 100);
-        }
-        return appliedPromotion.value;
-    }, [appliedPromotion, subtotal]);
+    const isPickup = liveOrder.delivery_type === 'pickup';
+    const baseCharge = deliverySettings?.base_charge ?? 50;
+    const freeThreshold = deliverySettings?.free_delivery_threshold ?? 499;
+    const shipping = (isPickup || subtotal >= freeThreshold) ? 0 : baseCharge;
 
     const statusColors = {
         'Processing': 'bg-blue-100 text-blue-800 border-blue-200',
@@ -246,7 +298,7 @@ const UserOrderDetailsPage: React.FC = () => {
                                 Order Details
                             </h1>
                             <p className="text-gray-500">
-                                Placed on {new Date(liveOrder.orderDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                Placed on {liveOrder.orderDate ? new Date(liveOrder.orderDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown Date'}
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-3">
@@ -338,8 +390,8 @@ const UserOrderDetailsPage: React.FC = () => {
                                                             )}
                                                         </div>
                                                         <div className="text-right mt-2 sm:mt-0">
-                                                            <p className="font-bold text-gray-900 text-lg">₹{(productPrice * item.quantity).toLocaleString()}</p>
-                                                            <p className="text-xs text-gray-500">Qty: {item.quantity} &times; ₹{productPrice}</p>
+                                                            <p className="font-bold text-gray-900 text-lg">₹{( (item.product?.price || item.price || 0) * (item.quantity || 0) ).toLocaleString()}</p>
+                                                            <p className="text-xs text-gray-500">Qty: {item.quantity || 0} &times; ₹{item.product?.price || item.price || 0}</p>
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-gray-50">
@@ -383,12 +435,12 @@ const UserOrderDetailsPage: React.FC = () => {
                             <div className="space-y-3 text-sm">
                                 <div className="flex justify-between text-gray-600">
                                     <span>Subtotal</span>
-                                    <span>₹{subtotal.toLocaleString()}</span>
+                                    <span>₹{(subtotal || 0).toLocaleString()}</span>
                                 </div>
                                 {promoDiscount > 0 && (
                                     <div className="flex justify-between text-green-700 bg-green-50 px-2 py-1 rounded">
                                         <span>Discount ({liveOrder.promotionCode})</span>
-                                        <span>- ₹{promoDiscount.toLocaleString()}</span>
+                                        <span>- ₹{(promoDiscount || 0).toLocaleString()}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between text-gray-600">
@@ -398,20 +450,20 @@ const UserOrderDetailsPage: React.FC = () => {
                                 <div className="border-t border-gray-100 pt-3 mt-2">
                                     <div className="flex justify-between items-end">
                                         <span className="font-bold text-gray-900 text-base">Total Amount</span>
-                                        <span className="font-bold text-gray-900 text-xl">₹{liveOrder.totalAmount.toLocaleString()}</span>
+                                        <span className="font-bold text-gray-900 text-xl">₹{(liveOrder.totalAmount || 0).toLocaleString()}</span>
                                     </div>
                                     <p className="text-xs text-gray-400 text-right mt-1">Inclusive of all taxes</p>
-
-                                    {liveOrder.tax_amount > 0 && (
+    
+                                    {(liveOrder.taxAmount || liveOrder.tax_amount || 0) > 0 && (
                                         <div className="border-t border-gray-100 pt-2 mt-2">
                                             <div className="flex justify-between text-gray-600">
                                                 <span>Tax</span>
-                                                <span>₹{liveOrder.tax_amount.toLocaleString()}</span>
+                                                <span>₹{(liveOrder.taxAmount || liveOrder.tax_amount || 0).toLocaleString()}</span>
                                             </div>
-                                            {liveOrder.tax_details && Object.entries(liveOrder.tax_details).map(([label, amount]: [string, any]) => (
+                                            {(liveOrder.taxDetails || liveOrder.tax_details) && Object.entries(liveOrder.taxDetails || liveOrder.tax_details || {}).map(([label, amount]: [string, any]) => (
                                                 <div key={label} className="flex justify-between text-xs text-gray-500 pl-2">
                                                     <span>{label}</span>
-                                                    <span>₹{Number(amount).toLocaleString()}</span>
+                                                    <span>₹{Number(amount || 0).toLocaleString()}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -483,6 +535,20 @@ const UserOrderDetailsPage: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
+                            {liveOrder.currentStatus.includes('Cancelled') && liveOrder.payment?.method !== 'COD' && (
+                                <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-lg">
+                                    <p className="text-xs text-red-700 leading-relaxed">
+                                        <strong>Refund Status:</strong> A total refund of ₹{(liveOrder.totalAmount || 0).toLocaleString()} has been initiated. It should reflect in your account within 3-5 business days.
+                                    </p>
+                                </div>
+                            )}
+                            {liveOrder.currentStatus.includes('Cancelled') && liveOrder.payment?.method === 'COD' && (
+                                <div className="mt-4 p-3 bg-gray-50 border border-gray-100 rounded-lg">
+                                    <p className="text-xs text-gray-600 leading-relaxed">
+                                        This order was cancelled. Since it was Cash on Delivery, no refund is required.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -518,6 +584,13 @@ const UserOrderDetailsPage: React.FC = () => {
                 isOpen={isHelpOpen}
                 onClose={() => setIsHelpOpen(false)}
                 contactDetails={contactDetails}
+            />
+
+            <CancellationReasonModal
+                isOpen={isCancellationModalOpen}
+                onClose={() => setIsCancellationModalOpen(false)}
+                onConfirm={handleConfirmCancellation}
+                isLoading={isCancelling}
             />
         </div >
     );
