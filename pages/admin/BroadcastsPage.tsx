@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient.ts';
 import { useAppContext } from '../../context/AppContext.tsx';
-import SupabaseImage from '../../components/SupabaseImage.tsx';
+import SupabaseImage from '../../components/shared/SupabaseImage';
 import { BUCKETS } from '../../constants.ts';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
 

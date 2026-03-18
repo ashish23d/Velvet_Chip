@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { uploadImage } from '../../services/supabaseImageService.ts';
 import PlusIcon from '../icons/PlusIcon.tsx';
 import TrashIcon from '../icons/TrashIcon.tsx';
-import SupabaseImage from '../SupabaseImage.tsx';
+import SupabaseImage from '../shared/SupabaseImage';
 
 interface ImageUploaderProps {
   bucket: string;

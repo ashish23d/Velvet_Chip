@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
-import OrderSummary from '../components/OrderSummary.tsx';
+import OrderSummary from '../components/checkout/OrderSummary';
 import CreditCardIcon from '../components/icons/CreditCardIcon.tsx';
 import UpiIcon from '../components/icons/UpiIcon.tsx';
 import WalletIcon from '../components/icons/WalletIcon.tsx';
@@ -10,8 +10,8 @@ import BankIcon from '../components/icons/BankIcon.tsx';
 import VisaIcon from '../components/icons/VisaIcon.tsx';
 import MastercardIcon from '../components/icons/MastercardIcon.tsx';
 import QrCodeIcon from '../components/icons/QrCodeIcon.tsx';
-import PaymentProcessingAnimation from '../components/PaymentProcessingAnimation.tsx';
-import PaymentSuccessAnimation from '../components/PaymentSuccessAnimation.tsx';
+import PaymentProcessingAnimation from '../components/checkout/PaymentProcessingAnimation';
+import PaymentSuccessAnimation from '../components/checkout/PaymentSuccessAnimation';
 import { loadRazorpayScript, openRazorpayCheckout } from '../services/razorpayService.ts';
 
 type PaymentTab = 'card' | 'upi' | 'wallet' | 'netbanking' | 'cod';
@@ -64,7 +64,9 @@ const PaymentPage: React.FC = () => {
       }
     }
 
-    const deliveryCharge = (deliveryMethod === 'pickup') ? 0 : (subtotal > 499 ? 0 : 50);
+    const baseCharge = deliverySettings?.base_charge ?? 50;
+    const freeThreshold = deliverySettings?.free_delivery_threshold ?? 499;
+    const deliveryCharge = (deliveryMethod === 'pickup') ? 0 : (subtotal >= freeThreshold ? 0 : baseCharge);
     return (subtotal - checkoutState.discount) + taxAmount + deliveryCharge;
   }, [cart, checkoutState.discount, deliveryMethod, taxSettings, categories]);
 

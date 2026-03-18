@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import SupabaseImage from '../../components/SupabaseImage.tsx';
+import SupabaseImage from '../shared/SupabaseImage';
 import { Product, Category, CustomizationOption } from '../../types.ts';
 import PlusIcon from '../../components/icons/PlusIcon.tsx';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
@@ -12,16 +12,18 @@ interface ProductFormProps {
   onSave: (product: any) => void;
   onCancel: () => void;
   isSaving?: boolean;
+  taxSettings?: any; // Added taxSettings prop
 }
 
 // Interfaces for local state management of variants
 interface Variant {
   size: string;
   stock: number;
-  price?: number;
+  base_price?: number; // New: Variant Base Price
+  price?: number;      // Calculated Final Selling Price
   mrp?: number;
   sku?: string;
-  image?: string; // New field for row-level image
+  image?: string;
 }
 interface ColorVariant {
   id: string; // for React key
@@ -32,15 +34,19 @@ interface ColorVariant {
   sizes: Variant[];
 }
 
-const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, onSave, onCancel, isSaving = false }) => {
+const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, onSave, onCancel, isSaving = false, taxSettings }) => {
   // Main product details state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [mrp, setMrp] = useState(0);
-  const [price, setPrice] = useState(0);
+  const [basePrice, setBasePrice] = useState(0); // New: Base Price (Excl Tax)
+  const [customTaxPercent, setCustomTaxPercent] = useState<number | ''>(''); // New: Optional Override
+  const [taxPercent, setTaxPercent] = useState(0); // Calculated/Resolved Tax %
+  const [taxAmount, setTaxAmount] = useState(0);   // Calculated Tax Amount
+  const [price, setPrice] = useState(0);           // Final Selling Price (MRP)
+  const [mrp, setMrp] = useState(0);               // Display MRP (List Price)
 
-  const [hsnCode, setHsnCode] = useState('');
+
   const [sku, setSku] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -66,15 +72,71 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
     });
   };
 
+  // Auto-Calculate Tax & Price
+  // Triggered when: basePrice, category, customTaxPercent, or global settings change.
+  useEffect(() => {
+    // 1. Resolve Tax Rate
+    let resolvedTaxRate = 0;
+
+    if (customTaxPercent !== '' && customTaxPercent !== null && customTaxPercent !== undefined) {
+      // Priority 1: Product Custom Override
+      resolvedTaxRate = Number(customTaxPercent);
+    } else if (category) {
+      // Priority 2: Category Level Tax
+      const selectedCat = categories.find(c => c.id === category);
+      if (selectedCat && selectedCat.tax_rate !== undefined) {
+        resolvedTaxRate = Number(selectedCat.tax_rate);
+      } else {
+        // Fallback if category has no specific tax (or 0) -> Check Global
+        // However, plan says "Category tax (if exists)". If category tax is 0, is it "exists"?
+        // Usually, 0 is a valid tax rate. So if undefined, use global.
+        // But for safety, let's use global if category tax is explicitly not set or separate logic.
+        // User's plan: "Category tax (if exists)".
+        // Our DB column default is 0.
+        // Let's assume if category tax is 0, it's 0.
+        // But we need to know if it was *intended* to be fallback.
+        // For simplicity: If category has tax_rate, use it.
+        // If not found, use global.
+        resolvedTaxRate = selectedCat?.tax_rate ?? (taxSettings?.global_rate || 0);
+      }
+    } else {
+      // Priority 3: Global (Fallback)
+      resolvedTaxRate = taxSettings?.global_rate || 0;
+    }
+
+    // Helper for safe rounding
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+
+    // 2. Calculate Tax Amount
+    // taxAmount = round2(basePrice * taxPercent / 100)
+    const calculatedTaxAmount = round2(basePrice * resolvedTaxRate / 100);
+
+    // 3. Calculate Final Selling Price
+    // Round to nearest integer (Rupee) as per Indian standards (e.g. 299.65 -> 300)
+    const calculatedSellingPrice = Math.round(basePrice + calculatedTaxAmount);
+
+    setTaxPercent(resolvedTaxRate);
+    setTaxAmount(calculatedTaxAmount);
+    setPrice(calculatedSellingPrice);
+
+  }, [basePrice, category, customTaxPercent, taxSettings, categories]);
+
   useEffect(() => {
     if (productToEdit) {
       setName(productToEdit.name);
       setDescription(productToEdit.description);
       setCategory(productToEdit.category);
-      setMrp(productToEdit.mrp);
+      // Initialize Pricing & Tax
+      setBasePrice(productToEdit.base_price || productToEdit.price || 0);
+      setCustomTaxPercent(productToEdit.custom_tax_percent ?? '');
+      setTaxPercent(productToEdit.tax_percent || 0);
+      setTaxAmount(productToEdit.tax_amount || 0);
       setPrice(productToEdit.price);
+      setMrp(productToEdit.mrp);
 
-      setHsnCode(productToEdit.hsnCode || '');
+      setPrice(productToEdit.price);
+      setMrp(productToEdit.mrp);
+
       setSku(productToEdit.sku || '');
       setTags(productToEdit.tags || []);
       setVariantLabel(productToEdit.variant_label || 'Size');
@@ -98,12 +160,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
           ? color.sizes.map(s => ({
             size: s.size,
             stock: s.stock,
+            base_price: (s as any).base_price || s.price, // Init base_price
             price: s.price,
             mrp: s.mrp,
             sku: s.sku,
             image: (s as any).image
           }))
-          : (productToEdit.sizes.map(size => ({ size, stock: 10, price: undefined, mrp: undefined, sku: '' })))
+          : (productToEdit.sizes.map(size => ({ size, stock: 10, base_price: undefined, price: undefined, mrp: undefined, sku: '', image: undefined })))
       }));
       setColorVariants(initialVariants);
 
@@ -115,7 +178,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
         hex: '#FFFFFF',
         uuid: generateUUID(),
         images: [],
-        sizes: [{ size: 'S', stock: 10, price: undefined, mrp: undefined, sku: '', image: undefined }]
+        sizes: [{ size: 'S', stock: 10, base_price: undefined, price: undefined, mrp: undefined, sku: '', image: undefined }]
       }]);
     }
   }, [productToEdit?.id]);
@@ -127,7 +190,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
       hex: '#000000',
       uuid: generateUUID(),
       images: [],
-      sizes: [{ size: 'S', stock: 10, price: undefined, mrp: undefined, sku: '', image: undefined }]
+      sizes: [{ size: 'S', stock: 10, base_price: undefined, price: undefined, mrp: undefined, sku: '', image: undefined }]
     }]);
     setActiveVariantIndex(colorVariants.length); // Switch to new variant
   };
@@ -147,7 +210,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
 
   const addSizeToColor = (colorId: string) => {
     setColorVariants(prev => prev.map(v =>
-      v.id === colorId ? { ...v, sizes: [...v.sizes, { size: '', stock: 10, price: undefined, mrp: undefined, sku: '', image: undefined }] } : v
+      v.id === colorId ? { ...v, sizes: [...v.sizes, { size: '', stock: 10, base_price: undefined, price: undefined, mrp: undefined, sku: '', image: undefined }] } : v
     ));
   };
 
@@ -167,9 +230,23 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
   const handleSizeChange = (colorId: string, sizeIndex: number, field: keyof Variant, value: string | number) => {
     setColorVariants(prev => prev.map(v => {
       if (v.id === colorId) {
-        const newSizes = v.sizes.map((s, i) =>
-          i === sizeIndex ? { ...s, [field]: value } : s
-        );
+        const newSizes = v.sizes.map((s, i) => {
+          if (i !== sizeIndex) return s;
+
+          const updatedSize = { ...s, [field]: value };
+
+          // Auto-Calc Variant Price if Base Price changes
+          if (field === 'base_price') {
+            const base = Number(value);
+            if (base > 0) {
+              const tax = (base * taxPercent) / 100; // Use current taxPercent from state
+              updatedSize.price = Math.round(base + tax);
+            } else {
+              updatedSize.price = undefined;
+            }
+          }
+          return updatedSize;
+        });
         return { ...v, sizes: newSizes };
       }
       return v;
@@ -329,7 +406,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
       category,
       mrp: Number(mrp),
       price: Number(price),
-      hsnCode,
+      base_price: Number(basePrice),
+      tax_percent: Number(taxPercent),
+      tax_amount: Number(taxAmount),
+
+      custom_tax_percent: customTaxPercent !== '' ? Number(customTaxPercent) : null,
       sku,
       show_colors: showColors,
       colors: colorVariants.map(cv => ({
@@ -340,6 +421,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
         sizes: cv.sizes.map(s => ({
           size: s.size,
           stock: Number(s.stock),
+          base_price: s.base_price ? Number(s.base_price) : undefined,
           price: s.price ? Number(s.price) : undefined,
           mrp: s.mrp ? Number(s.mrp) : undefined,
           sku: s.sku,
@@ -386,10 +468,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
               {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
             </select>
           </div>
-          <div className="sm:col-span-3">
-            <label htmlFor="hsnCode" className={labelClass}>HSN Code</label>
-            <input type="text" id="hsnCode" value={hsnCode} onChange={e => setHsnCode(e.target.value)} className={inputClass} placeholder="e.g., 6204" />
-          </div>
+
           <div className="sm:col-span-3">
             <label htmlFor="sku" className={labelClass}>SKU (Main Product Code)</label>
             <input type="text" id="sku" value={sku} onChange={e => setSku(e.target.value)} className={inputClass} placeholder="e.g., PROD-001" />
@@ -420,17 +499,87 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
         </div>
       </div>
 
-      {/* Pricing */}
+      {/* Pricing & Tax Configuration */}
       <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
-        <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">Pricing</h3>
+        <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">Pricing & Tax</h3>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+
+          {/* Base Price Input */}
           <div>
-            <label htmlFor="mrp" className={labelClass}>MRP (Maximum Retail Price)</label>
-            <input type="number" id="mrp" value={mrp} onChange={e => setMrp(Number(e.target.value))} className={inputClass} />
+            <label htmlFor="basePrice" className={labelClass}>
+              Base Price (Excl. Tax) <span className="text-red-500">*</span>
+            </label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span className="text-gray-500 sm:text-sm">₹</span>
+              </div>
+              <input
+                type="number"
+                id="basePrice"
+                min="0"
+                step="0.01"
+                value={basePrice}
+                onChange={e => setBasePrice(Number(e.target.value))}
+                className={`${inputClass} pl-7`}
+                required
+              />
+            </div>
           </div>
+
+          {/* Tax Override Input */}
           <div>
-            <label htmlFor="price" className={labelClass}>Sale Price</label>
-            <input type="number" id="price" value={price} onChange={e => setPrice(Number(e.target.value))} className={inputClass} required />
+            <label htmlFor="customTax" className={labelClass}>
+              Tax Override (%) <span className="text-xs text-gray-500">(Optional)</span>
+            </label>
+            <input
+              type="number"
+              id="customTax"
+              min="0"
+              max="100"
+              step="0.1"
+              value={customTaxPercent}
+              onChange={e => setCustomTaxPercent(e.target.value === '' ? '' : Number(e.target.value))}
+              placeholder={`Default: ${taxPercent}%`}
+              className={inputClass}
+            />
+          </div>
+
+          <div className="sm:col-span-2 border-t border-gray-200 dark:border-gray-700 pt-4">
+            <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Price Breakdown (Auto-Calculated)</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-md">
+              <div>
+                <span className="block text-xs text-gray-500">Tax Rate Applied</span>
+                <span className="block text-lg font-bold text-gray-800 dark:text-gray-200">{taxPercent}%</span>
+              </div>
+              <div>
+                <span className="block text-xs text-gray-500">Tax Amount (GST)</span>
+                <span className="block text-lg font-bold text-gray-800 dark:text-gray-200">₹{taxAmount.toFixed(2)}</span>
+              </div>
+              <div>
+                <span className="block text-xs text-gray-500">Final Selling Price (MRP)</span>
+                <span className="block text-xl font-bold text-green-600 dark:text-green-400">₹{price.toFixed(2)}</span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              * The Final Selling Price is what customers will pay (Inclusive of Taxes).
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="mrp" className={labelClass}>List Price (Display MRP) <span className="text-xs text-gray-500">(Optional crossed-out price)</span></label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span className="text-gray-500 sm:text-sm">₹</span>
+              </div>
+              <input
+                type="number"
+                id="mrp"
+                min="0"
+                value={mrp}
+                onChange={e => setMrp(Number(e.target.value))}
+                className={`${inputClass} pl-7`}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -527,9 +676,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
                           <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
                             <span className="w-24">Size/Variant</span>
                             <span className="w-16">Image</span>
-                            <span className="w-28">Rem. Stock</span>
-                            <span className="w-28">Price (Opt)</span>
-                            <span className="w-28">MRP (Opt)</span>
+                            <span className="w-28">Stock Qty</span>
+                            <span className="w-28">Base Price (No Tax)</span>
+                            <span className="w-20">Selling Price</span>
+                            <span className="w-28">MRP (Crossed)</span>
                             <span className="flex-grow">Variant SKU</span>
                             <span className="w-5"></span> {/* Spacer for delete icon */}
                           </div>
@@ -545,7 +695,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
 
                         {variant.sizes.map((size, sizeIndex) => (
                           <div key={sizeIndex} className="flex items-center gap-2">
-                            <input type="text" placeholder="Size (e.g. XL)" value={size.size} onChange={e => handleSizeChange(variant.id, sizeIndex, 'size', e.target.value)} className={`${inputClass} w - 24`} required />
+                            <input type="text" placeholder="Size (e.g. XL)" value={size.size} onChange={e => handleSizeChange(variant.id, sizeIndex, 'size', e.target.value)} className={`${inputClass} w-24`} required />
 
                             {/* Mini Image Uploader */}
                             <div className="w-16 h-10 relative flex-shrink-0">
@@ -581,10 +731,17 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
                               )}
                             </div>
 
-                            <input type="number" placeholder="Rem. Stock" min="0" value={size.stock} onChange={e => handleSizeChange(variant.id, sizeIndex, 'stock', Number(e.target.value))} className={`${inputClass} w - 28`} required title="Remaining Stock" />
-                            <input type="number" placeholder="Price (Opt)" min="0" value={size.price || ''} onChange={e => handleSizeChange(variant.id, sizeIndex, 'price', Number(e.target.value))} className={`${inputClass} w - 28`} title="Override base price for this variant" />
-                            <input type="number" placeholder="MRP (Opt)" min="0" value={size.mrp || ''} onChange={e => handleSizeChange(variant.id, sizeIndex, 'mrp', Number(e.target.value))} className={`${inputClass} w - 28`} title="Override base MRP for this variant" />
-                            <input type="text" placeholder="Variant SKU" value={size.sku || ''} onChange={e => handleSizeChange(variant.id, sizeIndex, 'sku', e.target.value)} className={`${inputClass} flex - grow`} />
+                            <input type="number" placeholder="Qty" min="0" value={size.stock} onChange={e => handleSizeChange(variant.id, sizeIndex, 'stock', Number(e.target.value))} className={`${inputClass} w-28`} required title="Remaining Stock Quantity" />
+                            <input type="number" placeholder="Override Base Price" min="0" value={size.base_price || ''} onChange={e => handleSizeChange(variant.id, sizeIndex, 'base_price', Number(e.target.value))} className={`${inputClass} w-28`} title="Optional: Override Base Price for this specific variant" />
+
+                            {/* Read-only Final Price Display */}
+                            <div className="w-20 px-2 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-center font-semibold text-gray-700 dark:text-gray-300" title="Final Selling Price (Tax Included)">
+                              {size.price ? `₹${size.price}` : '-'}
+                            </div>
+
+                            <input type="number" placeholder="MRP" min="0" value={size.mrp || ''} onChange={e => handleSizeChange(variant.id, sizeIndex, 'mrp', Number(e.target.value))} className={`${inputClass} w-28`} title="Optional: Crossed-out list price" />
+                            <input type="text" placeholder="Variant SKU" value={size.sku || ''} onChange={e => handleSizeChange(variant.id, sizeIndex, 'sku', e.target.value)} className={`${inputClass} flex-grow`} />
+
                             {variant.sizes.length > 1 && (
                               <button type="button" onClick={() => removeSizeFromColor(variant.id, sizeIndex)} className="text-gray-400 hover:text-red-500 flex-shrink-0">
                                 <TrashIcon className="w-5 h-5" />
@@ -614,15 +771,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
                 );
               })()}
             </div>
-          )}
-          {colorVariants.length === 0 && (
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">No variants defined. Please add at least one color variant.</p>
-          )}
-        </div>
-      </div>
+          )
+          }
+          {
+            colorVariants.length === 0 && (
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">No variants defined. Please add at least one color variant.</p>
+            )
+          }
+        </div >
+      </div >
 
       {/* Product Customization */}
-      <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+      < div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow" >
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-white">Product Customization</h3>
           <div className="flex items-center gap-2">
@@ -639,108 +799,110 @@ const ProductForm: React.FC<ProductFormProps> = ({ productToEdit, categories, on
           </div>
         </div>
 
-        {allowCustomization && (
-          <div className="space-y-4">
-            {customizationOptions.map((option, index) => (
-              <div key={option.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50/50 dark:bg-gray-900/50 relative">
-                <button
-                  type="button"
-                  onClick={() => removeCustomizationOption(option.id)}
-                  className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
-                >
-                  <TrashIcon className="w-5 h-5" />
-                </button>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelClass}>Field Label</label>
-                    <input
-                      type="text"
-                      value={option.label}
-                      onChange={(e) => handleCustomizationChange(option.id, 'label', e.target.value)}
-                      placeholder="e.g. Engraving Name"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Field Type</label>
-                    <select
-                      value={option.type}
-                      onChange={(e) => handleCustomizationChange(option.id, 'type', e.target.value)}
-                      className={inputClass}
-                    >
-                      <option value="text">Text Input</option>
-                      <option value="radio">Single Choice (Radio)</option>
-                      <option value="checkbox">Multiple Choice (Checkbox)</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center mt-6">
-                    <input
-                      type="checkbox"
-                      id={`req-${option.id}`}
-                      checked={option.required}
-                      onChange={(e) => handleCustomizationChange(option.id, 'required', e.target.checked)}
-                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                    />
-                    <label htmlFor={`req-${option.id}`} className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
-                      Required Field
-                    </label>
-                  </div>
-                </div>
-
-                {/* Options for Radio/Checkbox */}
-                {(option.type === 'radio' || option.type === 'checkbox') && (
-                  <div className="mt-4">
-                    <label className={labelClass}>Options</label>
-                    <div className="mt-2 space-y-2">
-                      {option.options.map((optVal, optIdx) => (
-                        <div key={optIdx} className="flex gap-2">
-                          <input
-                            type="text"
-                            value={optVal}
-                            onChange={(e) => updateOptionValue(option.id, optIdx, e.target.value)}
-                            placeholder={`Option ${optIdx + 1}`}
-                            className={inputClass}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeOptionValue(option.id, optIdx)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <TrashIcon className="w-5 h-5" />
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => addOptionValue(option.id)}
-                        className="text-sm text-primary hover:text-pink-700 font-medium flex items-center gap-1"
+        {
+          allowCustomization && (
+            <div className="space-y-4">
+              {customizationOptions.map((option, index) => (
+                <div key={option.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50/50 dark:bg-gray-900/50 relative">
+                  <button
+                    type="button"
+                    onClick={() => removeCustomizationOption(option.id)}
+                    className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                  >
+                    <TrashIcon className="w-5 h-5" />
+                  </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelClass}>Field Label</label>
+                      <input
+                        type="text"
+                        value={option.label}
+                        onChange={(e) => handleCustomizationChange(option.id, 'label', e.target.value)}
+                        placeholder="e.g. Engraving Name"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Field Type</label>
+                      <select
+                        value={option.type}
+                        onChange={(e) => handleCustomizationChange(option.id, 'type', e.target.value)}
+                        className={inputClass}
                       >
-                        <PlusIcon className="w-4 h-4" /> Add Option
-                      </button>
+                        <option value="text">Text Input</option>
+                        <option value="radio">Single Choice (Radio)</option>
+                        <option value="checkbox">Multiple Choice (Checkbox)</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center mt-6">
+                      <input
+                        type="checkbox"
+                        id={`req-${option.id}`}
+                        checked={option.required}
+                        onChange={(e) => handleCustomizationChange(option.id, 'required', e.target.checked)}
+                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                      />
+                      <label htmlFor={`req-${option.id}`} className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                        Required Field
+                      </label>
                     </div>
                   </div>
-                )}
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={addCustomizationOption}
-              className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md text-gray-500 hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2"
-            >
-              <PlusIcon className="w-5 h-5" /> Add Customization Field
-            </button>
-          </div>
-        )}
-      </div>
+
+                  {/* Options for Radio/Checkbox */}
+                  {(option.type === 'radio' || option.type === 'checkbox') && (
+                    <div className="mt-4">
+                      <label className={labelClass}>Options</label>
+                      <div className="mt-2 space-y-2">
+                        {option.options.map((optVal, optIdx) => (
+                          <div key={optIdx} className="flex gap-2">
+                            <input
+                              type="text"
+                              value={optVal}
+                              onChange={(e) => updateOptionValue(option.id, optIdx, e.target.value)}
+                              placeholder={`Option ${optIdx + 1}`}
+                              className={inputClass}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeOptionValue(option.id, optIdx)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <TrashIcon className="w-5 h-5" />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => addOptionValue(option.id)}
+                          className="text-sm text-primary hover:text-pink-700 font-medium flex items-center gap-1"
+                        >
+                          <PlusIcon className="w-4 h-4" /> Add Option
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addCustomizationOption}
+                className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md text-gray-500 hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2"
+              >
+                <PlusIcon className="w-5 h-5" /> Add Customization Field
+              </button>
+            </div>
+          )
+        }
+      </div >
 
       {/* Actions */}
-      <div className="flex justify-end gap-4">
+      < div className="flex justify-end gap-4" >
         <button type="button" onClick={onCancel} className="bg-white dark:bg-gray-700 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">Cancel</button>
         <button type="submit" disabled={isSaving} className={`bg-primary text-white py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium hover:bg-pink-700 ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}>
           {isSaving ? 'Saving...' : 'Save Product'}
         </button>
-      </div>
-    </form>
+      </div >
+    </form >
   );
 };
 

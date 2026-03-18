@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { BuildingOffice2Icon, EnvelopeIcon, PhoneIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext.tsx';
-import EditableWrapper from '../components/EditableWrapper.tsx';
+import EditableWrapper from '../components/shared/EditableWrapper';
 
 const ContactPage: React.FC = () => {
     const { contactDetails, submitContactForm, siteContent } = useAppContext();

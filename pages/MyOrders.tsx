@@ -3,7 +3,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
-import OrderCard from '../components/OrderCard.tsx';
+import OrderCard from '../components/order/OrderCard';
 import ArchiveBoxIcon from '../components/icons/ArchiveBoxIcon.tsx';
 
 const MyOrders: React.FC = () => {

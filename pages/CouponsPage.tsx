@@ -2,18 +2,20 @@ import React, { useState, useMemo } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { Promotion } from '../types.ts';
-import NewArrivalCard from '../components/NewArrivalCard.tsx';
+import NewArrivalCard from '../components/home/NewArrivalCard';
 import TagIcon from '../components/icons/TagIcon.tsx';
-import CouponCard from '../components/CouponCard.tsx';
+import CouponCard from '../components/shared/CouponCard';
+import { usePromotions } from '../services/api/promotions.api';
 
 const CouponsPage: React.FC = () => {
-    const { getAllPromotions, products } = useAppContext();
-    const allPromotions = getAllPromotions();
+    const { products } = useAppContext();
+    const { data: allPromotionsData } = usePromotions();
+    const allPromotions = allPromotionsData || [];
 
     const availablePromotions = useMemo(() => {
         return allPromotions.filter(p => p.isActive && new Date(p.expiresAt) > new Date());
     }, [allPromotions]);
-    
+
     const suggestedProducts = useMemo(() => {
         return products.slice(0, 8);
     }, [products]);
@@ -42,7 +44,7 @@ const CouponsPage: React.FC = () => {
                     <h2 className="text-3xl font-serif font-bold text-center text-gray-800 mb-8">Discover More</h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
                         {suggestedProducts.map((product) => (
-                             <NewArrivalCard key={product.id} product={product} />
+                            <NewArrivalCard key={product.id} product={product} />
                         ))}
                     </div>
                 </div>

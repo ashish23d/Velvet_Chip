@@ -2,21 +2,38 @@ import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../context/AppContext.tsx';
 import { ReturnRequest, ReturnRequestStatus } from '../../types.ts';
 import { Link } from 'react-router-dom';
-import SupabaseImage from '../../components/SupabaseImage.tsx';
+import SupabaseImage from '../../components/shared/SupabaseImage';
 import { BUCKETS } from '../../constants.ts';
+import { useAdminPaginatedReturns } from '../../services/api/admin.api';
+import Pagination from '../../components/shared/Pagination';
 
 const ReturnsListPage: React.FC = () => {
-    const { adminData, adminUpdateReturnStatus, showConfirmationModal } = useAppContext();
-    const returns = adminData?.returns || [];
+    const { adminUpdateReturnStatus, showConfirmationModal } = useAppContext();
     const [statusFilter, setStatusFilter] = useState<ReturnRequestStatus | 'all'>('Pending');
     const [updatingId, setUpdatingId] = useState<string | null>(null);
     const [updateError, setUpdateError] = useState<string | null>(null);
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
+
+    const { data: returnsResponse, isLoading } = useAdminPaginatedReturns({
+        page: currentPage,
+        limit: itemsPerPage,
+    });
+
+    const returns = (returnsResponse?.data || []) as ReturnRequest[];
+    const totalReturns = returnsResponse?.count || 0;
+    const totalPages = Math.ceil(totalReturns / itemsPerPage);
 
     const filteredReturns = useMemo(() => {
         return returns
             .filter(r => statusFilter === 'all' || r.status === statusFilter)
             .sort((a, b) => new Date(b.return_requested_at).getTime() - new Date(a.return_requested_at).getTime());
     }, [returns, statusFilter]);
+
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [statusFilter]);
 
     const handleStatusChange = async (returnId: string, newStatus: ReturnRequestStatus) => {
         showConfirmationModal({
@@ -132,12 +149,23 @@ const ReturnsListPage: React.FC = () => {
                                 </tr>
                             );
                         })}
+                        {isLoading && filteredReturns.length === 0 && (
+                            <tr>
+                                <td colSpan={5} className="text-center py-8">Loading returns...</td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
-                {filteredReturns.length === 0 && (
+                {!isLoading && filteredReturns.length === 0 && (
                     <div className="text-center py-12 text-gray-500">No return requests match the filter.</div>
                 )}
             </div>
+
+            <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+            />
         </div>
     );
 };

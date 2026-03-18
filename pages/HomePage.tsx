@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
-import HeroSlider from '../components/HeroSlider.tsx';
-import CategoryShowcase from '../components/CategoryShowcase.tsx';
-import NewArrivalCard from '../components/NewArrivalCard.tsx';
-import SeasonalCard from '../components/SeasonalCard.tsx';
-import ProductCard from '../components/ProductCard.tsx';
+import HeroSlider from '../components/home/HeroSlider';
+import CategoryShowcase from '../components/home/CategoryShowcase';
+import NewArrivalCard from '../components/home/NewArrivalCard';
+import SeasonalCard from '../components/home/SeasonalCard';
+import ProductCard from '../components/product/ProductCard';
 import { useAppContext } from '../context/AppContext.tsx';
 import { BUCKETS } from '../constants.ts';
 import { Product } from '../types.ts';
 import ChevronLeftIcon from '../components/icons/ChevronLeftIcon.tsx';
 import ChevronRightIcon from '../components/icons/ChevronRightIcon.tsx';
-import CardRenderer from '../components/CardRenderer.tsx';
+import CardRenderer from '../components/home/CardRenderer';
 
 const HomePage: React.FC = () => {
-    const { slides, seasonalEditCards, fetchProducts, lastProductUpdate, siteContent, products, categories, isLoading, cardAddons } = useAppContext();
+    const { slides, seasonalEditCards, fetchProducts, lastProductUpdate, siteContent, products, categories, cardAddons } = useAppContext();
+    const isSiteContentLoading = siteContent.length === 0;
 
     // Helper to get content with fallback
     const getContent = (id: string, defaultTitle: string, defaultDesc: string) => {
@@ -137,7 +138,7 @@ const HomePage: React.FC = () => {
         <div className="space-y-12 sm:space-y-16 lg:space-y-24">
             {/* Hero Slider Section */}
             <section className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-                {isLoading || slides.length === 0 ? (
+                {slides.length === 0 ? (
                     <div className="animate-pulse relative w-full h-[60vh] overflow-hidden rounded-xl bg-gray-200 dark:bg-gray-800"></div>
                 ) : (
                     <HeroSlider slides={slides} bucket={BUCKETS.SITE_ASSETS} />
@@ -157,27 +158,19 @@ const HomePage: React.FC = () => {
 
             {/* Category Showcase Section */}
             <section className="container mx-auto px-4 sm:px-6 lg:px-8">
-                {isLoading ? (
-                    <SectionHeaderSkeleton />
-                ) : (
-                    <div className="text-center mb-8">
-                        <h2 className="text-3xl font-serif text-gray-800 dark:text-gray-100">{fabulousRange.title}</h2>
-                        <p className="mt-2 text-gray-500 dark:text-gray-400">{fabulousRange.description}</p>
-                    </div>
-                )}
+                <div className="text-center mb-8">
+                    <h2 className="text-3xl font-serif text-gray-800 dark:text-gray-100">{fabulousRange.title}</h2>
+                    <p className="mt-2 text-gray-500 dark:text-gray-400">{fabulousRange.description}</p>
+                </div>
                 <CategoryShowcase />
             </section>
 
             {/* New Arrivals Section - CAROUSEL */}
             <section className="container mx-auto px-4 sm:px-6 lg:px-8">
-                {isLoading ? (
-                    <SectionHeaderSkeleton />
-                ) : (
-                    <div className="text-center mb-8">
-                        <h2 className="text-3xl font-serif text-gray-800 dark:text-gray-100">{newArrivals.title}</h2>
-                        <p className="mt-2 text-gray-500 dark:text-gray-400">{newArrivals.description}</p>
-                    </div>
-                )}
+                <div className="text-center mb-8">
+                    <h2 className="text-3xl font-serif text-gray-800 dark:text-gray-100">{newArrivals.title}</h2>
+                    <p className="mt-2 text-gray-500 dark:text-gray-400">{newArrivals.description}</p>
+                </div>
                 <div className="relative">
                     <button onClick={() => scrollCarousel('left')} className="absolute top-1/2 -left-4 transform -translate-y-1/2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-2 shadow-md hover:bg-white dark:hover:bg-gray-700 transition hidden md:block z-10" aria-label="Scroll left">
                         <ChevronLeftIcon className="w-6 h-6 text-gray-700 dark:text-gray-200" />
@@ -206,18 +199,14 @@ const HomePage: React.FC = () => {
                 <div className="max-w-6xl mx-auto px-6 lg:px-10">
 
                     {/* Heading */}
-                    {isLoading ? (
-                        <SectionHeaderSkeleton />
-                    ) : (
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl md:text-4xl font-serif text-gray-800 dark:text-gray-100">
-                                {featuredCollection.title}
-                            </h2>
-                            <p className="mt-3 max-w-2xl mx-auto text-gray-500 dark:text-gray-400">
-                                {featuredCollection.description}
-                            </p>
-                        </div>
-                    )}
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl md:text-4xl font-serif text-gray-800 dark:text-gray-100">
+                            {featuredCollection.title}
+                        </h2>
+                        <p className="mt-3 max-w-2xl mx-auto text-gray-500 dark:text-gray-400">
+                            {featuredCollection.description}
+                        </p>
+                    </div>
 
                     {/* Grid */}
                     {isLoadingGrid ? (
@@ -259,14 +248,10 @@ const HomePage: React.FC = () => {
             {/* Seasonal Edit Section */}
             <section className="bg-pink-50/40 dark:bg-gray-800/50 py-16 transition-colors duration-200">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    {isLoading ? (
-                        <SectionHeaderSkeleton />
-                    ) : (
-                        <div className="text-center mb-10">
-                            <h2 className="text-3xl font-serif text-primary">{seasonalEdit.title}</h2>
-                            <p className="mt-2 text-gray-600 dark:text-gray-300">{seasonalEdit.description}</p>
-                        </div>
-                    )}
+                    <div className="text-center mb-10">
+                        <h2 className="text-3xl font-serif text-primary">{seasonalEdit.title}</h2>
+                        <p className="mt-2 text-gray-600 dark:text-gray-300">{seasonalEdit.description}</p>
+                    </div>
                     <div className="space-y-8">
                         {seasonalEditCards
                             .filter(card => card.is_active)

@@ -3,12 +3,14 @@ import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import CheckCircleIcon from '../components/icons/CheckCircleIcon.tsx';
-import SupabaseImage from '../components/SupabaseImage.tsx';
+import SupabaseImage from '../components/shared/SupabaseImage';
 import { BUCKETS } from '../constants.ts';
+import { useUserOrders } from '../services/api/user.api.ts';
 
 const OrderConfirmationPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const { getOrderById, currentUser } = useAppContext();
+    const { currentUser } = useAppContext();
+    const { data: userOrders = [] } = useUserOrders(currentUser?.id);
     const navigate = useNavigate();
     const [countdown, setCountdown] = React.useState(5);
 
@@ -23,7 +25,7 @@ const OrderConfirmationPage: React.FC = () => {
         }
     }, [countdown, navigate, id]);
 
-    const order = getOrderById(id);
+    const order = userOrders.find(o => o.id === id);
 
     if (!order) {
         return (

@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext.tsx';
 import { SiteSettings, ContactDetails } from '../../types.ts';
 import ImageUploader from '../../components/admin/ImageUploader.tsx';
 import { BUCKETS } from '../../constants.ts';
-import SupabaseMedia from '../../components/SupabaseMedia.tsx';
+import SupabaseMedia from '../../components/shared/SupabaseMedia';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
 import TruckIcon from '../../components/icons/TruckIcon.tsx';
 import { CommandLineIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
@@ -397,14 +397,14 @@ const DeliverySettingsLink: React.FC = () => {
                 Manage your delivery zones, shipping partners, and pincode rules.
             </p>
             <div className="flex gap-4">
-                <a href="#/admin/delivery" className="flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary hover:text-white transition-colors">
+                <Link to="/admin/delivery" className="flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary hover:text-white transition-colors">
                     <TruckIcon className="w-5 h-5" />
                     Manage Delivery Rules
-                </a>
-                <a href="#/admin/shipping" className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                </Link>
+                <Link to="/admin/shipping" className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <TruckIcon className="w-5 h-5" />
                     Shipping Integration
-                </a>
+                </Link>
             </div>
         </div>
     );

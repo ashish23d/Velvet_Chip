@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import SupabaseImage from '../components/SupabaseImage';
+import SupabaseImage from '../components/shared/SupabaseImage';
 import { BUCKETS } from '../constants';
 
 const NotificationsPage: React.FC = () => {

@@ -3,8 +3,8 @@ import * as ReactRouterDOM from 'react-router-dom';
 import { Product } from '../types.ts';
 import { useAppContext } from '../context/AppContext.tsx';
 import TrashIcon from './icons/TrashIcon.tsx';
-import SupabaseImage from './SupabaseImage.tsx';
-import EditableWrapper from './EditableWrapper.tsx';
+import SupabaseImage from './shared/SupabaseImage';
+import EditableWrapper from './shared/EditableWrapper';
 import { BUCKETS } from '../constants.ts';
 
 interface SavedItemCardProps {

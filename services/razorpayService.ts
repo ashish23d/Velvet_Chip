@@ -23,16 +23,16 @@ export interface RazorpayOptions {
     description: string;
     order_id?: string; // Optional - can place order after payment confirmation
     handler: (response: RazorpayResponse) => void;
-    prefill: {
-        name: string;
-        email: string;
-        contact: string;
+    prefill?: {
+        name?: string;
+        email?: string;
+        contact?: string;
     };
-    theme: {
-        color: string;
+    theme?: {
+        color?: string;
     };
-    modal: {
-        ondismiss: () => void;
+    modal?: {
+        ondismiss?: () => void;
     };
 }
 

@@ -1,9 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import { AuthProvider } from './context/AuthContext.tsx';
+import { CartProvider } from './context/CartContext.tsx';
 import './index.css';
-import { AppProvider } from './context/AppContext';
+import { AppProvider } from './context/AppContext.tsx';
+import { SiteProvider } from './context/SiteContext.tsx';
+import { UIProvider } from './context/UIContext.tsx';
 import { queryClient } from './services/queryClient';
 
 const rootElement = document.getElementById('root');
@@ -14,10 +19,20 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AppProvider>
-        <App />
-      </AppProvider>
-    </QueryClientProvider>
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <SiteProvider>
+            <UIProvider>
+              <CartProvider>
+                <AppProvider>
+                  <App />
+                </AppProvider>
+              </CartProvider>
+            </UIProvider>
+          </SiteProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );

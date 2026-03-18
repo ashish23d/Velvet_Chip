@@ -24,24 +24,23 @@ import {
     UserGroupIcon,
     ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
+import { useAdminAllOrders, useAdminAllReturns, useAdminProductsList, useAdminUsersList } from '../../services/api/admin.api';
 
 const AnalyticsPage: React.FC = () => {
-    const { adminData } = useAppContext();
+    const { data: allOrdersData, isLoading: isLoadingOrders } = useAdminAllOrders();
+    const { data: allReturnsData, isLoading: isLoadingReturns } = useAdminAllReturns();
+    const { data: productsData, isLoading: isLoadingProducts } = useAdminProductsList();
+    const { data: usersData, isLoading: isLoadingUsers } = useAdminUsersList();
 
-    if (!adminData) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            </div>
-        );
-    }
+    const isLoading = isLoadingOrders || isLoadingReturns || isLoadingProducts || isLoadingUsers;
 
-    const { orders, products, returns, users } = adminData;
+    const orders = allOrdersData || [];
+    const products = productsData || [];
+    const returns = allReturnsData || [];
+    const users = usersData || [];
 
-    // --- Calculations ---
-
-    const safeOrders = orders || [];
-    const safeReturns = returns || [];
+    const safeOrders = orders;
+    const safeReturns = returns;
 
     const totalSales = safeOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
     const totalOrders = safeOrders.length;
@@ -54,7 +53,6 @@ const AnalyticsPage: React.FC = () => {
         const data: { [key: string]: number } = {};
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-        // Initialize with 0
         months.forEach(m => data[m] = 0);
 
         safeOrders.forEach(order => {
@@ -129,6 +127,14 @@ const AnalyticsPage: React.FC = () => {
     }, [products]);
 
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 p-6">

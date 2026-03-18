@@ -3,13 +3,16 @@ import { QueryClient } from '@tanstack/react-query';
 export const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
-            // Data is considered fresh for 5 minutes
-            staleTime: 1000 * 60 * 5,
+            // Data is considered fresh for 10 minutes (increased for better cache hit rate across tabs)
+            staleTime: 1000 * 60 * 10,
 
-            // Keep unused data in cache for 30 minutes
-            gcTime: 1000 * 60 * 30,
+            // Keep unused data in cache for 1 hour
+            gcTime: 1000 * 60 * 60,
 
-            // Refetch when window regains focus to ensure data is current
+            // Refetch on window focus is often good for ensuring data freshness, 
+            // but for a "robust" ecommerce feel, we might want to rely on staleTime more 
+            // to prevent constant spinning spinners when switching tabs.
+            // Let's keep it true but the high staleTime will prevent actual refetches unless content is old.
             refetchOnWindowFocus: true,
 
             // Retry failed requests 3 times

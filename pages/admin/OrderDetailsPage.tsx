@@ -3,11 +3,13 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext.tsx';
 import { CartItem, OrderStatus } from '../../types.ts';
-import SupabaseImage from '../../components/SupabaseImage.tsx';
+import SupabaseImage from '../../components/shared/SupabaseImage';
 import { BUCKETS } from '../../constants.ts';
 import { EyeIcon, TruckIcon } from '@heroicons/react/24/outline';
 import DocumentPreviewModal from '../../components/admin/DocumentPreviewModal.tsx';
 import { supabase } from '../../services/supabaseClient.ts';
+import { useAdminOrderById, useAdminInvoiceByOrderId } from '../../services/api/admin.api';
+import { usePromotions } from '../../services/api/promotions.api';
 
 const possibleNextStatuses: Record<OrderStatus, OrderStatus[]> = {
     'Processing': ['Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'],
@@ -23,9 +25,11 @@ const possibleNextStatuses: Record<OrderStatus, OrderStatus[]> = {
 
 const OrderDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const { getOrderById, updateOrderStatus, getAllPromotions, siteSettings, contactDetails, adminData } = useAppContext();
+    const { updateOrderStatus, siteSettings, contactDetails } = useAppContext();
 
-    const order = getOrderById(id);
+    const { data: order, isLoading: isOrderLoading } = useAdminOrderById(id);
+    const { data: invoiceData, isLoading: isInvoiceLoading } = useAdminInvoiceByOrderId(id);
+    const { data: promotionsData } = usePromotions();
     const [status, setStatus] = useState<OrderStatus | undefined>(undefined);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
@@ -35,10 +39,7 @@ const OrderDetailsPage: React.FC = () => {
     const [isSavingLogistics, setIsSavingLogistics] = useState(false);
 
     // Get related data for preview
-    const promotions = getAllPromotions();
-    const invoiceData = useMemo(() => {
-        return adminData?.invoices.find(inv => inv.order_id === id);
-    }, [adminData, id]);
+    const promotions = promotionsData || [];
 
     useEffect(() => {
         if (order) {
@@ -112,6 +113,14 @@ const OrderDetailsPage: React.FC = () => {
             setIsSavingLogistics(false);
         }
     };
+
+    if (isOrderLoading || isInvoiceLoading) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <p className="text-gray-500">Loading order details...</p>
+            </div>
+        );
+    }
 
     if (!order) {
         return <div className="text-center p-10">Order not found.</div>;
@@ -284,19 +293,39 @@ const OrderDetailsPage: React.FC = () => {
                                             type="text"
                                             placeholder="Delivery Person Name"
                                             className="w-full p-2 border rounded text-sm"
-                                            value={order.shop_delivery_details?.boy_name || ''}
-                                            onChange={(e) => {
-                                                // Handle local state update for shop details not implemented fully in this snippet 
-                                                // Would typically need a local state object for this form
-                                            }}
+                                            value={courierName}
+                                            onChange={(e) => setCourierName(e.target.value)}
                                         />
                                         <input
                                             type="text"
                                             placeholder="Phone Number"
                                             className="w-full p-2 border rounded text-sm"
-                                            value={order.shop_delivery_details?.boy_phone || ''}
+                                            value={trackingId}
+                                            onChange={(e) => setTrackingId(e.target.value)}
                                         />
-                                        <button className="w-full bg-green-600 text-white py-2 rounded text-sm">Assign & notify</button>
+                                        <button 
+                                            onClick={async () => {
+                                                setIsSavingLogistics(true);
+                                                try {
+                                                    await supabase.from('orders').update({
+                                                        shop_delivery_details: {
+                                                            boy_name: courierName,
+                                                            boy_phone: trackingId
+                                                        }
+                                                    }).eq('id', order.id);
+                                                    alert("Shop delivery details updated.");
+                                                } catch (e) {
+                                                    console.error("Error updating shop delivery details:", e);
+                                                    alert("Failed to update details.");
+                                                } finally {
+                                                    setIsSavingLogistics(false);
+                                                }
+                                            }}
+                                            disabled={isSavingLogistics}
+                                            className="w-full bg-green-600 text-white py-2 rounded text-sm disabled:bg-gray-400"
+                                        >
+                                            {isSavingLogistics ? 'Saving...' : 'Assign & notify'}
+                                        </button>
                                     </div>
                                 ) : (
                                     <>

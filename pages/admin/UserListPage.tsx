@@ -1,37 +1,41 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext.tsx';
-import { useAdminUsersList } from '../../services/api/admin.api'; // New Hook
+import { useAdminPaginatedUsers } from '../../services/api/admin.api'; // Paginated Hook
 import PlusIcon from '../../components/icons/PlusIcon.tsx';
 import UserCard from '../../components/admin/UserCard.tsx';
 import { UserProfile } from '../../types.ts';
-import Avatar from '../../components/Avatar.tsx';
+import Avatar from '../../components/profile/Avatar';
 import PencilIcon from '../../components/icons/PencilIcon.tsx';
 import LockClosedIcon from '../../components/icons/LockClosedIcon.tsx';
 import LockOpenIcon from '../../components/icons/LockOpenIcon.tsx';
 import ArrowUpTrayIcon from '../../components/icons/ArrowUpTrayIcon.tsx';
 import ArrowDownTrayIcon from '../../components/icons/ArrowDownTrayIcon.tsx';
+import Pagination from '../../components/shared/Pagination';
 
 const UserListPage: React.FC = () => {
     const { currentUser, updateUserStatus, adminChangeUserRole } = useAppContext();
 
-    // Use Real-Time Hook
-    const { data: usersData, isLoading } = useAdminUsersList();
-    const users = (usersData || []) as UserProfile[]; // Cast to expected type
-
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'blocked'>('all');
     const [sortBy, setSortBy] = useState('name-asc');
-    const [visibleAdmins, setVisibleAdmins] = useState(10);
-    const [visibleCustomers, setVisibleCustomers] = useState(10);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 20;
+
+    // Use Paginated API Hook
+    const { data: usersResponse, isLoading } = useAdminPaginatedUsers({
+        page: currentPage,
+        limit: itemsPerPage,
+        search: searchTerm,
+    });
+
+    const users = (usersResponse?.data || []) as UserProfile[];
+    const totalUsers = usersResponse?.count || 0;
+    const totalPages = Math.ceil(totalUsers / itemsPerPage);
 
     const { currentAdmin, otherAdmins, customers } = useMemo(() => {
         let filtered = users
-            .filter(user => statusFilter === 'all' || (user.status || 'active') === statusFilter)
-            .filter(user =>
-                (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
-            );
+            .filter(user => statusFilter === 'all' || (user.status || 'active') === statusFilter);
 
         const sorted = [...filtered].sort((a, b) => {
             switch (sortBy) {
@@ -50,7 +54,12 @@ const UserListPage: React.FC = () => {
         const customers = sorted.filter(u => u.role !== 'admin');
 
         return { currentAdmin, otherAdmins, customers };
-    }, [users, searchTerm, statusFilter, sortBy, currentUser]);
+    }, [users, statusFilter, sortBy, currentUser]);
+
+    // Reset pagination when search changes
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, statusFilter, sortBy]);
 
     const handleToggleStatus = (user: UserProfile) => {
         const newStatus = (user.status || 'active') === 'blocked' ? 'active' : 'blocked';
@@ -130,16 +139,11 @@ const UserListPage: React.FC = () => {
                 {otherAdmins.length > 0 ? (
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                            {otherAdmins.slice(0, visibleAdmins).map(user => <UserCard key={user.id} user={user} />)}
+                            {otherAdmins.map(user => <UserCard key={user.id} user={user} />)}
                         </div>
-                        {otherAdmins.length > visibleAdmins && (
-                            <div className="mt-6 text-center">
-                                <button
-                                    onClick={() => setVisibleAdmins(prev => prev + 10)}
-                                    className="bg-white py-2 px-6 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                >
-                                    Load More Administrators
-                                </button>
+                        {otherAdmins.length > 0 && (
+                            <div className="mt-6 text-center text-sm text-gray-500">
+                                Showing top {otherAdmins.length} administrators on this page.
                             </div>
                         )}
                     </>
@@ -178,7 +182,11 @@ const UserListPage: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {customers.slice(0, visibleCustomers).map(user => (
+                                        {isLoading ? (
+                                            <tr>
+                                                <td colSpan={5} className="text-center py-8">Loading users...</td>
+                                            </tr>
+                                        ) : customers.map(user => (
                                             <tr key={user.id}>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
@@ -219,16 +227,6 @@ const UserListPage: React.FC = () => {
                                 </table>
                             </div>
                         </div>
-                        {customers.length > visibleCustomers && (
-                            <div className="mt-6 text-center">
-                                <button
-                                    onClick={() => setVisibleCustomers(prev => prev + 10)}
-                                    className="bg-white py-2 px-6 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                >
-                                    Load More Customers
-                                </button>
-                            </div>
-                        )}
                     </>
                 ) : (
                     <div className="text-center py-10 bg-white rounded-lg shadow-sm border border-gray-200 text-gray-500">
@@ -236,6 +234,12 @@ const UserListPage: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+            />
         </div>
     );
 };

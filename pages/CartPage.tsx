@@ -1,10 +1,10 @@
 import React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
-import CartItem from '../components/CartItem.tsx';
-import OrderSummary from '../components/OrderSummary.tsx';
+import CartItem from '../components/cart/CartItem';
+import OrderSummary from '../components/checkout/OrderSummary';
 import ShoppingBagIcon from '../components/icons/ShoppingBagIcon.tsx';
-import CardRenderer from '../components/CardRenderer.tsx';
+import CardRenderer from '../components/home/CardRenderer';
 
 const CartPage: React.FC = () => {
   const { cart, cardAddons } = useAppContext();

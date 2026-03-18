@@ -2,15 +2,15 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { useProductsByCategory } from '../services/api/products.api';
-import ProductCard from '../components/ProductCard.tsx';
-import FilterSidebar from '../components/FilterSidebar.tsx';
-import MobileFilterSortSheet from '../components/MobileFilterSortSheet.tsx';
+import ProductCard from '../components/product/ProductCard';
+import FilterSidebar from '../components/search/FilterSidebar';
+import MobileFilterSortSheet from '../components/search/MobileFilterSortSheet';
 import AdjustmentsHorizontalIcon from '../components/icons/AdjustmentsHorizontalIcon.tsx';
 import ArrowsUpDownIcon from '../components/icons/ArrowsUpDownIcon.tsx';
 import { Product } from '../types.ts';
-import SupabaseMedia from '../components/SupabaseMedia.tsx';
+import SupabaseMedia from '../components/shared/SupabaseMedia';
 import { BUCKETS } from '../constants.ts';
-import CardRenderer from '../components/CardRenderer.tsx';
+import CardRenderer from '../components/home/CardRenderer';
 
 const CategoryPage: React.FC = () => {
   const { id: categoryId } = useParams<{ id: string }>();
@@ -168,10 +168,10 @@ const CategoryPage: React.FC = () => {
 
     // Filter by Dynamic Attributes
     Object.entries(selectedAttributes).forEach(([key, values]) => {
-      if (values && values.length > 0) {
+      if (values && (values as string[]).length > 0) {
         filtered = filtered.filter(p => {
           if (!p.attributes || p.attributes[key] === undefined || p.attributes[key] === null) return false;
-          return values.includes(String(p.attributes[key]));
+          return (values as string[]).includes(String(p.attributes[key]));
         });
       }
     });

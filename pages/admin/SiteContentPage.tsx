@@ -8,7 +8,8 @@ import ImageUploader from '../../components/admin/ImageUploader.tsx';
 import { BUCKETS } from '../../constants.ts';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
 import PencilIcon from '../../components/icons/PencilIcon.tsx';
-import SupabaseImage from '../../components/SupabaseImage.tsx';
+import SupabaseImage from '../../components/shared/SupabaseImage';
+import { useAdminProductsList } from '../../services/api/admin.api';
 
 // --- Reusable & Standalone Components (Moved to top-level) ---
 
@@ -166,8 +167,9 @@ const SeasonalCardFormModal: React.FC<{
     onClose: () => void;
     cardToEdit: SeasonalEditCard | null;
 }> = ({ isOpen, onClose, cardToEdit }) => {
-    const { adminData, adminAddSeasonalCard, adminUpdateSeasonalCard } = useAppContext();
-    const products = adminData?.products || [];
+    const { adminAddSeasonalCard, adminUpdateSeasonalCard } = useAppContext();
+    const { data: productsData } = useAdminProductsList();
+    const products = productsData || [];
     const [formData, setFormData] = useState<Partial<SeasonalEditCard>>({
         card_type: 'product',
         is_active: true,
@@ -310,8 +312,9 @@ const SeasonalCardFormModal: React.FC<{
 };
 
 const SeasonalEditManager: React.FC = () => {
-    const { seasonalEditCards, adminData, adminDeleteSeasonalCard, showConfirmationModal } = useAppContext();
-    const products = adminData?.products || [];
+    const { seasonalEditCards, adminDeleteSeasonalCard, showConfirmationModal } = useAppContext();
+    const { data: productsData } = useAdminProductsList();
+    const products = productsData || [];
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [cardToEdit, setCardToEdit] = useState<SeasonalEditCard | null>(null);
 

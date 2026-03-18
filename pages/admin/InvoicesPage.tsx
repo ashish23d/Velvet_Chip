@@ -9,9 +9,16 @@ import { BUCKETS } from '../../constants.ts';
 import DocumentPreviewModal from '../../components/admin/DocumentPreviewModal.tsx';
 import { Order, Invoice } from '../../types.ts';
 import { generateShippingLabelPDF } from '../../utils/labelGenerator.ts';
+import { useAdminAllOrders, useAdminAllInvoices } from '../../services/api/admin.api';
+import { usePromotions } from '../../services/api/promotions.api';
 
 const InvoicesPage: React.FC = () => {
-    const { adminData, generateInvoice, getAllPromotions, siteSettings, contactDetails } = useAppContext();
+    const { generateInvoice, siteSettings, contactDetails } = useAppContext();
+    const { data: allOrdersData, isLoading: isOrdersLoading } = useAdminAllOrders();
+    const { data: allInvoicesData, isLoading: isInvoicesLoading } = useAdminAllInvoices();
+    const { data: promotionsData } = usePromotions();
+    const promotions = promotionsData || [];
+
     const navigate = useNavigate();
 
     // --- Filter States ---
@@ -37,8 +44,8 @@ const InvoicesPage: React.FC = () => {
     const [previewInvoice, setPreviewInvoice] = useState<Invoice | undefined>(undefined);
 
     const ordersWithInvoiceStatus = useMemo(() => {
-        const orders = adminData?.orders || [];
-        const invoices = adminData?.invoices || [];
+        const orders = allOrdersData || [];
+        const invoices = allInvoicesData || [];
         const invoiceMap = new Map(invoices.map(inv => [inv.order_id, inv]));
 
         // 1. Map Data
@@ -130,7 +137,7 @@ const InvoicesPage: React.FC = () => {
         });
 
         return processed;
-    }, [adminData, searchTerm, statusFilter, dateFilter, customStartDate, customEndDate, minAmount, maxAmount, sortBy]);
+    }, [allOrdersData, allInvoicesData, searchTerm, statusFilter, dateFilter, customStartDate, customEndDate, minAmount, maxAmount, sortBy]);
 
     const handleResetFilters = () => {
         setSearchTerm('');
@@ -205,7 +212,7 @@ const InvoicesPage: React.FC = () => {
     };
 
     const handleBulkDownloadInvoicesZip = async () => {
-        if (selectedOrderIds.length === 0 || !adminData) return;
+        if (selectedOrderIds.length === 0 || !allInvoicesData) return;
         setIsProcessing(true);
         try {
             const zip = new JSZip();
@@ -213,7 +220,7 @@ const InvoicesPage: React.FC = () => {
             let count = 0;
 
             const promises = selectedOrderIds.map(async (orderId) => {
-                const item = adminData.invoices.find(inv => inv.order_id === orderId);
+                const item = allInvoicesData.find(inv => inv.order_id === orderId);
                 // Try clean path first, then raw path
                 if (item?.pdf_url) {
                     try {
@@ -263,10 +270,10 @@ const InvoicesPage: React.FC = () => {
             alert("Please select at least one order.");
             return;
         }
-        if (!adminData) return;
+        if (!allInvoicesData) return;
 
         const invoiceTargets = selectedOrderIds
-            .map(id => adminData.invoices.find(inv => inv.order_id === id))
+            .map(id => allInvoicesData.find(inv => inv.order_id === id))
             .filter(inv => !!inv?.pdf_url);
 
         if (invoiceTargets.length === 0) {
@@ -319,14 +326,14 @@ const InvoicesPage: React.FC = () => {
     };
 
     const handleBulkDownloadLabelsZip = async () => {
-        if (selectedOrderIds.length === 0 || !adminData) return;
+        if (selectedOrderIds.length === 0 || !allOrdersData) return;
         setIsProcessing(true);
         try {
             const zip = new JSZip();
             const folder = zip.folder("labels");
             let count = 0;
             const promises = selectedOrderIds.map(async (orderId) => {
-                const order = adminData.orders.find(o => o.id === orderId);
+                const order = allOrdersData.find(o => o.id === orderId);
                 if (order) {
                     try {
                         const labelBlob = await generateShippingLabelPDF(order, contactDetails || { email: '', phone: '', address: '' });
@@ -357,14 +364,14 @@ const InvoicesPage: React.FC = () => {
             alert("Please select at least one order.");
             return;
         }
-        if (!adminData) return;
+        if (!allOrdersData) return;
         if (!confirm(`You are about to download ${selectedOrderIds.length} shipping labels sequentially.\n\nPlease allow "Automatic Downloads" if your browser prompts you.`)) return;
 
         setIsProcessing(true);
         let downloadedCount = 0;
         try {
             for (const orderId of selectedOrderIds) {
-                const order = adminData.orders.find(o => o.id === orderId);
+                const order = allOrdersData.find(o => o.id === orderId);
                 if (order) {
                     try {
                         const labelBlob = await generateShippingLabelPDF(order, contactDetails || { email: '', phone: '', address: '' });
@@ -387,7 +394,7 @@ const InvoicesPage: React.FC = () => {
     };
 
     const handleDownloadSingleLabel = async (orderId: string) => {
-        const order = adminData?.orders.find(o => o.id === orderId);
+        const order = allOrdersData?.find(o => o.id === orderId);
         if (!order) return;
         setDownloadingId(`label-${orderId}`);
         try {
@@ -402,7 +409,7 @@ const InvoicesPage: React.FC = () => {
     }
 
     const handleDownloadSingleInvoice = async (orderId: string) => {
-        const item = adminData?.invoices.find(inv => inv.order_id === orderId);
+        const item = allInvoicesData?.find(inv => inv.order_id === orderId);
         if (!item?.pdf_url) {
             alert("Invoice PDF not found. Please generate it first.");
             return;
@@ -559,152 +566,161 @@ const InvoicesPage: React.FC = () => {
 
             {error && <div className="p-3 bg-red-100 text-red-700 rounded-md mb-4">{error}</div>}
 
-            {/* Table */}
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="p-4 w-4">
-                                <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                                    onChange={handleSelectAll}
-                                    checked={selectedOrderIds.length > 0 && selectedOrderIds.length === ordersWithInvoiceStatus.length}
-                                />
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {ordersWithInvoiceStatus.map((item) => {
-                            const { id: orderId, customerName, invoice } = item;
-                            return (
-                                <tr key={orderId} className={selectedOrderIds.includes(orderId) ? 'bg-primary/5' : ''}>
-                                    <td className="p-4">
-                                        <input
-                                            type="checkbox"
-                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                                            checked={selectedOrderIds.includes(orderId)}
-                                            onChange={() => handleSelectOne(orderId)}
-                                        />
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">
-                                        <Link to={`/admin/orders/${orderId}`} className="hover:underline">#{orderId}</Link>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customerName}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">₹{item.totalAmount.toLocaleString()}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">{invoice?.invoice_number || 'Pending'}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {new Date(item.orderDate).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        {invoice ? (
-                                            <div className="flex items-center justify-end gap-3">
-                                                <button
-                                                    onClick={() => handleDownloadSingleInvoice(orderId)}
-                                                    className="text-gray-500 hover:text-primary disabled:opacity-50"
-                                                    disabled={!!downloadingId}
-                                                    title="Download Invoice"
-                                                >
-                                                    {downloadingId === `invoice-${orderId}` ? '...' : <ArrowDownTrayIcon className="w-5 h-5" />}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDownloadSingleLabel(orderId)}
-                                                    className="text-gray-500 hover:text-primary disabled:opacity-50"
-                                                    disabled={!!downloadingId}
-                                                    title="Download Label"
-                                                >
-                                                    {downloadingId === `label-${orderId}` ? '...' : <TagIcon className="w-5 h-5" />}
-                                                </button>
-                                                <button onClick={() => handlePreview(item as any, invoice)} className="text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded flex items-center gap-1">
-                                                    <EyeIcon className="w-4 h-4" /> View
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <button
-                                                onClick={() => handleGenerate(orderId)}
-                                                disabled={isGenerating === orderId}
-                                                className="bg-primary text-white text-xs py-1 px-3 rounded-md font-medium hover:bg-pink-700 disabled:bg-gray-400"
-                                            >
-                                                {isGenerating === orderId ? 'Generating...' : 'Generate'}
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-                {ordersWithInvoiceStatus.length === 0 && (
-                    <div className="text-center py-12 text-gray-500">
-                        No orders match your filters.
-                    </div>
-                )}
-            </div>
-
-            {/* Bulk Action Bar */}
-            {selectedOrderIds.length > 0 && (
-                <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] p-4 border-t flex flex-wrap items-center justify-between gap-4 z-20 animate-slide-in-down">
-                    <p className="text-sm font-medium text-gray-700 hidden sm:block">{selectedOrderIds.length} selected</p>
-
-                    <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-
-                        {/* Print Group */}
-                        <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-md border border-gray-200">
-                            <span className="text-xs font-semibold text-gray-400 uppercase px-2">Print</span>
-                            <button
-                                onClick={handleBulkPrintInvoices}
-                                className="flex items-center gap-1 bg-white text-gray-700 py-1.5 px-3 rounded shadow-sm text-xs sm:text-sm font-medium hover:text-primary"
-                            >
-                                <PrinterIcon className="w-4 h-4" /> Invoices
-                            </button>
-                            <button
-                                onClick={handleBulkPrintLabels}
-                                className="flex items-center gap-1 bg-white text-gray-700 py-1.5 px-3 rounded shadow-sm text-xs sm:text-sm font-medium hover:text-primary"
-                            >
-                                <TagIcon className="w-4 h-4" /> Labels
-                            </button>
-                        </div>
-
-                        {/* Download Group Dropdown */}
-                        <div className="relative group">
-                            <button className="flex items-center gap-1 bg-primary text-white py-1.5 px-4 rounded-md shadow-sm text-xs sm:text-sm font-medium hover:bg-pink-700 disabled:opacity-50 disabled:bg-gray-400" disabled={isProcessing}>
-                                <ArrowDownTrayIcon className="w-4 h-4" />
-                                {isProcessing ? 'Processing...' : 'Download'}
-                            </button>
-                            <div className="absolute bottom-full right-0 mb-2 w-64 bg-white rounded-md shadow-xl border border-gray-200 hidden group-hover:block z-30">
-                                <div className="py-1">
-                                    <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50">Invoices</div>
-                                    <button onClick={handleBulkDownloadInvoicesZip} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-primary">Download as ZIP</button>
-                                    <button onClick={handleBulkDownloadInvoicesIndividual} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-primary">Download Individual Files</button>
-
-                                    <div className="border-t border-gray-100 my-1"></div>
-
-                                    <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50">Shipping Labels</div>
-                                    <button onClick={handleBulkDownloadLabelsZip} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-primary">Download as ZIP</button>
-                                    <button onClick={handleBulkDownloadLabelsIndividual} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-primary">Download Individual Files</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button onClick={() => setSelectedOrderIds([])} className="text-sm text-gray-500 hover:underline ml-2">
-                            Cancel
-                        </button>
-                    </div>
+            {(isOrdersLoading || isInvoicesLoading) && (
+                <div className="flex justify-center items-center py-12">
+                    <p className="text-gray-500">Loading orders and invoices...</p>
                 </div>
             )}
+
+            {!isOrdersLoading && !isInvoicesLoading && (
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="p-4 w-4">
+                                    <input
+                                        type="checkbox"
+                                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                        onChange={handleSelectAll}
+                                        checked={selectedOrderIds.length > 0 && selectedOrderIds.length === ordersWithInvoiceStatus.length}
+                                    />
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {ordersWithInvoiceStatus.map((item) => {
+                                const { id: orderId, customerName, invoice } = item;
+                                return (
+                                    <tr key={orderId} className={selectedOrderIds.includes(orderId) ? 'bg-primary/5' : ''}>
+                                        <td className="p-4">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                                checked={selectedOrderIds.includes(orderId)}
+                                                onChange={() => handleSelectOne(orderId)}
+                                            />
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">
+                                            <Link to={`/admin/orders/${orderId}`} className="hover:underline">#{orderId}</Link>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customerName}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">₹{item.totalAmount.toLocaleString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">{invoice?.invoice_number || 'Pending'}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {new Date(item.orderDate).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            {invoice ? (
+                                                <div className="flex items-center justify-end gap-3">
+                                                    <button
+                                                        onClick={() => handleDownloadSingleInvoice(orderId)}
+                                                        className="text-gray-500 hover:text-primary disabled:opacity-50"
+                                                        disabled={!!downloadingId}
+                                                        title="Download Invoice"
+                                                    >
+                                                        {downloadingId === `invoice-${orderId}` ? '...' : <ArrowDownTrayIcon className="w-5 h-5" />}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDownloadSingleLabel(orderId)}
+                                                        className="text-gray-500 hover:text-primary disabled:opacity-50"
+                                                        disabled={!!downloadingId}
+                                                        title="Download Label"
+                                                    >
+                                                        {downloadingId === `label-${orderId}` ? '...' : <TagIcon className="w-5 h-5" />}
+                                                    </button>
+                                                    <button onClick={() => handlePreview(item as any, invoice)} className="text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded flex items-center gap-1">
+                                                        <EyeIcon className="w-4 h-4" /> View
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleGenerate(orderId)}
+                                                    disabled={isGenerating === orderId}
+                                                    className="bg-primary text-white text-xs py-1 px-3 rounded-md font-medium hover:bg-pink-700 disabled:bg-gray-400"
+                                                >
+                                                    {isGenerating === orderId ? 'Generating...' : 'Generate'}
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                    {ordersWithInvoiceStatus.length === 0 && (
+                        <div className="text-center py-12 text-gray-500">
+                            No orders match your filters.
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Bulk Action Bar */}
+            {
+                selectedOrderIds.length > 0 && (
+                    <div className="fixed bottom-0 left-0 lg:left-64 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.1)] p-4 border-t flex flex-wrap items-center justify-between gap-4 z-20 animate-slide-in-down">
+                        <p className="text-sm font-medium text-gray-700 hidden sm:block">{selectedOrderIds.length} selected</p>
+
+                        <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+
+                            {/* Print Group */}
+                            <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-md border border-gray-200">
+                                <span className="text-xs font-semibold text-gray-400 uppercase px-2">Print</span>
+                                <button
+                                    onClick={handleBulkPrintInvoices}
+                                    className="flex items-center gap-1 bg-white text-gray-700 py-1.5 px-3 rounded shadow-sm text-xs sm:text-sm font-medium hover:text-primary"
+                                >
+                                    <PrinterIcon className="w-4 h-4" /> Invoices
+                                </button>
+                                <button
+                                    onClick={handleBulkPrintLabels}
+                                    className="flex items-center gap-1 bg-white text-gray-700 py-1.5 px-3 rounded shadow-sm text-xs sm:text-sm font-medium hover:text-primary"
+                                >
+                                    <TagIcon className="w-4 h-4" /> Labels
+                                </button>
+                            </div>
+
+                            {/* Download Group Dropdown */}
+                            <div className="relative group">
+                                <button className="flex items-center gap-1 bg-primary text-white py-1.5 px-4 rounded-md shadow-sm text-xs sm:text-sm font-medium hover:bg-pink-700 disabled:opacity-50 disabled:bg-gray-400" disabled={isProcessing}>
+                                    <ArrowDownTrayIcon className="w-4 h-4" />
+                                    {isProcessing ? 'Processing...' : 'Download'}
+                                </button>
+                                <div className="absolute bottom-full right-0 mb-2 w-64 bg-white rounded-md shadow-xl border border-gray-200 hidden group-hover:block z-30">
+                                    <div className="py-1">
+                                        <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50">Invoices</div>
+                                        <button onClick={handleBulkDownloadInvoicesZip} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-primary">Download as ZIP</button>
+                                        <button onClick={handleBulkDownloadInvoicesIndividual} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-primary">Download Individual Files</button>
+
+                                        <div className="border-t border-gray-100 my-1"></div>
+
+                                        <div className="px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50">Shipping Labels</div>
+                                        <button onClick={handleBulkDownloadLabelsZip} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-primary">Download as ZIP</button>
+                                        <button onClick={handleBulkDownloadLabelsIndividual} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-primary">Download Individual Files</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onClick={() => setSelectedOrderIds([])} className="text-sm text-gray-500 hover:underline ml-2">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )
+            }
 
             {previewOrder && (
                 <DocumentPreviewModal
                     isOpen={isPreviewOpen}
                     onClose={closePreview}
                     order={previewOrder}
-                    promotions={getAllPromotions()}
+                    promotions={promotions}
                     siteSettings={siteSettings}
                     contactDetails={contactDetails}
                     invoiceData={previewInvoice}

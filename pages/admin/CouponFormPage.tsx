@@ -1,19 +1,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAppContext } from '../../context/AppContext.tsx';
 import { Promotion } from '../../types.ts';
-import { generateProductDescription } from '../../services/geminiService.ts'; // Re-using for text generation
+import { generateProductDescription } from '../../services/geminiService.ts';
 import { SparklesIcon } from '@heroicons/react/24/outline';
+import { usePromotions, useAddPromotion, useUpdatePromotion } from '../../services/api/promotions.api';
 
 const PromotionFormPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { getPromotionById, addPromotion, updatePromotion } = useAppContext();
+    const { data: promotionsData } = usePromotions();
+    const { mutateAsync: addPromotionAsync } = useAddPromotion();
+    const { mutateAsync: updatePromotionAsync } = useUpdatePromotion();
 
     const isEditing = Boolean(id);
-    const promotionToEdit = isEditing ? getPromotionById(Number(id)) : undefined;
-    
+    const promotionToEdit = isEditing ? (promotionsData || []).find(p => p.id === Number(id)) : undefined;
+
     const [formData, setFormData] = useState<Omit<Promotion, 'id' | 'uses' | 'createdAt'>>({
         code: '',
         type: 'percentage',
@@ -23,7 +25,7 @@ const PromotionFormPage: React.FC = () => {
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
         isActive: true,
     });
-    
+
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSuggesting, setIsSuggesting] = useState(false);
@@ -31,9 +33,13 @@ const PromotionFormPage: React.FC = () => {
 
     useEffect(() => {
         if (isEditing && promotionToEdit) {
+            const rawDate = promotionToEdit.expiresAt;
+            const parsedDate = rawDate ? new Date(rawDate) : null;
+            const isValidDate = parsedDate && !isNaN(parsedDate.getTime());
+            const fallbackDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
             setFormData({
                 ...promotionToEdit,
-                expiresAt: new Date(promotionToEdit.expiresAt).toISOString().split('T')[0],
+                expiresAt: isValidDate ? parsedDate!.toISOString().split('T')[0] : fallbackDate,
             });
         }
     }, [isEditing, promotionToEdit]);
@@ -52,7 +58,7 @@ const PromotionFormPage: React.FC = () => {
             setIsSuggesting(false);
         }
     };
-    
+
     const handleUseSuggestion = (code: string) => {
         setFormData(prev => ({ ...prev, code }));
         setSuggestions([]);
@@ -60,15 +66,15 @@ const PromotionFormPage: React.FC = () => {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        
+
         if (type === 'checkbox') {
-             const { checked } = e.target as HTMLInputElement;
-             setFormData(prev => ({ ...prev, [name]: checked }));
+            const { checked } = e.target as HTMLInputElement;
+            setFormData(prev => ({ ...prev, [name]: checked }));
         } else {
             const numericFields = ['value', 'minPurchase', 'usageLimit'];
-            setFormData(prev => ({ 
-                ...prev, 
-                [name]: numericFields.includes(name) ? Number(value) : value 
+            setFormData(prev => ({
+                ...prev,
+                [name]: numericFields.includes(name) ? Number(value) : value
             }));
         }
     };
@@ -79,9 +85,9 @@ const PromotionFormPage: React.FC = () => {
         setError(null);
         try {
             if (isEditing && promotionToEdit) {
-                await updatePromotion({ ...promotionToEdit, ...formData });
+                await updatePromotionAsync({ ...promotionToEdit, ...formData });
             } else {
-                await addPromotion(formData);
+                await addPromotionAsync(formData);
             }
             navigate('/admin/marketing');
         } catch (err: any) {
@@ -103,7 +109,7 @@ const PromotionFormPage: React.FC = () => {
             </h1>
             <form onSubmit={handleSubmit} className="space-y-6 bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
                 {error && <div className="text-red-600 bg-red-50 dark:bg-red-900/30 p-3 rounded-md">{error}</div>}
-                
+
                 {/* Code */}
                 <div>
                     <label htmlFor="code" className={labelClass}>Promotion Code</label>
@@ -139,7 +145,7 @@ const PromotionFormPage: React.FC = () => {
                 </div>
 
                 {/* Restrictions */}
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label htmlFor="minPurchase" className={labelClass}>Minimum Purchase (₹)</label>
                         <input type="number" name="minPurchase" id="minPurchase" value={formData.minPurchase} onChange={handleChange} className={inputClass} />
@@ -151,7 +157,7 @@ const PromotionFormPage: React.FC = () => {
                 </div>
 
                 {/* Expiry and Status */}
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                     <div>
                         <label htmlFor="expiresAt" className={labelClass}>Expires At</label>
                         <input type="date" name="expiresAt" id="expiresAt" value={formData.expiresAt} onChange={handleChange} required className={inputClass} />

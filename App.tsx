@@ -1,23 +1,23 @@
 
 import React, { useEffect } from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
-import Header from './components/Header.tsx';
-import Footer from './components/Footer.tsx';
+import Header from './components/layout/Header';
+import Footer from './components/layout/Footer';
 import { AppProvider, useAppContext } from './context/AppContext.tsx';
 import { supabase } from './services/supabaseClient.ts';
-import Breadcrumb from './components/Breadcrumb.tsx';
-import CartHeader from './components/CartHeader.tsx';
+import Breadcrumb from './components/layout/Breadcrumb';
+import CartHeader from './components/cart/CartHeader';
 import AdminLayout from './layouts/AdminLayout.tsx';
-import FlyToCartAnimation from './components/FlyToCartAnimation.tsx';
-import AnnouncementBar from './components/AnnouncementBar.tsx';
+import FlyToCartAnimation from './components/cart/FlyToCartAnimation';
+import AnnouncementBar from './components/layout/AnnouncementBar';
 import PrintLayout from './layouts/PrintLayout.tsx';
-import ScrollToTop from './components/ScrollToTop.tsx';
-import SearchBar from './components/SearchBar.tsx';
-import OfferModal from './components/OfferModal.tsx';
-import ProtectedRoute from './components/ProtectedRoute.tsx';
-import SignUpPopup from './components/SignUpPopup.tsx';
-import ConfirmationModal from './components/ConfirmationModal.tsx';
-import BottomNavigation from './components/BottomNavigation.tsx';
+import ScrollToTop from './components/shared/ScrollToTop';
+import SearchBar from './components/search/SearchBar';
+import OfferModal from './components/shared/OfferModal';
+import ProtectedRoute from './components/shared/ProtectedRoute';
+import SignUpPopup from './components/shared/SignUpPopup';
+import ConfirmationModal from './components/shared/ConfirmationModal';
+import BottomNavigation from './components/layout/BottomNavigation';
 
 // Lazy load pages
 const HomePage = React.lazy(() => import('./pages/HomePage.tsx'));
@@ -77,13 +77,45 @@ const ShippingSettingsPage = React.lazy(() => import('./pages/admin/ShippingSett
 const DeliverySettingsPage = React.lazy(() => import('./pages/admin/DeliverySettingsPage.tsx'));
 
 const LoadingFallback = () => (
-  <div className="flex h-screen w-full items-center justify-center bg-white dark:bg-gray-900">
-    <div className="text-center">
-      <svg className="animate-spin h-8 w-8 text-primary mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
+  <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900 overflow-hidden">
+    {/* Skeleton Header */}
+    <div className="h-16 border-b dark:border-gray-800 flex items-center justify-between px-4 lg:px-8">
+      <div className="w-8 h-8 bg-gray-200 dark:bg-gray-800 rounded animate-pulse md:hidden"></div>
+      <div className="w-32 h-8 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
+      <div className="hidden md:flex space-x-6">
+        <div className="w-20 h-4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
+        <div className="w-20 h-4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
+        <div className="w-20 h-4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
+      </div>
+      <div className="flex space-x-4">
+        <div className="w-6 h-6 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
+        <div className="w-6 h-6 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
+      </div>
     </div>
+
+    <main className="flex-grow">
+      {/* Skeleton Hero */}
+      <div className="w-full h-[300px] md:h-[500px] bg-gray-100 dark:bg-gray-800 animate-pulse relative">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-gray-400 dark:border-t-gray-500 rounded-full animate-spin"></div>
+        </div>
+      </div>
+
+      {/* Skeleton Content Grid - Mobile/Desktop Responsive */}
+      <div className="container mx-auto px-4 py-8">
+        <div className="w-48 h-8 bg-gray-200 dark:bg-gray-800 rounded mb-6 animate-pulse"></div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex flex-col space-y-3">
+              <div className="w-full aspect-[3/4] bg-gray-100 dark:bg-gray-800 rounded animate-pulse"></div>
+              <div className="w-3/4 h-4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
+              <div className="w-1/4 h-4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
   </div>
 );
 
@@ -260,22 +292,8 @@ const StyleInjector = () => {
 }
 
 const AppContent: React.FC = () => {
-  const { isLoading, session } = useAppContext();
+  const { session } = useAppContext();
   const navigate = ReactRouterDOM.useNavigate();
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-white dark:bg-gray-900">
-        <div className="text-center">
-          <svg className="animate-spin h-8 w-8 text-primary mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <p className="mt-4 font-medium text-gray-600 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -289,13 +307,14 @@ const AppContent: React.FC = () => {
 }
 
 const App: React.FC = () => {
+  const navigate = ReactRouterDOM.useNavigate();
   const [isRecoveryMode, setIsRecoveryMode] = React.useState(
     window.location.href.includes('type=recovery')
   );
 
   useEffect(() => {
     if (isRecoveryMode) {
-      console.log("Recovery Mode: Intercepting Supabase hash...");
+      console.log("Recovery Mode: Intercepting Supabase token...");
 
       // 1. If path has access_token but no hash, fix it for Supabase
       if (!window.location.hash && window.location.href.includes('access_token')) {
@@ -309,8 +328,7 @@ const App: React.FC = () => {
       const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
         if (session || event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
           console.log("Supabase Auth Success! Redirecting to Reset Password.");
-          // Force the router hash
-          window.location.hash = '/reset-password';
+          navigate('/reset-password', { replace: true });
           setIsRecoveryMode(false);
         }
       });
@@ -319,7 +337,7 @@ const App: React.FC = () => {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
           console.log("Session found immediately. Proceeding.");
-          window.location.hash = '/reset-password';
+          navigate('/reset-password', { replace: true });
           setIsRecoveryMode(false);
         }
       });
@@ -327,10 +345,8 @@ const App: React.FC = () => {
       // 4. Safety Timeout (10s)
       const timer = setTimeout(() => {
         console.warn("Recovery timeout. Mounting app anyway.");
-        // If we still have a token hash, clear it to prevent Router crash
-        if (window.location.hash.includes('access_token')) {
-          window.location.hash = '/'; // Fallback to home
-        }
+        // Change browser location path if needed, or just navigate to root
+        navigate('/', { replace: true });
         setIsRecoveryMode(false);
       }, 10000);
 
@@ -339,7 +355,7 @@ const App: React.FC = () => {
         clearTimeout(timer);
       };
     }
-  }, [isRecoveryMode]);
+  }, [isRecoveryMode, navigate]);
 
   if (isRecoveryMode) {
     return (
@@ -347,7 +363,7 @@ const App: React.FC = () => {
         <div className="text-center">
           <svg className="animate-spin h-8 w-8 text-primary mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
           <p className="mt-4 font-medium text-gray-600 dark:text-gray-400">
             Verifying secure link...
@@ -357,13 +373,7 @@ const App: React.FC = () => {
     );
   }
 
-  return (
-    <ReactRouterDOM.HashRouter>
-      <AppProvider>
-        <AppContent />
-      </AppProvider>
-    </ReactRouterDOM.HashRouter>
-  );
+  return <AppContent />;
 };
 
 export default App;

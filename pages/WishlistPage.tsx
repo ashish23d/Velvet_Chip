@@ -2,7 +2,7 @@ import React from 'react';
 import * as ReactRouterDOM from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import { Product } from '../types.ts';
-import ProductCard from '../components/ProductCard.tsx';
+import ProductCard from '../components/product/ProductCard';
 import WishlistCard from '../components/WishlistCard.tsx'; // New import for mobile
 import WishlistIcon from '../components/icons/WishlistIcon.tsx';
 

@@ -3,19 +3,22 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext.tsx';
 import { Review, Product, UserProfile } from '../../types.ts';
-import Rating from '../../components/Rating.tsx';
+import Rating from '../../components/product/Rating';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
 import CheckIcon from '../../components/icons/CheckIcon.tsx';
 import XMarkIcon from '../../components/icons/XMarkIcon.tsx';
-import SupabaseImage from '../../components/SupabaseImage.tsx';
+import SupabaseImage from '../../components/shared/SupabaseImage';
 import { BUCKETS } from '../../constants.ts';
 import PencilIcon from '../../components/icons/PencilIcon.tsx';
 import EditReviewModal from '../../components/admin/EditReviewModal.tsx';
+import { useAdminUsersList, useAdminProductsList } from '../../services/api/admin.api';
 
 const ReviewListPage: React.FC = () => {
-    const { adminData, reviews, updateReviewStatus, deleteReview, showConfirmationModal } = useAppContext();
-    const users = adminData?.users || [];
-    const products = adminData?.products || [];
+    const { reviews, updateReviewStatus, deleteReview, showConfirmationModal } = useAppContext();
+    const { data: usersData } = useAdminUsersList();
+    const users = usersData || [];
+    const { data: productsData } = useAdminProductsList();
+    const products = productsData || [];
 
     const [statusFilter, setStatusFilter] = useState<Review['status'] | 'all'>('all');
     const [searchTerm, setSearchTerm] = useState('');

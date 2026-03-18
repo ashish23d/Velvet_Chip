@@ -206,15 +206,48 @@ export interface DeliverySettings {
   store_pincode?: string;
   store_address?: string;
   is_all_india_serviceable: boolean;
+  base_charge?: number;
+  free_delivery_threshold?: number;
 }
 
 export interface Order {
+  id: string; // Found in usage
+  user_id: string; // Found in usage
+  items: CartItem[]; // Changed from Json to CartItem[] for better sizing
+  totalAmount: number;
+  orderDate: string;
+  currentStatus: OrderStatus; // Use OrderStatus type
+  statusHistory: StatusUpdate[];
+  shippingAddress: any; // Address or Json
+  customerName?: string;
+  customerEmail?: string;
+  promotionCode?: string;
+  payment?: {
+    method: string;
+    status: string;
+    transactionId?: string;
+  };
+
+  // DB Fields (if mixed usage)
+  total_amount?: number;
+  order_date?: string;
+  current_status?: string;
+  status_history?: any;
+  shipping_address?: any;
+
+  // Extensions
   trackingUrl?: string | null;
   delivery_type?: 'partner' | 'shop' | 'pickup';
   delivery_partner_details?: { provider: string; tracking_id: string; url: string };
   shop_delivery_details?: { boy_name: string; boy_phone: string; vehicle_no?: string };
   pickup_verification_code?: string;
   is_pickup_verified?: boolean;
+
+  invoice_number?: string;
+  downloadable_invoice_url?: string;
+  packet_id?: string;
+  courier_name?: string;
+  tracking_id?: string;
 }
 
 export interface Address {
@@ -227,6 +260,7 @@ export interface Address {
   city: string;
   state: string;
   isDefault?: boolean;
+  is_default?: boolean; // Mixed usage
 }
 
 export interface Product {
@@ -269,6 +303,10 @@ export interface Product {
   variant_label?: string;
   allow_customization?: boolean;
   customization_options?: CustomizationOption[];
+  base_price?: number; // Price before tax
+  tax_percent?: number; // Applied tax percentage
+  tax_amount?: number; // Calculated tax amount
+  custom_tax_percent?: number; // Optional override
   attributes?: Record<string, any>; // Dynamic attributes for filtering (e.g., {"Brand": "Nike", "Material": "Cotton"})
 }
 
@@ -328,7 +366,7 @@ export interface Category {
   pageHeroText?: string | null;
   showPageHeroText?: boolean;
   appImagePath?: string | null; // New field for app-specific category image
-  tax_rate?: number; // Added for Category-wise tax
+  tax_rate?: number; // Category-level tax %
 }
 
 export interface Review {
@@ -372,6 +410,7 @@ export interface User {
   savedItems?: Product[];
   orders?: Order[];
   returns?: ReturnRequest[];
+  updates?: any[]; // Order Updates from 'profiles' table
 }
 
 export interface PendingChange {
@@ -998,6 +1037,12 @@ export type Database = {
         tags?: string[] | null
         uuid?: string
         variant_label?: string | null
+        base_price?: number | null
+        tax_percent?: number | null
+        tax_amount?: number | null
+        custom_tax_percent?: number | null
+        allow_customization?: boolean
+        customization_options?: Json | null
       }
     }
     profiles: {

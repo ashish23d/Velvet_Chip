@@ -4,15 +4,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext.tsx';
 import ImageUploader from '../components/admin/ImageUploader.tsx';
 import { BUCKETS } from '../constants.ts';
-import SupabaseImage from '../components/SupabaseImage.tsx';
+import SupabaseImage from '../components/shared/SupabaseImage';
 import { CartItem } from '../types.ts';
+import { useUserOrders } from '../services/api/user.api.ts';
 
 const ReturnRequestPage: React.FC = () => {
   const { orderId, itemId } = useParams<{ orderId?: string, itemId?: string }>();
   const navigate = useNavigate();
-  const { currentUser, submitReturnRequest, getOrderById, isLoading } = useAppContext();
+  const { currentUser, submitReturnRequest, isLoading } = useAppContext();
+  const { data: userOrders = [] } = useUserOrders(currentUser?.id);
 
-  const order = useMemo(() => getOrderById(orderId), [orderId, getOrderById]);
+  const order = useMemo(() => userOrders.find(o => o.id === orderId), [orderId, userOrders]);
   const itemToReturn = useMemo(() => {
     if (!order || !itemId) return undefined;
 

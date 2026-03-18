@@ -6,10 +6,13 @@ import { Promotion, Announcement } from '../../types.ts';
 import PlusIcon from '../../components/icons/PlusIcon.tsx';
 import TrashIcon from '../../components/icons/TrashIcon.tsx';
 import PencilIcon from '../../components/icons/PencilIcon.tsx';
+import { usePromotions, useDeletePromotion } from '../../services/api/promotions.api';
 
 const PromotionTable: React.FC = () => {
-    const { getAllPromotions, deletePromotion, showConfirmationModal } = useAppContext();
-    const promotions = getAllPromotions();
+    const { showConfirmationModal } = useAppContext();
+    const { data: promotionsData, isLoading } = usePromotions();
+    const { mutateAsync: deletePromotionAsync } = useDeletePromotion();
+    const promotions = promotionsData || [];
 
     const handleDelete = async (promotion: Promotion) => {
         showConfirmationModal({
@@ -17,7 +20,7 @@ const PromotionTable: React.FC = () => {
             message: `Are you sure you want to delete the promotion "${promotion.code}"? This action cannot be undone.`,
             onConfirm: async () => {
                 try {
-                    await deletePromotion(promotion);
+                    await deletePromotionAsync(promotion.id);
                 } catch (error) {
                     console.error("Failed to delete promotion:", error);
                     alert(`Error: Could not delete promotion. ${(error as Error).message}`);
@@ -37,49 +40,53 @@ const PromotionTable: React.FC = () => {
 
     return (
         <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-900">
-                    <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Code</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Value</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Usage</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
-                    </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {promotions.map((promotion) => {
-                        const status = getStatus(promotion);
-                        return (
-                            <tr key={promotion.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-primary">{promotion.code}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 capitalize">{promotion.type}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-white">
-                                    {promotion.type === 'percentage' ? `${promotion.value}%` : `₹${promotion.value}`}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{promotion.uses} / {promotion.usageLimit}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${status.color}`}>
-                                        {status.text}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div className="flex justify-end items-center gap-4">
-                                        <Link to={`/admin/marketing/promotions/edit/${promotion.id}`} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-                                            <PencilIcon className="h-5 w-5"/>
-                                        </Link>
-                                        <button onClick={() => handleDelete(promotion)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
-                                            <TrashIcon className="h-5 w-5"/>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
-            {promotions.length === 0 && (
+            {isLoading ? (
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400">Loading promotions...</div>
+            ) : (
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Code</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Type</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Value</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Usage</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {promotions.map((promotion) => {
+                            const status = getStatus(promotion);
+                            return (
+                                <tr key={promotion.id}>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-primary">{promotion.code}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 capitalize">{promotion.type}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-white">
+                                        {promotion.type === 'percentage' ? `${promotion.value}%` : `₹${promotion.value}`}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{promotion.uses} / {promotion.usageLimit}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${status.color}`}>
+                                            {status.text}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <div className="flex justify-end items-center gap-4">
+                                            <Link to={`/admin/marketing/promotions/edit/${promotion.id}`} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
+                                                <PencilIcon className="h-5 w-5" />
+                                            </Link>
+                                            <button onClick={() => handleDelete(promotion)} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
+                                                <TrashIcon className="h-5 w-5" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            )}
+            {!isLoading && promotions.length === 0 && (
                 <div className="text-center py-12 text-gray-500 dark:text-gray-400">No promotions have been created yet.</div>
             )}
         </div>
@@ -104,7 +111,7 @@ const AnnouncementEditor: React.FC = () => {
             [name]: type === 'checkbox' ? checked : value
         }));
     };
-    
+
     const handleSave = async () => {
         setIsSaving(true);
         await updateAnnouncement(formState);
@@ -117,7 +124,7 @@ const AnnouncementEditor: React.FC = () => {
 
     return (
         <div className="space-y-4">
-             <div>
+            <div>
                 <label htmlFor="announcement-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Announcement Text</label>
                 <input
                     type="text"
@@ -129,7 +136,7 @@ const AnnouncementEditor: React.FC = () => {
                     className={inputClass}
                 />
             </div>
-             <div>
+            <div>
                 <label htmlFor="announcement-link" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Link (Optional)</label>
                 <input
                     type="text"
@@ -157,7 +164,7 @@ const AnnouncementEditor: React.FC = () => {
                         <label htmlFor="announcement-active" className="font-medium text-gray-700 dark:text-gray-300">Show announcement bar on site</label>
                     </div>
                 </div>
-                 <button
+                <button
                     onClick={handleSave}
                     disabled={!isChanged || isSaving}
                     className="bg-primary text-white py-2 px-4 rounded-md font-medium hover:bg-pink-700 disabled:bg-gray-400"
@@ -174,7 +181,7 @@ const MarketingPage: React.FC = () => {
     return (
         <div className="space-y-8">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Marketing & Promotions</h1>
-            
+
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Promotions & Coupons</h2>
@@ -182,14 +189,14 @@ const MarketingPage: React.FC = () => {
                         to="/admin/marketing/promotions/new"
                         className="flex items-center gap-2 bg-primary text-white py-2 px-4 rounded-md font-medium hover:bg-pink-700"
                     >
-                        <PlusIcon className="w-5 h-5"/>
+                        <PlusIcon className="w-5 h-5" />
                         Create Promotion
                     </Link>
                 </div>
                 <PromotionTable />
             </div>
 
-             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Site Announcements</h2>
                 <AnnouncementEditor />
             </div>
