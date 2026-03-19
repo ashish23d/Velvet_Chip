@@ -11,6 +11,7 @@ import { Product } from '../types.ts';
 import SupabaseMedia from '../components/shared/SupabaseMedia';
 import { BUCKETS } from '../constants.ts';
 import CardRenderer from '../components/home/CardRenderer';
+import ScrollReveal from '../components/shared/ScrollReveal';
 
 const CategoryPage: React.FC = () => {
   const { id: categoryId } = useParams<{ id: string }>();
@@ -240,56 +241,62 @@ const CategoryPage: React.FC = () => {
     <div className="bg-white">
       {/* Category Hero */}
       {category.pageHeroMedia && category.pageHeroMedia.length > 0 && (
-        <div className="relative h-[40vh] bg-gray-200">
-          <SupabaseMedia
-            bucket={BUCKETS.CATEGORIES}
-            imagePath={category.pageHeroMedia[0].path}
-            alt={category.name}
-            className="w-full h-full object-cover"
-          />
-          {category.showPageHeroText && category.pageHeroText && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-              <h1 className="text-4xl md:text-5xl font-serif text-white text-center drop-shadow-lg">{category.pageHeroText}</h1>
-            </div>
-          )}
-        </div>
+        <ScrollReveal animation="reveal-scale">
+          <div className="relative h-[40vh] bg-gray-200">
+            <SupabaseMedia
+              bucket={BUCKETS.CATEGORIES}
+              imagePath={category.pageHeroMedia[0].path}
+              alt={category.name}
+              className="w-full h-full object-cover"
+            />
+            {category.showPageHeroText && category.pageHeroText && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <h1 className="text-4xl md:text-5xl font-serif text-white text-center drop-shadow-lg">{category.pageHeroText}</h1>
+              </div>
+            )}
+          </div>
+        </ScrollReveal>
       )}
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-serif font-bold text-gray-900">{category.name}</h1>
-          <p className="mt-2 text-gray-500">{isLoading && products.length === 0 ? 'Loading items...' : `${filteredAndSortedProducts.length} items found`}</p>
-        </div>
+        <ScrollReveal animation="reveal">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-serif font-bold text-gray-900">{category.name}</h1>
+            <p className="mt-2 text-gray-500">{isLoading && products.length === 0 ? 'Loading items...' : `${filteredAndSortedProducts.length} items found`}</p>
+          </div>
+        </ScrollReveal>
 
         <div className="flex gap-8 items-start">
           {/* Filters (Desktop) */}
           <div className="hidden lg:block w-64 xl:w-72 flex-shrink-0">
-            <FilterSidebar
-              availableSizes={availableSizes}
-              priceRange={priceRange}
-              selectedSizes={selectedSizes}
-              selectedTags={selectedTags}
-              onPriceChange={setPriceRange}
-              onSizeToggle={(size) => setSelectedSizes(p => p.includes(size) ? p.filter(s => s !== size) : [...p, size])}
-              onTagToggle={(tag) => setSelectedTags(t => t.includes(tag) ? t.filter(x => x !== tag) : [...t, tag])}
-              onClearFilters={onClearFilters}
-              minPrice={minPrice}
-              maxPrice={maxPrice}
-              availableTags={availableTags}
-              categories={categories}
-              currentCategoryId={category?.id}
-              // New Props
-              selectedRating={selectedRating}
-              onRatingChange={setSelectedRating}
-              minDiscount={minDiscount}
-              onDiscountChange={setMinDiscount}
-              includeOutOfStock={includeOutOfStock}
-              onToggleOutOfStock={() => setIncludeOutOfStock(prev => !prev)}
-              // Dynamic Attributes
-              availableAttributes={availableAttributes}
-              selectedAttributes={selectedAttributes}
-              onAttributeToggle={handleAttributeToggle}
-            />
+            <ScrollReveal animation="reveal-left">
+              <FilterSidebar
+                availableSizes={availableSizes}
+                priceRange={priceRange}
+                selectedSizes={selectedSizes}
+                selectedTags={selectedTags}
+                onPriceChange={setPriceRange}
+                onSizeToggle={(size) => setSelectedSizes(p => p.includes(size) ? p.filter(s => s !== size) : [...p, size])}
+                onTagToggle={(tag) => setSelectedTags(t => t.includes(tag) ? t.filter(x => x !== tag) : [...t, tag])}
+                onClearFilters={onClearFilters}
+                minPrice={minPrice}
+                maxPrice={maxPrice}
+                availableTags={availableTags}
+                categories={categories}
+                currentCategoryId={category?.id}
+                // New Props
+                selectedRating={selectedRating}
+                onRatingChange={setSelectedRating}
+                minDiscount={minDiscount}
+                onDiscountChange={setMinDiscount}
+                includeOutOfStock={includeOutOfStock}
+                onToggleOutOfStock={() => setIncludeOutOfStock(prev => !prev)}
+                // Dynamic Attributes
+                availableAttributes={availableAttributes}
+                selectedAttributes={selectedAttributes}
+                onAttributeToggle={handleAttributeToggle}
+              />
+            </ScrollReveal>
           </div>
 
 
@@ -319,8 +326,14 @@ const CategoryPage: React.FC = () => {
               filteredAndSortedProducts.length > 0 ?
                 <>
                   <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
-                    {filteredAndSortedProducts.map(product => (
-                      <ProductCard key={product.id} product={product} />
+                    {filteredAndSortedProducts.map((product, index) => (
+                      <ScrollReveal 
+                        key={product.id} 
+                        animation="reveal-scale" 
+                        delay={(index % 4) * 100 as any}
+                      >
+                        <ProductCard product={product} />
+                      </ScrollReveal>
                     ))}
                   </div>
                   {hasMore && (

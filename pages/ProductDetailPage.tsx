@@ -19,6 +19,7 @@ import SimilarProductsModal from '../components/product/SimilarProductsModal';
 import MapPinIcon from '../components/icons/MapPinIcon.tsx';
 import AddressSelectionModal from '../components/checkout/AddressSelectionModal';
 import CardRenderer from '../components/home/CardRenderer';
+import ScrollReveal from '../components/shared/ScrollReveal';
 
 const ProductDetailSkeleton = () => (
   <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-pulse">
@@ -330,7 +331,7 @@ const ProductDetailPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
 
           {/* Image Gallery */}
-          <div className="flex flex-col-reverse md:flex-row gap-4 lg:gap-6 lg:sticky lg:top-24">
+          <ScrollReveal animation="reveal-left" className="flex flex-col-reverse md:flex-row gap-4 lg:gap-6 lg:sticky lg:top-24">
             <div className={`flex md:flex-col gap-3 lg:gap-4 overflow-x-auto md:overflow-y-auto no-scrollbar md:w-20 lg:w-24 flex-shrink-0 transition-all duration-300`}>
               {/* Show only first 4 images or all if expanded */}
               {(isGalleryExpanded ? allImagesForProduct : allImagesForProduct.slice(0, 4)).map(img => (
@@ -360,10 +361,10 @@ const ProductDetailPage: React.FC = () => {
                 className="w-full h-full object-cover"
               />
             </div>
-          </div>
+          </ScrollReveal>
 
           {/* Product Details - Right Column */}
-          <div className="py-2 space-y-6 lg:space-y-8">
+          <ScrollReveal animation="reveal-right" className="py-2 space-y-6 lg:space-y-8">
             <EditableWrapper editUrl={`/admin/products/edit/${product.id}`}>
               <div>
                 <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold tracking-tight text-gray-900 font-serif leading-tight">{product.name}</h1>
@@ -733,23 +734,33 @@ const ProductDetailPage: React.FC = () => {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
               </button>
             </div>
+          </ScrollReveal>
+        </div>
+
+        <ScrollReveal animation="reveal" threshold={0.05}>
+          <CustomerPhotos photoPaths={customerPhotos} />
+
+          <div className="my-20 border-t border-gray-100 pt-16">
+            <h2 className="text-3xl font-bold font-serif text-center text-gray-900 mb-10">Ratings & Reviews</h2>
+            <ReviewsList reviews={productReviews} productRating={product.rating} totalReviews={product.reviews} />
           </div>
-        </div>
-
-        <CustomerPhotos photoPaths={customerPhotos} />
-
-        <div className="my-20 border-t border-gray-100 pt-16">
-          <h2 className="text-3xl font-bold font-serif text-center text-gray-900 mb-10">Ratings & Reviews</h2>
-          <ReviewsList reviews={productReviews} productRating={product.rating} totalReviews={product.reviews} />
-        </div>
+        </ScrollReveal>
 
         {similarProducts.length > 0 && (
-          <div className="my-20 border-t border-gray-100 pt-16" id="similar-products-section">
+          <ScrollReveal animation="reveal" className="my-20 border-t border-gray-100 pt-16" id="similar-products-section">
             <h2 className="text-3xl font-bold font-serif text-center text-gray-900 mb-10">You May Also Like</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 lg:gap-8">
-              {similarProducts.slice(0, 4).map(p => <ProductCard key={p.id} product={p} />)}
+              {similarProducts.slice(0, 4).map((p, index) => (
+                <ScrollReveal 
+                   key={p.id} 
+                   animation="reveal-scale" 
+                   delay={(index % 4) * 100 as any}
+                >
+                  <ProductCard product={p} />
+                </ScrollReveal>
+              ))}
             </div>
-          </div>
+          </ScrollReveal>
         )}
       </div>
       <SimilarProductsModal

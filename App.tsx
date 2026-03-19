@@ -15,7 +15,6 @@ import ScrollToTop from './components/shared/ScrollToTop';
 import SearchBar from './components/search/SearchBar';
 import OfferModal from './components/shared/OfferModal';
 import ProtectedRoute from './components/shared/ProtectedRoute';
-import SignUpPopup from './components/shared/SignUpPopup';
 import ConfirmationModal from './components/shared/ConfirmationModal';
 import BottomNavigation from './components/layout/BottomNavigation';
 
@@ -301,7 +300,6 @@ const AppContent: React.FC = () => {
       <ScrollToTop />
       <AppRoutes />
       <GlobalComponents />
-      <SignUpPopup />
     </>
   );
 }

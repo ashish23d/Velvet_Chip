@@ -78,7 +78,8 @@ const HeroSlider: React.FC<HeroSliderProps> = ({ slides, bucket }) => {
                   height={900}
                 />
                 {item.showText && (
-                  <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-black bg-opacity-30 flex flex-col items-center justify-center p-4">
+                    <span className="text-primary font-accent text-2xl mb-2 opacity-0 animate-fade-in delay-300">Velvet Chip Elegance</span>
                     <h2 className="text-white text-2xl sm:text-4xl md:text-6xl font-serif text-center max-w-4xl px-4">
                       {item.text}
                     </h2>

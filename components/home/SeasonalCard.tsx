@@ -81,7 +81,7 @@ const SeasonalCard: React.FC<SeasonalCardProps> = ({ card }) => {
           </div>
           
           <div className="w-full md:w-1/2 p-4 sm:p-6 flex flex-col justify-center transition-colors duration-500 ease-in-out group-hover:bg-gray-50/50">
-            <p className="text-xs sm:text-sm uppercase tracking-widest text-primary font-semibold">{title}</p>
+            <p className="text-base sm:text-xl text-primary font-accent">{title}</p>
             
             <h3 className="text-lg sm:text-2xl font-serif text-gray-900 mt-1 sm:mt-2 line-clamp-2 transition-colors duration-300 group-hover:text-primary">{cardTitle}</h3>
             

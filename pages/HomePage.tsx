@@ -11,6 +11,7 @@ import { Product } from '../types.ts';
 import ChevronLeftIcon from '../components/icons/ChevronLeftIcon.tsx';
 import ChevronRightIcon from '../components/icons/ChevronRightIcon.tsx';
 import CardRenderer from '../components/home/CardRenderer';
+import ScrollReveal from '../components/shared/ScrollReveal';
 
 const HomePage: React.FC = () => {
     const { slides, seasonalEditCards, fetchProducts, lastProductUpdate, siteContent, products, categories, cardAddons } = useAppContext();
@@ -138,11 +139,13 @@ const HomePage: React.FC = () => {
         <div className="space-y-12 sm:space-y-16 lg:space-y-24">
             {/* Hero Slider Section */}
             <section className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-                {slides.length === 0 ? (
-                    <div className="animate-pulse relative w-full h-[60vh] overflow-hidden rounded-xl bg-gray-200 dark:bg-gray-800"></div>
-                ) : (
-                    <HeroSlider slides={slides} bucket={BUCKETS.SITE_ASSETS} />
-                )}
+                <ScrollReveal animation="reveal-scale">
+                    {slides.length === 0 ? (
+                        <div className="animate-pulse relative w-full h-[60vh] overflow-hidden rounded-xl bg-gray-200 dark:bg-gray-800"></div>
+                    ) : (
+                        <HeroSlider slides={slides} bucket={BUCKETS.SITE_ASSETS} />
+                    )}
+                </ScrollReveal>
             </section>
 
             {/* Dynamic Card Addons */}
@@ -158,87 +161,96 @@ const HomePage: React.FC = () => {
 
             {/* Category Showcase Section */}
             <section className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-8">
-                    <h2 className="text-3xl font-serif text-gray-800 dark:text-gray-100">{fabulousRange.title}</h2>
-                    <p className="mt-2 text-gray-500 dark:text-gray-400">{fabulousRange.description}</p>
-                </div>
-                <CategoryShowcase />
+                <ScrollReveal animation="reveal">
+                    <div className="text-center mb-8">
+                        <h2 className="text-3xl font-serif text-gray-800 dark:text-gray-100">{fabulousRange.title}</h2>
+                        <p className="mt-2 text-gray-500 dark:text-gray-400">{fabulousRange.description}</p>
+                    </div>
+                    <CategoryShowcase />
+                </ScrollReveal>
             </section>
 
             {/* New Arrivals Section - CAROUSEL */}
             <section className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-8">
-                    <h2 className="text-3xl font-serif text-gray-800 dark:text-gray-100">{newArrivals.title}</h2>
-                    <p className="mt-2 text-gray-500 dark:text-gray-400">{newArrivals.description}</p>
-                </div>
-                <div className="relative">
-                    <button onClick={() => scrollCarousel('left')} className="absolute top-1/2 -left-4 transform -translate-y-1/2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-2 shadow-md hover:bg-white dark:hover:bg-gray-700 transition hidden md:block z-10" aria-label="Scroll left">
-                        <ChevronLeftIcon className="w-6 h-6 text-gray-700 dark:text-gray-200" />
-                    </button>
-                    <div
-                        ref={carouselRef}
-                        className="flex gap-4 md:gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar"
-                    >
-                        {isLoadingCarousel ? (
-                            <CarouselSkeleton />
-                        ) : (
-                            carouselProducts.map(product => (
-                                <div key={product.id} className="snap-start flex-shrink-0 w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5">
-                                    <NewArrivalCard product={product} />
-                                </div>
-                            ))
-                        )}
+                <ScrollReveal animation="reveal-right">
+                    <div className="text-center mb-8">
+                        <h2 className="text-3xl font-serif text-gray-800 dark:text-gray-100">{newArrivals.title}</h2>
+                        <p className="mt-2 text-gray-500 dark:text-gray-400">{newArrivals.description}</p>
                     </div>
-                    <button onClick={() => scrollCarousel('right')} className="absolute top-1/2 -right-4 transform -translate-y-1/2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-2 shadow-md hover:bg-white dark:hover:bg-gray-700 transition hidden md:block z-10" aria-label="Scroll right">
-                        <ChevronRightIcon className="w-6 h-6 text-gray-700 dark:text-gray-200" />
-                    </button>
-                </div>
+                    <div className="relative">
+                        <button onClick={() => scrollCarousel('left')} className="absolute top-1/2 -left-4 transform -translate-y-1/2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-2 shadow-md hover:bg-white dark:hover:bg-gray-700 transition hidden md:block z-10" aria-label="Scroll left">
+                            <ChevronLeftIcon className="w-6 h-6 text-gray-700 dark:text-gray-200" />
+                        </button>
+                        <div
+                            ref={carouselRef}
+                            className="flex gap-4 md:gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar"
+                        >
+                            {isLoadingCarousel ? (
+                                <CarouselSkeleton />
+                            ) : (
+                                carouselProducts.map(product => (
+                                    <div key={product.id} className="snap-start flex-shrink-0 w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5">
+                                        <NewArrivalCard product={product} />
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        <button onClick={() => scrollCarousel('right')} className="absolute top-1/2 -right-4 transform -translate-y-1/2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full p-2 shadow-md hover:bg-white dark:hover:bg-gray-700 transition hidden md:block z-10" aria-label="Scroll right">
+                            <ChevronRightIcon className="w-6 h-6 text-gray-700 dark:text-gray-200" />
+                        </button>
+                    </div>
+                </ScrollReveal>
             </section>
             {/* Featured Collections Section */}
             <section className="w-full bg-gray-50 dark:bg-gray-900 py-16">
                 <div className="max-w-6xl mx-auto px-6 lg:px-10">
-
-                    {/* Heading */}
-                    <div className="text-center mb-12">
-                        <h2 className="text-3xl md:text-4xl font-serif text-gray-800 dark:text-gray-100">
-                            {featuredCollection.title}
-                        </h2>
-                        <p className="mt-3 max-w-2xl mx-auto text-gray-500 dark:text-gray-400">
-                            {featuredCollection.description}
-                        </p>
-                    </div>
+                    <ScrollReveal animation="reveal">
+                        {/* Heading */}
+                        <div className="text-center mb-12">
+                            <h2 className="text-3xl md:text-4xl font-serif text-gray-800 dark:text-gray-100">
+                                {featuredCollection.title}
+                            </h2>
+                            <p className="mt-3 max-w-2xl mx-auto text-gray-500 dark:text-gray-400">
+                                {featuredCollection.description}
+                            </p>
+                        </div>
+                    </ScrollReveal>
 
                     {/* Grid */}
                     {isLoadingGrid ? (
                         <GridSkeleton />
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 lg:gap-8">
-                            {featuredProducts.map(product => (
-                                <div
-                                    key={product.id}
-                                    className="transition-transform duration-300 hover:-translate-y-2"
+                            {featuredProducts.map((product, index) => (
+                                <ScrollReveal 
+                                    key={product.id} 
+                                    animation="reveal-scale" 
+                                    delay={(index % 4) * 100 as any}
                                 >
-                                    <ProductCard product={product} />
-                                </div>
+                                    <div className="transition-transform duration-300 hover:-translate-y-2">
+                                        <ProductCard product={product} />
+                                    </div>
+                                </ScrollReveal>
                             ))}
                         </div>
                     )}
 
                     {/* CTA */}
-                    <div className="text-center mt-16">
-                        <ReactRouterDOM.Link
-                            to="/search"
-                            className="inline-flex items-center justify-center 
-                   px-10 py-3 rounded-full 
-                   border-2 border-primary text-primary 
-                   font-semibold tracking-wide
-                   hover:bg-primary hover:text-white
-                   transition-all duration-300"
-                        >
-                            See More Collections →
-                        </ReactRouterDOM.Link>
-                    </div>
-
+                    <ScrollReveal animation="reveal" delay={200}>
+                        <div className="text-center mt-16">
+                            <ReactRouterDOM.Link
+                                to="/search"
+                                className="inline-flex items-center justify-center 
+                       px-10 py-3 rounded-full 
+                       border-2 border-primary text-primary 
+                       font-semibold tracking-wide
+                       hover:bg-primary hover:text-white
+                       transition-all duration-300"
+                            >
+                                See More Collections →
+                            </ReactRouterDOM.Link>
+                        </div>
+                    </ScrollReveal>
                 </div>
             </section>
 
@@ -248,15 +260,19 @@ const HomePage: React.FC = () => {
             {/* Seasonal Edit Section */}
             <section className="bg-pink-50/40 dark:bg-gray-800/50 py-16 transition-colors duration-200">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-10">
-                        <h2 className="text-3xl font-serif text-primary">{seasonalEdit.title}</h2>
-                        <p className="mt-2 text-gray-600 dark:text-gray-300">{seasonalEdit.description}</p>
-                    </div>
+                    <ScrollReveal animation="reveal">
+                        <div className="text-center mb-10">
+                            <h2 className="text-3xl font-serif text-primary">{seasonalEdit.title}</h2>
+                            <p className="mt-2 text-gray-600 dark:text-gray-300">{seasonalEdit.description}</p>
+                        </div>
+                    </ScrollReveal>
                     <div className="space-y-8">
                         {seasonalEditCards
                             .filter(card => card.is_active)
-                            .map(card => (
-                                <SeasonalCard key={card.id} card={card} />
+                            .map((card, index) => (
+                                <ScrollReveal key={card.id} animation={index % 2 === 0 ? 'reveal-left' : 'reveal-right'}>
+                                    <SeasonalCard card={card} />
+                                </ScrollReveal>
                             ))}
                     </div>
                 </div>
