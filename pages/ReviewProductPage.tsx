@@ -7,6 +7,7 @@ import ImageUploader from '../components/admin/ImageUploader.tsx';
 import { BUCKETS } from '../constants.ts';
 import StarRatingInput from '../components/product/StarRatingInput';
 import ThankYouModal from '../components/shared/ThankYouModal';
+import { sanitizeString } from '../utils/sanitization';
 
 interface ReviewProductPageProps {
   isOpen: boolean;
@@ -64,10 +65,12 @@ const ReviewProductPage: React.FC<ReviewProductPageProps> = ({ isOpen, onClose, 
     setError(null);
 
     try {
+      const sanitizedComment = sanitizeString(comment);
+
       if (isEditMode) {
         await updateUserReview(currentUserReview.id, {
-          rating, // Though UI is readonly, we pass it or just keep old.
-          comment,
+          rating,
+          comment: sanitizedComment,
           productImages: uploadedImages
         });
       } else {
@@ -76,7 +79,7 @@ const ReviewProductPage: React.FC<ReviewProductPageProps> = ({ isOpen, onClose, 
           userId: currentUser.id,
           author: currentUser.name,
           rating: rating,
-          comment: comment,
+          comment: sanitizedComment,
           userImage: currentUser.avatar || '',
           productImages: uploadedImages,
         };

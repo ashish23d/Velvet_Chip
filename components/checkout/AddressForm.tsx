@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Address } from '../../types';
+import { sanitizeForm, validatePhone } from '../../utils/sanitization';
 
 interface AddressFormProps {
   addressToEdit?: Address | null;
@@ -20,6 +20,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ addressToEdit, onSave, onCanc
   };
 
   const [formData, setFormData] = useState(initialFormState);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (addressToEdit) {
@@ -44,7 +45,21 @@ const AddressForm: React.FC<AddressFormProps> = ({ addressToEdit, onSave, onCanc
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ ...addressToEdit, ...formData });
+    setError(null);
+
+    // Validation
+    if (!validatePhone(formData.mobile)) {
+      setError('Please enter a valid mobile number.');
+      return;
+    }
+
+    if (!/^\d{6}$/.test(formData.pincode)) {
+      setError('Please enter a valid 6-digit pincode.');
+      return;
+    }
+
+    const sanitizedData = sanitizeForm(formData);
+    onSave({ ...addressToEdit, ...sanitizedData });
   };
 
   const inputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500";
@@ -87,6 +102,7 @@ const AddressForm: React.FC<AddressFormProps> = ({ addressToEdit, onSave, onCanc
             <input type="text" name="state" id="state" value={formData.state} onChange={handleChange} required className={inputClasses} />
           </div>
         </div>
+        {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
         <div className="flex justify-end gap-4 pt-4">
           <button type="button" onClick={onCancel} className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 px-6 rounded-md text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
             Cancel

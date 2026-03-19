@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { BuildingOffice2Icon, EnvelopeIcon, PhoneIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../context/AppContext.tsx';
 import EditableWrapper from '../components/shared/EditableWrapper';
+import { sanitizeForm, validateEmail } from '../utils/sanitization';
 
 const ContactPage: React.FC = () => {
     const { contactDetails, submitContactForm, siteContent } = useAppContext();
@@ -18,10 +18,20 @@ const ContactPage: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Validation & Sanitization
+        if (!validateEmail(formData.email)) {
+            setStatus('error');
+            setMessage('Please enter a valid email address.');
+            return;
+        }
+
+        const sanitizedData = sanitizeForm(formData);
+
         setStatus('loading');
         setMessage('');
         try {
-            await submitContactForm(formData);
+            await submitContactForm(sanitizedData);
             setStatus('success');
             setMessage('Your message has been sent successfully!');
             setFormData({ name: '', email: '', message: '' });

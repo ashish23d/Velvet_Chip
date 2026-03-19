@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { User } from '../../types';
 import RecentOrderItem from '../order/RecentOrderItem';
 import { useUserOrders } from '../../services/api/user.api';
+import { sanitizeForm, validatePhone } from '../../utils/sanitization';
 
 interface ProfileInformationProps {
   setActiveSection: (section: string) => void;
@@ -12,6 +12,7 @@ interface ProfileInformationProps {
 const ProfileInformation: React.FC<ProfileInformationProps> = ({ setActiveSection }) => {
   const { currentUser, updateUser } = useAppContext();
   const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({
     name: currentUser?.name || '',
     mobile: currentUser?.mobile || '',
@@ -36,7 +37,17 @@ const ProfileInformation: React.FC<ProfileInformationProps> = ({ setActiveSectio
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateUser(formData);
+    setError(null);
+
+    // Validation
+    if (formData.mobile && !validatePhone(formData.mobile)) {
+      setError('Please enter a valid mobile number.');
+      return;
+    }
+
+    const sanitizedData = sanitizeForm(formData);
+    
+    updateUser(sanitizedData);
     setIsEditing(false);
   };
 
@@ -108,6 +119,7 @@ const ProfileInformation: React.FC<ProfileInformationProps> = ({ setActiveSectio
             </div>
 
             <div className="flex justify-end gap-4">
+              {error && <p className="text-red-600 text-sm flex-1">{error}</p>}
               <button type="button" onClick={handleCancelClick} className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2 px-4 rounded-md text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
                 Cancel
               </button>

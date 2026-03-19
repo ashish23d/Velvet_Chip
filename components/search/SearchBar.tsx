@@ -10,6 +10,7 @@ import FolderIcon from '../icons/FolderIcon';
 import LightBulbIcon from '../icons/LightBulbIcon';
 import ClockIcon from '../icons/ClockIcon';
 import XIcon from '../icons/XIcon';
+import { sanitizeString } from '../../utils/sanitization';
 
 interface SearchBarProps {
     className?: string;
@@ -123,10 +124,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ className, onResultClick, isMobil
     // --- ACTIONS ---
 
     const executeSearch = (searchQuery: string) => {
-        const trimmed = searchQuery.trim();
-        if (trimmed) {
-            addToSearchHistory(trimmed);
-            navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+        const sanitized = sanitizeString(searchQuery);
+        if (sanitized) {
+            addToSearchHistory(sanitized);
+            navigate(`/search?q=${encodeURIComponent(sanitized)}`);
             closeExpanded();
             if (isMobileOverlay && onResultClick) onResultClick();
         }
